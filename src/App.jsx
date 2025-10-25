@@ -1,7 +1,10 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from './services/supabaseClient';
+<<<<<<< HEAD
 import { filtroProductos } from './utils/helpers';
+=======
+>>>>>>> 58cb29c (ultima version)
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
 import PublicCatalogView from './components/PublicCatalogView';
@@ -11,7 +14,27 @@ import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
 import PaymentModal from './components/Modals/PaymentModal';
 import ConfirmationModal from './components/Modals/ConfirmationModal';
 import CreditCardModal from './components/Modals/CreditCardModal';
+<<<<<<< HEAD
 import { migrarDatos } from './utils/migrarDatos'; //  Solo una función de migración
+=======
+import { migrarDatos } from './utils/migrarDatos';
+
+const CATEGORIAS_PERMITIDAS = [
+  'Procesadores',
+  'Tarjetas Gráficas',
+  'Memorias RAM',
+  'Discos Duros',
+  'Boards',
+  'Fuentes de Poder',
+  'Gabinetes',
+  'Periféricos',
+  'Monitores',
+  'Refrigeración',
+  'Redes',
+  'Accesorios',
+  'Mobiliario'
+];
+>>>>>>> 58cb29c (ultima version)
 
 function App() {
   const [usuarios, setUsuarios] = useState([]);
@@ -28,6 +51,7 @@ function App() {
   const [showCreditCardModal, setShowCreditCardModal] = useState(false);
   const [confirmationData, setConfirmationData] = useState({ title: '', body: '' });
 
+<<<<<<< HEAD
   //  Solo una migración al inicio (en desarrollo)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -102,10 +126,31 @@ function App() {
       setUsuarios(data || []);
     }
   };
+=======
+  // Solo una migración al inicio (en desarrollo)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // migrarDatos();
+    }
+  }, []);
 
-  const getInventario = () => productos;
-  const getProveedores = () => proveedores;
+  // Cargar datos desde tablas en español
+  useEffect(() => {
+    const cargarDatos = async () => {
+      const { data: productosDB } = await supabase.from('productos').select('*');
+      const { data: proveedoresDB } = await supabase.from('proveedores').select('*');
+      const { data: usuariosDB } = await supabase.from('usuarios').select('*');
+>>>>>>> 58cb29c (ultima version)
 
+      const productosTransformados = productosDB?.map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        precio: p.precio,
+        cantidad: p.cantidad,
+        categoria: p.categoria
+      })) || [];
+
+<<<<<<< HEAD
   const agregarProducto = async (producto) => {
     const { error } = await supabase.from('productos').insert({
       nombre: producto.nombre,
@@ -129,11 +174,17 @@ function App() {
       setProductos(productosTransformados);
     }
   };
+=======
+      setProductos(productosTransformados);
+      setProveedores(proveedoresDB || []);
+      setUsuarios(usuariosDB || []);
+    };
+>>>>>>> 58cb29c (ultima version)
 
-  const eliminarProducto = (id) => {
-    setProductos(prev => prev.filter(p => p.id !== id));
-  };
+    cargarDatos();
+  }, []);
 
+<<<<<<< HEAD
   const agregarProveedor = async (proveedor) => {
     const { error } = await supabase.from('proveedores').insert({ // 'proveedores', no 'providers'
       nombre: proveedor.nombre,
@@ -149,6 +200,94 @@ function App() {
     }
   };
 
+=======
+  // ✅ handleLogin ahora recibe directamente el usuario (ya validado)
+  const handleLogin = (usr) => {
+    if (!usr) {
+      alert('Usuario/clave inválidos');
+      return;
+    }
+    setUsuarioActual(usr);
+    setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
+    if (usr.role === 'admin') setVistaAdminActiva('inventory');
+  };
+
+  const registrarUsuario = async (nuevoUsuario) => {
+    const { error } = await supabase.from('usuarios').insert({
+      username: nuevoUsuario.user,
+      pass: nuevoUsuario.pass,
+      role: nuevoUsuario.role
+    });
+
+    if (error) {
+      console.error('❌ Error al registrar usuario:', error);
+    } else {
+      const { data } = await supabase.from('usuarios').select('*');
+      setUsuarios(data || []);
+    }
+  };
+
+  const getInventario = () => productos;
+  const getProveedores = () => proveedores;
+
+  const agregarProducto = async (producto) => {
+    const { error } = await supabase.from('productos').insert({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      cantidad: producto.cantidad,
+      categoria: producto.categoria,
+      id_proveedor: producto.provider_id
+    });
+
+    if (error) {
+      console.error('Error:', error);
+      alert('Error al guardar el producto');
+      return;
+    }
+
+    const { data } = await supabase.from('productos').select('*');
+    const productosTransformados = data?.map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      precio: p.precio,
+      cantidad: p.cantidad,
+      categoria: p.categoria
+    })) || [];
+    setProductos(productosTransformados);
+  };
+
+  const eliminarProducto = async (id) => {
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(' Error al eliminar producto:', error);
+      alert('Error al eliminar el producto');
+      return;
+    }
+
+    setProductos(prev => prev.filter(p => p.id !== id));
+  };
+
+  const agregarProveedor = async (proveedor) => {
+    const { error } = await supabase.from('proveedores').insert({
+      nombre: proveedor.nombre,
+      email: proveedor.email,
+      telefono: proveedor.phone || ''
+    });
+
+    if (error) {
+      console.error('Error al insertar proveedor:', error);
+    } else {
+      const { data } = await supabase.from('proveedores').select('*');
+      setProveedores(data || []);
+    }
+  };
+
+>>>>>>> 58cb29c (ultima version)
   const actualizarTotal = () => carrito.reduce((s, c) => s + c.precio, 0);
 
   const handleLogout = () => {

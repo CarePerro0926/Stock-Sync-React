@@ -1,13 +1,34 @@
-// src/components/LoginView.js
+// src/components/LoginView.jsx
 import React, { useState } from 'react';
+import { supabase } from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
 
-  const handleSubmit = (e) => {
+  // ✅ Lógica de validación movida aquí
+  const validarUsuario = async (username, password) => {
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('username', u)
+      .eq('pass', p);
+
+    if (error) {
+      console.error('Error al consultar usuario:', error);
+      return null;
+    }
+
+    return data?.[0] || null;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onLogin(user, pass);
+    const usr = await validarUsuario(user, pass);
+    onLogin(usr); // Envía el resultado a App.jsx
   };
 
   return (
