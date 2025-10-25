@@ -1,123 +1,83 @@
 /* src/index.css */
-
-/* Fondo */
 body {
-  background: url('https://i.postimg.cc/9F8NBNs1/Stock-Sync-logo-with-elements-representing-technology-organization-and-inventory-management-includ.jpg') no-repeat center/cover fixed;
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: url('https://i.postimg.cc/9F8NBNs1/Stock-Sync-logo-with-elements-representing-technology-organization-and-inventory-management-includ.jpg') /* <-- Sin espacio extra */
+    no-repeat center/cover fixed;
 }
-
-/* Vistas y tarjetas */
 .view, .admin-tab { display: none; }
 .card { background-color: rgba(255,255,255,0.95); }
-
-/* Cursores y botones */
 .pointer { cursor: pointer; }
-
 #btnShowRegister {
-  background-color: #0F2C54;
-  border-color: #0F2C54;
-  color: #fff;
+  background-color: #0F2C54; border-color: #0F2C54; color: #fff;
   min-width: 140px;
 }
 #btnShowRegister:hover { background-color: #0D274A; border-color:#0D274A; }
-
 #btnLogin, #btnBackToLogin {
-  background-color: #0F2C54;
-  border-color: #0F2C54;
-  color: #fff;
+  background-color: #0F2C54; border-color: #0F2C54; color: #fff;
 }
 #btnLogin:hover, #btnBackToLogin:hover {
-  background-color: #0D274A;
-  border-color: #0D274A;
+  background-color: #0D274A; border-color: #0D274A;
 }
-
 #btnShowCatalog {
-  background-color: #6c7172;
-  border-color: #6c7172;
-  color: #fff;
+  background-color: #6c7172; border-color: #6c7172; color: #fff;
 }
 #btnShowCatalog:hover {
-  background-color: #5a6364;
-  border-color: #5a6364;
+  background-color: #5a6364; border-color: #5a6364;
 }
-
 .text-login { color: #0F2C54 !important; }
 .text-stock { color: #FF4500 !important; }
-
 /* --- RESPONSIVE TABLE STYLES --- */
-/* Se usa el atributo data-title en cada <td> para mostrar la etiqueta en móvil */
 @media (max-width: 767.98px) {
-  .responsive-table table thead {
+  .responsive-table thead {
     display: none !important;
   }
-
   .responsive-table .table-row {
     display: block;
     margin-bottom: 1rem;
     padding: 0.75rem;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
-    background-color: #fff;
+    background-color: #f8f9fa;
   }
-
   .responsive-table .table-cell {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     padding: 0.25rem 0;
     border-bottom: 1px solid #e9ecef;
     word-break: break-word;
   }
-
   .responsive-table .table-cell:last-child {
     border-bottom: none;
   }
-
   .responsive-table .table-cell::before {
-    content: attr(data-title) ":";
-    font-weight: 600;
-    color: #6c757d;
+    content: attr(data-title) ": ";
+    font-weight: bold;
     margin-right: 0.5rem;
-    width: 35%;
-    flex-shrink: 0;
     white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-  }
-
-  /* Contenedor de input de cantidad */
-  .responsive-table .qty-input-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  /* Si el input está dentro de td, ajustarlo */
-  .responsive-table .qty-input {
-    width: 80px !important;
     flex-shrink: 0;
   }
-
-  /* Asegura que la tabla responsiva no haga scroll horizontal innecesario */
-  .responsive-table.table-responsive {
-    overflow-x: hidden !important;
+  .responsive-table .table-cell .qty-input-container {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+  }
+  .responsive-table .table-cell .qty-input-container::before {
+      content: attr(data-title) ": ";
+      font-weight: bold;
+      margin-right: 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+  }
+  .responsive-table .table-cell .qty-input {
+      width: 80px !important;
+      flex-shrink: 0;
+      display: inline-block;
   }
 }
-
-/* Pequeño ajuste para pantallas muy pequeñas */
-@media (max-width: 420px) {
-  .responsive-table .table-cell::before {
-    width: 40%;
-    font-size: 0.95em;
-  }
-  .responsive-table .qty-input {
-    width: 64px !important;
-  }
+@media (max-width: 767.98px) {
+    .responsive-table.table-responsive {
+        overflow-x: hidden !important;
+    }
 }
-
 /* --- ESTILOS PARA EL MENÚ HAMBURGUESA EN ADMIN --- */
 #btnMenuHamburguesa {
   font-size: 1.5rem;
@@ -126,51 +86,48 @@ body {
   border-color: #243446;
   color: white;
 }
-#btnMenuHamburguesa:hover,
-#btnMenuHamburguesa:focus {
+#btnMenuHamburguesa:hover, #btnMenuHamburguesa:focus {
   background-color: #1e2a3a;
   border-color: #1e2a3a;
   box-shadow: 0 0 0 0.2rem rgba(36, 52, 70, 0.25);
 }
-
 #adminMenu {
-  z-index: 1000;
-  position: absolute;
-  background-color: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  min-width: 160px;
+    z-index: 1000;
+    position: absolute;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    min-width: 160px;
 }
 #adminMenu .admin-menu-item {
-  border: none;
-  border-radius: 0;
-  text-align: left;
+    border: none;
+    border-radius: 0;
+    text-align: left;
 }
 #adminMenu .admin-menu-item:first-child {
-  border-top-left-radius: calc(0.375rem - 1px);
-  border-top-right-radius: calc(0.375rem - 1px);
+    border-top-left-radius: calc(0.375rem - 1px);
+    border-top-right-radius: calc(0.375rem - 1px);
 }
 #adminMenu .admin-menu-item:last-child {
-  border-bottom-left-radius: calc(0.375rem - 1px);
-  border-bottom-right-radius: calc(0.375rem - 1px);
+    border-bottom-left-radius: calc(0.375rem - 1px);
+    border-bottom-right-radius: calc(0.375rem - 1px);
 }
 #adminMenu .admin-menu-item:hover {
-  background-color: #f8f9fa;
+    background-color: #f8f9fa;
 }
 #adminMenu .admin-menu-item.active {
-  background-color: #243446;
-  color: white;
-  border-color: #243446;
+    background-color: #243446;
+    color: white;
+    border-color: #243446;
 }
-
 #viewAdmin .card {
-  position: relative;
+    position: relative;
 }
-
 /* Ajuste: Ocultar vistas no activas en React */
-.view:not(.active-react) { display: none; }
-.admin-tab:not(.active-react) { display: none; }
-
-/* Utilidades adicionales */
-.text-muted { color: #6c757d; }
+.view:not(.active-react) {
+    display: none;
+}
+.admin-tab:not(.active-react) {
+    display: none;
+}
