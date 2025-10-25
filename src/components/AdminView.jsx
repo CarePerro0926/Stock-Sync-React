@@ -55,7 +55,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     }
   };
 
-  // ✅ Proveedores
+  // Proveedores
   const handleAddProveedorLocal = async (proveedor) => {
     try {
       await providerService.create(proveedor);
