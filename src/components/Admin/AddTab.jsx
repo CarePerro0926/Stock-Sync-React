@@ -62,7 +62,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     setNuevoProveedor({ ...nuevoProveedor, [name]: value });
   };
 
-  // ✅ Manejar selección de categorías (checkboxes)
+  //  Manejar selección de categorías (checkboxes)
   const toggleCategoriaProveedor = (idCategoria) => {
     setNuevoProveedor(prev => {
       const categorias = prev.categorias;
@@ -150,65 +150,68 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
 
       <hr className="my-4" />
 
-      {/* Agregar Proveedor */}
-      <h5>Agregar Proveedor</h5>
-      <form onSubmit={handleAddProveedorSubmit}>
-        <div className="mb-2">
-          <input
-            type="text"
-            className="form-control"
-            name="nombre"
-            placeholder="Nombre del proveedor"
-            value={nuevoProveedor.nombre}
-            onChange={handleProveedorChange}
-            required
-          />
-        </div>
-        <div className="mb-2">
-          <input
-            type="email"
-            className="form-control"
-            name="email"
-            placeholder="Correo electrónico"
-            value={nuevoProveedor.email}
-            onChange={handleProveedorChange}
-            required
-          />
-        </div>
-        <div className="mb-2">
-          <input
-            type="text"
-            className="form-control"
-            name="telefono"
-            placeholder="Teléfono (opcional)"
-            value={nuevoProveedor.telefono}
-            onChange={handleProveedorChange}
-          />
-        </div>
+{/* Agregar Proveedor */}
+<h5>Agregar Proveedor</h5>
+<form onSubmit={handleAddProveedorSubmit}>
+  <div className="mb-2">
+    <input
+      type="text"
+      className="form-control"
+      name="nombre"
+      placeholder="Nombre del proveedor"
+      value={nuevoProveedor.nombre}
+      onChange={handleProveedorChange}
+      required
+    />
+  </div>
+  <div className="mb-2">
+    <input
+      type="email"
+      className="form-control"
+      name="email"
+      placeholder="Correo electrónico"
+      value={nuevoProveedor.email}
+      onChange={handleProveedorChange}
+      required
+    />
+  </div>
+  <div className="mb-2">
+    <input
+      type="text"
+      className="form-control"
+      name="telefono"
+      placeholder="Teléfono (opcional)"
+      value={nuevoProveedor.telefono}
+      onChange={handleProveedorChange}
+    />
+  </div>
 
-        {/* ✅ Selección múltiple de categorías */}
-        <div className="mb-3">
-          <label className="form-label">Categorías que surte</label>
-          <div className="d-flex flex-wrap gap-2">
-            {categorias.map(cat => (
-              <div key={cat.id} className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id={`cat-${cat.id}`}
-                  checked={nuevoProveedor.categorias.includes(cat.id)}
-                  onChange={() => toggleCategoriaProveedor(cat.id)}
-                />
-                <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                  {cat.nombre}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+  {/* ✅ Selección múltiple con <select multiple> */}
+  <div className="mb-3">
+    <label className="form-label">Categorías que surte</label>
+    <select
+      className="form-control"
+      multiple
+      value={nuevoProveedor.categorias}
+      onChange={(e) => {
+        const selected = Array.from(e.target.selectedOptions, option => Number(option.value));
+        setNuevoProveedor(prev => ({ ...prev, categorias: selected }));
+      }}
+      style={{ height: '120px' }}
+    >
+      {categorias.map(cat => (
+        <option key={cat.id} value={cat.id}>
+          {cat.nombre}
+        </option>
+      ))}
+    </select>
+    <small className="text-muted">
+      Mantén presionada Ctrl (o Cmd en Mac) para seleccionar varias.
+    </small>
+  </div>
 
-        <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
-      </form>
+  <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
+</form>
     </>
   );
 };
