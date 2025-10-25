@@ -174,29 +174,37 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* ✅ Menú desplegable compacto con selección múltiple */}
+        {/* ✅ Checkbox list para seleccionar categorías (ideal para móviles) */}
         <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
-          <select
-            className="form-control"
-            multiple
-            value={nuevoProveedor.categorias}
-            onChange={(e) => {
-              // ✅ CORRECTO: usa selectedOptions para múltiples selecciones
-              const selected = Array.from(e.target.selectedOptions, option => Number(option.value));
-              setNuevoProveedor(prev => ({ ...prev, categorias: selected }));
-            }}
-            style={{ height: '100px' }} // Altura fija con scroll
-          >
+          <div className="d-flex flex-wrap gap-2 mt-2">
             {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nombre}
-              </option>
+              <div key={cat.id} className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id={`cat-${cat.id}`}
+                  checked={nuevoProveedor.categorias.includes(cat.id)}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setNuevoProveedor(prev => {
+                      if (isChecked) {
+                        return { ...prev, categorias: [...prev.categorias, cat.id] };
+                      } else {
+                        return { ...prev, categorias: prev.categorias.filter(id => id !== cat.id) };
+                      }
+                    });
+                  }}
+                />
+                <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
+                  {cat.nombre}
+                </label>
+              </div>
             ))}
-          </select>
-          <small className="text-muted d-block mt-1">
-            Mantén presionada Ctrl (Windows/Linux) o Cmd (Mac) para seleccionar varias.
-          </small>
+          </div>
+          {categorias.length === 0 && (
+            <small className="text-muted">No hay categorías disponibles.</small>
+          )}
         </div>
 
         <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
