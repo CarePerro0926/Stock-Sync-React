@@ -110,7 +110,9 @@ const ClientView = ({ productos, carrito, setCarrito, total, onLogout, onPay }) 
                         onInput={handleInputInput} // Añadir onInput
                       />
                     </td>
-                    <td className="table-cell" dataTitle="Precio Unidad" style={{ textAlign: 'right' }}>{p.precio.toLocaleString('es-CO')}</td>
+                    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
+                          {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
+                        </td>
                   </tr>
                 );
               })
