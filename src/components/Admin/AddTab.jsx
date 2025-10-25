@@ -1,5 +1,5 @@
 // src/components/Admin/AddTab.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
   const [nuevoProducto, setNuevoProducto] = useState({
@@ -21,6 +21,27 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   });
 
   const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
+  const [searchCategoria, setSearchCategoria] = useState('');
+  const dropdownRef = useRef(null);
+  const searchRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowCategoriaDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Focus input when opening dropdown
+  useEffect(() => {
+    if (showCategoriaDropdown && searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, [showCategoriaDropdown]);
 
   // Manejadores de producto
   const handleProductoChange = (e) => {
@@ -79,6 +100,8 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     }
     onAddProveedor({ nombre, email, telefono, categorias });
     setNuevoProveedor({ nombre: '', email: '', telefono: '', categorias: [] });
+    setSearchCategoria('');
+    setShowCategoriaDropdown(false);
   };
 
   const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
@@ -87,6 +110,11 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const categoriasSeleccionadas = categorias
     .filter(cat => nuevoProveedor.categorias.includes(cat.id))
     .map(cat => cat.nombre);
+
+  // Filtrado por búsqueda (case-insensitive)
+  const categoriesFiltered = categorias.filter(cat =>
+    cat.nombre.toLowerCase().includes(searchCategoria.trim().toLowerCase())
+  );
 
   return (
     <>
@@ -187,41 +215,55 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* ✅ Dropdown con checkboxes (funciona en móvil) */}
-        <div className="mb-3">
+        {/* Dropdown con checkboxes y búsqueda (móvil friendly) */}
+        <div className="mb-3" ref={dropdownRef} style={{ position: 'relative' }}>
           <label className="form-label">Categorías que surte</label>
-          <div className="dropdown" style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className="form-control text-start d-flex justify-content-between align-items-center"
-              onClick={() => setShowCategoriaDropdown(!showCategoriaDropdown)}
-              style={{ cursor: 'pointer' }}
-            >
-              {categoriasSeleccionadas.length > 0
-                ? categoriasSeleccionadas.join(', ')
-                : 'Seleccionar categorías'}
-              <span>▼</span>
-            </button>
 
-            {showCategoriaDropdown && (
-              <div
-                className="dropdown-menu show"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  zIndex: 1000,
-                  backgroundColor: 'white',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '0.375rem',
-                  padding: '0.5rem'
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {categorias.map(cat => (
+          <button
+            type="button"
+            className="form-control text-start d-flex justify-content-between align-items-center"
+            onClick={() => setShowCategoriaDropdown(s => !s)}
+            style={{ cursor: 'pointer' }}
+            aria-expanded={showCategoriaDropdown}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '85%' }}>
+              {categoriasSeleccionadas.length > 0 ? categoriasSeleccionadas.join(', ') : 'Seleccionar categorías'}
+            </span>
+            <span style={{ marginLeft: '0.5rem' }}>▾</span>
+          </button>
+
+          {showCategoriaDropdown && (
+            <div
+              className="dropdown-menu show"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                maxHeight: '240px',
+                overflowY: 'auto',
+                zIndex: 1000,
+                backgroundColor: 'white',
+                border: '1px solid #dee2e6',
+                borderRadius: '0.375rem',
+                padding: '0.5rem'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ marginBottom: '0.5rem' }}>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  className="form-control"
+                  placeholder="Buscar categoría..."
+                  value={searchCategoria}
+                  onChange={(e) => setSearchCategoria(e.target.value)}
+                  aria-label="Buscar categoría"
+                />
+              </div>
+
+              <div>
+                {categoriesFiltered.length > 0 ? categoriesFiltered.map(cat => (
                   <div key={cat.id} className="form-check" style={{ margin: '0.25rem 0' }}>
                     <input
                       className="form-check-input"
@@ -234,10 +276,12 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
                       {cat.nombre}
                     </label>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-muted" style={{ padding: '0.5rem' }}>No hay categorías.</div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
