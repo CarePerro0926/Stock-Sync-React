@@ -1,232 +1,222 @@
-// src/components/ClientView.jsx
-import React, { useState, useMemo } from 'react';
-import { usePayment } from '../hooks/usePayment'; // ✅ Importa el hook
-import { filtroProductos } from '../utils/helpers';
+// src/components/AdminView.jsx
+import React, { useState, useEffect } from 'react';
+import { productService } from '../services/productService';
+import { providerService } from '../services/providerService';
+import { categoryService } from '../services/categoryService';
+import InventoryTab from './Admin/InventoryTab';
+import AddTab from './Admin/AddTab';
+import DeleteTab from './Admin/DeleteTab';
+import ProvidersTab from './Admin/ProvidersTab';
+import UpdateTab from './Admin/UpdateTab';
 
-const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
-  const [filtroCat, setFiltroCat] = useState('Todas');
-  const [filtroTxt, setFiltroTxt] = useState('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
+const AdminView = ({
+  productos,
+  proveedores,
+  categorias,
+  onAddProducto,
+  onDeleteProducto,
+  onAddProveedor,
+  onAddCategoria,
+  onDeleteCategoria,
+  onLogout
+}) => {
+  const [vistaActiva, setVistaActiva] = useState('inventory');
+  const [showMenu, setShowMenu] = useState(false);
 
-  // ✅ Usa el hook de pago
-  const {
-    showCreditCardModal,
-    showConfirmationModal,
-    confirmationData,
-    handlePayCard,
-    handlePayEfecty,
-    handlePayCardConfirm,
-    closeModals
-  } = usePayment(() => setCarrito([])); // Limpia el carrito al pagar
-
-  const total = carrito.reduce((sum, item) => sum + item.precio, 0);
-
-  const categorias = useMemo(() => {
-    const cats = [...new Set(productos.map(p => p.categoria))];
-    return ['Todas', ...cats];
-  }, [productos]);
-
-  const productosFiltrados = useMemo(() => {
-    return filtroProductos(productos, filtroTxt, filtroCat);
-  }, [productos, filtroTxt, filtroCat]);
-
-  const handleQuantityChange = (productoId, precioUnitario) => (e) => {
-    const cantidad = parseInt(e.target.value) || 0;
-    setCarrito(prevCarrito => {
-      const idx = prevCarrito.findIndex(item => item.id === productoId);
-      let newCarrito = [...prevCarrito];
-
-      if (cantidad > 0) {
-        if (idx > -1) {
-          newCarrito[idx] = { ...newCarrito[idx], cantidad, precio: precioUnitario * cantidad };
-        } else {
-          newCarrito.push({ id: productoId, cantidad, precio: precioUnitario * cantidad });
-        }
-      } else {
-        if (idx > -1) {
-          newCarrito.splice(idx, 1);
-        }
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (showMenu && !e.target.closest('#adminMenu') && !e.target.closest('#btnMenuHamburguesa')) {
+        setShowMenu(false);
       }
-      return newCarrito;
-    });
-  };
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [showMenu]);
 
-  const handleInputFocus = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
+  // Productos
+  const handleAddProductoLocal = async (producto) => {
+    try {
+      await productService.create(producto);
+      onAddProducto();
+    } catch (error) {
+      console.error('Error al agregar producto:', error);
+      alert('Error al guardar el producto');
     }
   };
 
-  const handleInputInput = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
+  const handleDeleteProductoLocal = async (id) => {
+    try {
+      await productService.remove(id);
+      onDeleteProducto(id);
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      alert('Error al eliminar el producto');
+    }
+  };
+
+  // Actualizar producto
+  const handleUpdateProductoLocal = async (productoActualizado) => {
+    try {
+      await productService.update(productoActualizado);
+      onAddProducto(); // recarga la lista completa
+    } catch (error) {
+      console.error('Error al actualizar producto:', error);
+      alert('Error al actualizar el producto');
+    }
+  };
+
+  // Proveedores
+  const handleAddProveedorLocal = async (proveedor) => {
+    try {
+      await providerService.create(proveedor);
+      onAddProveedor();
+    } catch (error) {
+      console.error('Error al agregar proveedor:', error);
+      alert('Error al registrar el proveedor');
+    }
+  };
+
+  const handleDeleteProveedorLocal = async (id) => {
+    try {
+      await providerService.remove(id);
+      onAddProveedor();
+    } catch (error) {
+      console.error('Error al eliminar proveedor:', error);
+      alert('Error al eliminar el proveedor');
+    }
+  };
+
+  // Categorías
+  const handleAddCategoriaLocal = async (nombre) => {
+    try {
+      await categoryService.create(nombre);
+      onAddCategoria();
+    } catch (error) {
+      console.error('Error al agregar categoría:', error);
+      alert('Error al agregar la categoría');
+    }
+  };
+
+  const handleDeleteCategoriaLocal = async (id) => {
+    try {
+      await categoryService.remove(id);
+      onDeleteCategoria(id);
+    } catch (error) {
+      console.error('Error al eliminar categoría:', error);
+      alert('Error al eliminar la categoría');
+    }
+  };
+
+  const toggleMenu = () => setShowMenu((s) => !s);
+  const selectTab = (tabId) => {
+    setVistaActiva(tabId);
+    setShowMenu(false);
+  };
+
+  const getTitle = () => {
+    switch (vistaActiva) {
+      case 'inventory': return 'Inventario';
+      case 'add': return 'Agregar';
+      case 'update': return 'Actualizar';
+      case 'delete': return 'Eliminar';
+      case 'providers': return 'Proveedores';
+      default: return 'Panel Administrador';
     }
   };
 
   return (
     <div className="card p-4">
-      <h4 className="text-dark">Catálogo de Productos</h4>
-      <div className="row g-2 mb-3">
-        <div className="col">
-          <select id="filtroCat" className="form-select" value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+      <h4 className="mb-3">Panel Administrador</h4>
+
+      {/* Header móvil */}
+      <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
+        <button id="btnMenuHamburguesa" className="btn btn-primary me-3" onClick={toggleMenu}>&#9776;</button>
+        <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
+      </div>
+
+      {/* Menú móvil */}
+      {showMenu && (
+        <div id="adminMenu" className="list-group mb-3 d-md-none">
+          <button className="list-group-item" onClick={() => selectTab('inventory')}>Inventario</button>
+          <button className="list-group-item" onClick={() => selectTab('add')}>Agregar</button>
+          <button className="list-group-item" onClick={() => selectTab('update')}>Actualizar</button>
+          <button className="list-group-item" onClick={() => selectTab('delete')}>Eliminar</button>
+          <button className="list-group-item" onClick={() => selectTab('providers')}>Proveedores</button>
         </div>
-        <div className="col">
-          <input
-            id="filtroTxt"
-            className="form-control"
-            placeholder="Buscar..."
-            value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
+      )}
+
+      {/* Tabs escritorio */}
+      <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>Inventario</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>Agregar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>Actualizar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>Eliminar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button>
+        </li>
+      </ul>
+
+      {/* Vistas */}
+      {vistaActiva === 'inventory' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <InventoryTab productos={productos} />
+        </div>
+      )}
+
+      {vistaActiva === 'add' && (
+        <AddTab
+          onAddProducto={handleAddProductoLocal}
+          onAddCategoria={handleAddCategoriaLocal}
+          onAddProveedor={handleAddProveedorLocal}
+          proveedores={proveedores || []}
+          categorias={categorias || []}
+        />
+      )}
+
+      {vistaActiva === 'update' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <UpdateTab
+            productos={productos}
+            onUpdateProducto={handleUpdateProductoLocal}
+            categorias={(categorias || []).map(c => (c && c.nombre ? c.nombre : c)).filter(Boolean)}
           />
         </div>
-      </div>
-      <div className="table-responsive responsive-table" style={{ maxHeight: '300px', overflow: 'auto' }}>
-        <table className="table table-bordered table-sm mb-0">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th>Stock</th>
-              <th style={{ width: '60px' }}>Cantidad</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
-            </tr>
-          </thead>
-          <tbody id="tblClient">
-            {productosFiltrados.length === 0 ? (
-              <tr><td colSpan="6" className="text-center">No se encontraron productos.</td></tr>
-            ) : (
-              productosFiltrados.map(p => {
-                const itemCarrito = carrito.find(item => item.id === p.id);
-                const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
+      )}
 
-// reemplaza este bloque dentro de productosFiltrados.map(...)
-return (
-  <tr key={p.id} className="table-row">
-    <td className="table-cell" data-title="ID">{p.id}</td>
-    <td className="table-cell" data-title="Nombre">{p.nombre}</td>
-    <td className="table-cell" data-title="Categoria">{p.categoria}</td>
-    <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-    <td className="table-cell qty-input-container" data-title="Cantidad">
-      <input
-        type="number"
-        min="0"
-        className="form-control form-control-sm qty-input"
-        id={`qty-${p.id}`}
-        data-id={p.id}
-        data-precio={p.precio}
-        value={cantidadActual > 0 ? cantidadActual : ''}
-        placeholder="0"
-        onChange={handleQuantityChange(p.id, p.precio)}
-        onFocus={handleInputFocus}
-        onInput={handleInputInput}
-      />
-    </td>
-    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-    </td>
-  </tr>
-);
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="d-flex flex-wrap align-items-center mt-3">
-        <strong style={{ fontSize: '1.3em' }} className="me-auto">
-          <span style={{ color: '#FF4500' }}>Total: $</span>
-          <span id="totalLbl" style={{ color: '#222' }}>{total.toLocaleString('es-CO')} COP</span>
-        </strong>
-        <div>
-          {/* ✅ Reemplaza el alert por la apertura del modal de pago */}
-          <button onClick={() => setShowPaymentModal(true)} id="btnPay" className="btn btn-success me-2">Pagar</button>
-          <button onClick={onLogout} id="btnLogout" className="btn btn-danger">Cerrar Sesión</button>
-        </div>
-      </div>
-
-      {/* ✅ Modal de selección de método de pago */}
-      {showPaymentModal && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content p-4">
-              <div className="modal-header border-0 pb-0">
-                <h5 className="modal-title text-primary w-100 text-center">Método de Pago</h5>
-                <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)}></button>
-              </div>
-              <div className="modal-body px-0 pt-3 pb-4">
-                <button onClick={() => { handlePayCard(); setShowPaymentModal(false); }} id="payCard" className="btn btn-dark w-100 mb-2">Tarjeta</button>
-                <button onClick={() => { handlePayEfecty(); setShowPaymentModal(false); }} id="payEfecty" className="btn btn-success w-100">Consignación en Efecty</button>
-              </div>
-            </div>
-          </div>
+      {vistaActiva === 'delete' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <DeleteTab
+            productos={productos}
+            categorias={categorias || []}
+            onDeleteProducto={handleDeleteProductoLocal}
+            onDeleteProveedor={handleDeleteProveedorLocal}
+            onDeleteCategoria={handleDeleteCategoriaLocal}
+          />
         </div>
       )}
 
-      {/* ✅ Modal de tarjeta */}
-      {showCreditCardModal && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content p-4">
-              <div className="modal-header border-0 pb-0">
-                <h5 className="modal-title text-primary w-100 text-center">Agregar Tarjeta</h5>
-                <button type="button" className="btn-close" onClick={closeModals}></button>
-              </div>
-              <div className="modal-body px-0 pt-3 pb-4">
-                <div className="mb-3">
-                  <label className="form-label">Número de tarjeta</label>
-                  <input type="text" className="form-control" placeholder="1234 5678 9012 3456" />
-                </div>
-                <div className="row g-2 mb-3">
-                  <div className="col-6">
-                    <label className="form-label">Fecha de vencimiento</label>
-                    <input type="text" className="form-control" placeholder="MM/AA" />
-                  </div>
-                  <div className="col-6">
-                    <label className="form-label">CVC</label>
-                    <input type="text" className="form-control" placeholder="123" />
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Nombre del titular</label>
-                  <input type="text" className="form-control" placeholder="Juan Pérez" />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Tipo de tarjeta</label>
-                  <select className="form-select">
-                    <option>Visa</option>
-                    <option>Mastercard</option>
-                    <option>American Express</option>
-                    <option>Diners Club</option>
-                  </select>
-                </div>
-                <button onClick={handlePayCardConfirm} className="btn btn-primary w-100">Pagar con tarjeta</button>
-              </div>
-            </div>
-          </div>
+      {vistaActiva === 'providers' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <ProvidersTab
+            proveedores={proveedores}
+            onAddProveedor={handleAddProveedorLocal}
+          />
         </div>
       )}
 
-      {/* ✅ Modal de confirmación (Efecty) */}
-      {showConfirmationModal && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content p-4">
-              <div className="modal-header border-0 pb-0">
-                <h5 className="modal-title text-primary w-100 text-center">{confirmationData.title}</h5>
-                <button type="button" className="btn-close" onClick={closeModals}></button>
-              </div>
-              <div className="modal-body px-0 pt-3 pb-4">
-                <div dangerouslySetInnerHTML={{ __html: confirmationData.body }} />
-                <button onClick={closeModals} className="btn btn-secondary w-100 mt-3">Cerrar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="text-end mt-3">
+        <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
+      </div>
     </div>
   );
 };
 
-export default ClientView;
+export default AdminView;
