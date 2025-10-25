@@ -174,37 +174,38 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* ✅ Checkbox list para seleccionar categorías (ideal para móviles) */}
+        {/* ✅ CHECKBOXES PARA CATEGORÍAS (ideal para móviles) */}
         <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
-          <div className="d-flex flex-wrap gap-2 mt-2">
-            {categorias.map(cat => (
-              <div key={cat.id} className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id={`cat-${cat.id}`}
-                  checked={nuevoProveedor.categorias.includes(cat.id)}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    setNuevoProveedor(prev => {
-                      if (isChecked) {
-                        return { ...prev, categorias: [...prev.categorias, cat.id] };
-                      } else {
-                        return { ...prev, categorias: prev.categorias.filter(id => id !== cat.id) };
-                      }
-                    });
-                  }}
-                />
-                <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                  {cat.nombre}
-                </label>
-              </div>
-            ))}
+          <div className="d-flex flex-column gap-2 mt-2">
+            {categorias.length > 0 ? (
+              categorias.map(cat => (
+                <div key={cat.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`cat-${cat.id}`}
+                    checked={nuevoProveedor.categorias.includes(cat.id)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setNuevoProveedor(prev => {
+                        if (isChecked) {
+                          return { ...prev, categorias: [...prev.categorias, cat.id] };
+                        } else {
+                          return { ...prev, categorias: prev.categorias.filter(id => id !== cat.id) };
+                        }
+                      });
+                    }}
+                  />
+                  <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
+                    {cat.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay categorías disponibles.</small>
+            )}
           </div>
-          {categorias.length === 0 && (
-            <small className="text-muted">No hay categorías disponibles.</small>
-          )}
         </div>
 
         <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
