@@ -23,7 +23,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     return () => document.removeEventListener('click', handleClick);
   }, [showMenu]);
 
-  // ✅ Productos
+  // Productos
   const handleAddProductoLocal = async (producto) => {
     try {
       await productService.create(producto);
@@ -44,7 +44,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     }
   };
 
-  // ✅ Actualizar producto — ¡ESTA ERA LA FALTA!
+  // Actualizar producto
   const handleUpdateProductoLocal = async (productoActualizado) => {
     try {
       await productService.update(productoActualizado);
@@ -76,7 +76,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     }
   };
 
-  // ✅ Categorías
+  // Categorías
   const handleAddCategoriaLocal = async (nombre) => {
     try {
       await categoryService.create(nombre);
@@ -117,7 +117,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
   return (
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
-      
+
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button id="btnMenuHamburguesa" className="btn btn-primary me-3" onClick={toggleMenu}>&#9776;</button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
@@ -141,37 +141,55 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
         <li className="nav-item"><button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button></li>
       </ul>
 
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
+      {/* Wrappers .responsive-table para asegurar que el CSS responsivo funcione en móvil.
+          Muchos tabs renderizan tablas internamente; envolverlos en este contenedor garantiza
+          que la clase responsive-table esté presente si el tab no la incluye internamente. */}
+      {vistaActiva === 'inventory' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <InventoryTab productos={productos} />
+        </div>
+      )}
+
       {vistaActiva === 'add' && (
-        <AddTab 
-          onAddProducto={handleAddProductoLocal} 
+        // AddTab no necesariamente contiene tablas, lo renderizamos directo
+        <AddTab
+          onAddProducto={handleAddProductoLocal}
           onAddCategoria={handleAddCategoriaLocal}
           onAddProveedor={handleAddProveedorLocal}
-          proveedores={proveedores || []} 
-          categorias={categorias || []} 
-        />
-      )}
-      {vistaActiva === 'update' && (
-        <UpdateTab 
-          productos={productos} 
-          onUpdateProducto={handleUpdateProductoLocal} 
-          categorias={(categorias || []).map(c => c && c.nombre ? c.nombre : c).filter(Boolean)} 
-        />
-      )}
-      {vistaActiva === 'delete' && (
-        <DeleteTab 
-          productos={productos} 
+          proveedores={proveedores || []}
           categorias={categorias || []}
-          onDeleteProducto={handleDeleteProductoLocal}
-          onDeleteProveedor={handleDeleteProveedorLocal}
-          onDeleteCategoria={handleDeleteCategoriaLocal}
         />
       )}
+
+      {vistaActiva === 'update' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <UpdateTab
+            productos={productos}
+            onUpdateProducto={handleUpdateProductoLocal}
+            categorias={(categorias || []).map(c => c && c.nombre ? c.nombre : c).filter(Boolean)}
+          />
+        </div>
+      )}
+
+      {vistaActiva === 'delete' && (
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <DeleteTab
+            productos={productos}
+            categorias={categorias || []}
+            onDeleteProducto={handleDeleteProductoLocal}
+            onDeleteProveedor={handleDeleteProveedorLocal}
+            onDeleteCategoria={handleDeleteCategoriaLocal}
+          />
+        </div>
+      )}
+
       {vistaActiva === 'providers' && (
-        <ProvidersTab 
-          proveedores={proveedores} 
-          onAddProveedor={handleAddProveedorLocal} 
-        />
+        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
+          <ProvidersTab
+            proveedores={proveedores}
+            onAddProveedor={handleAddProveedorLocal}
+          />
+        </div>
       )}
 
       <div className="text-end mt-3">
