@@ -1,4 +1,4 @@
-imppo// src/components/Admin/AddTab.jsx
+// src/components/Admin/AddTab.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
 const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
