@@ -164,3 +164,44 @@ body {
 
 /* Utilidades finales */
 .text-muted { color: #6c757d; }
+
+/* mobile card rows dentro de InventoryTab */
+.inventory-card {
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  background: #fff;
+  border: 1px solid #e9ecef;
+}
+
+/* fila label/value */
+.inventory-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+/* label: reservar hasta 45% y permitir salto de linea si es necesario */
+.inventory-row .label {
+  flex: 0 0 45%;
+  color: #6c757d;
+  font-weight: 600;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* valor: ocupa el resto, alinea a la derecha si es numérico */
+.inventory-row .value {
+  flex: 1 1 55%;
+  text-align: right;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* para textos largos en pantallas muy pequeñas ajusta */
+@media (max-width: 360px) {
+  .inventory-row .label { flex-basis: 50%; font-size: 0.95rem; }
+  .inventory-row .value { font-size: 0.95rem; }
+}
