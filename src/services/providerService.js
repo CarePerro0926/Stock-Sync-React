@@ -7,13 +7,17 @@ export const providerService = {
     return r.data;
   }),
 
-  create: (proveedor) => supabase.from('proveedores').insert({
-    nombre: proveedor.nombre,
-    email: proveedor.email,
-    telefono: proveedor.phone || ''
-  }).then(r => {
-    if (r.error) throw r.error;
-  }),
+  create: (proveedor) => {
+    // Asegúrate de que la tabla 'proveedores' tenga una columna 'categorias'
+    return supabase.from('proveedores').insert({
+      nombre: proveedor.nombre,
+      email: proveedor.email,
+      telefono: proveedor.telefono || '',
+      categorias: proveedor.categorias || [] // ← ¡Este campo es clave!
+    }).then(r => {
+      if (r.error) throw r.error;
+    });
+  },
 
   remove: (id) => supabase.from('proveedores').delete().eq('id', id).then(r => {
     if (r.error) throw r.error;
