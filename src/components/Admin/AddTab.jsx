@@ -20,7 +20,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     nombre: '',
     email: '',
     telefono: '',
-    categorias: [] // Array de IDs de categorías seleccionadas
+    categorias: [] // ✅ Array de IDs de categorías seleccionadas
   });
 
   // Manejadores de producto
@@ -60,6 +60,18 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
     setNuevoProveedor({ ...nuevoProveedor, [name]: value });
+  };
+
+  //  Manejar selección de categorías (checkboxes)
+  const toggleCategoriaProveedor = (idCategoria) => {
+    setNuevoProveedor(prev => {
+      const categorias = prev.categorias;
+      if (categorias.includes(idCategoria)) {
+        return { ...prev, categorias: categorias.filter(id => id !== idCategoria) };
+      } else {
+        return { ...prev, categorias: [...categorias, idCategoria] };
+      }
+    });
   };
 
   const handleAddProveedorSubmit = (e) => {
@@ -174,28 +186,25 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* Selección múltiple de categorías con <select multiple> */}
+        {/* ✅ Selección múltiple de categorías */}
         <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
-          <select
-            className="form-control"
-            multiple
-            value={nuevoProveedor.categorias}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => Number(option.value));
-              setNuevoProveedor(prev => ({ ...prev, categorias: selected }));
-            }}
-            style={{ height: '120px' }}
-          >
+          <div className="d-flex flex-wrap gap-2">
             {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nombre}
-              </option>
+              <div key={cat.id} className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id={`cat-${cat.id}`}
+                  checked={nuevoProveedor.categorias.includes(cat.id)}
+                  onChange={() => toggleCategoriaProveedor(cat.id)}
+                />
+                <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
+                  {cat.nombre}
+                </label>
+              </div>
             ))}
-          </select>
-          <small className="text-muted d-block mt-1">
-            Mantén presionada Ctrl (o Cmd en Mac) para seleccionar varias.
-          </small>
+          </div>
         </div>
 
         <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
