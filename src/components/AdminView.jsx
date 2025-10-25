@@ -146,6 +146,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
         <AddTab 
           onAddProducto={handleAddProductoLocal} 
           onAddCategoria={handleAddCategoriaLocal}
+          onAddProveedor={handleAddProveedorLocal}
           proveedores={proveedores || []} 
           categorias={categorias || []} 
         />

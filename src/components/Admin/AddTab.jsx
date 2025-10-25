@@ -1,7 +1,8 @@
 // src/components/Admin/AddTab.jsx
 import React, { useState } from 'react';
 
-const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = [] }) => {
+const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
+  // Estados para producto
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
@@ -10,8 +11,18 @@ const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = 
     precio: '',
     provider_id: ''
   });
+
+  // Estado para nueva categoría
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
+  // Estado para nuevo proveedor
+  const [nuevoProveedor, setNuevoProveedor] = useState({
+    nombre: '',
+    email: '',
+    telefono: ''
+  });
+
+  // Manejadores de producto
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
     setNuevoProducto({
@@ -33,6 +44,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = 
     setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
   };
 
+  // Manejador de categoría
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -43,10 +55,28 @@ const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = 
     setNuevaCategoria('');
   };
 
+  // Manejadores de proveedor
+  const handleProveedorChange = (e) => {
+    const { name, value } = e.target;
+    setNuevoProveedor({ ...nuevoProveedor, [name]: value });
+  };
+
+  const handleAddProveedorSubmit = (e) => {
+    e.preventDefault();
+    const { nombre, email, telefono } = nuevoProveedor;
+    if (!nombre || !email) {
+      alert('Por favor completa al menos nombre y correo del proveedor.');
+      return;
+    }
+    onAddProveedor({ nombre, email, telefono });
+    setNuevoProveedor({ nombre: '', email: '', telefono: '' });
+  };
+
   const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
 
   return (
     <>
+      {/* Agregar Producto */}
       <h5>Agregar Producto</h5>
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
@@ -86,8 +116,9 @@ const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = 
 
       <hr className="my-4" />
 
+      {/* Agregar Categoría */}
       <h5>Agregar Categoría</h5>
-      <form onSubmit={handleAddCategoriaSubmit}>
+      <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
             <input
@@ -102,6 +133,46 @@ const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = 
             <button type="submit" className="btn btn-info w-100">Agregar Categoría</button>
           </div>
         </div>
+      </form>
+
+      <hr className="my-4" />
+
+      {/* Agregar Proveedor */}
+      <h5>Agregar Proveedor</h5>
+      <form onSubmit={handleAddProveedorSubmit}>
+        <div className="mb-2">
+          <input
+            type="text"
+            className="form-control"
+            name="nombre"
+            placeholder="Nombre del proveedor"
+            value={nuevoProveedor.nombre}
+            onChange={handleProveedorChange}
+            required
+          />
+        </div>
+        <div className="mb-2">
+          <input
+            type="email"
+            className="form-control"
+            name="email"
+            placeholder="Correo electrónico"
+            value={nuevoProveedor.email}
+            onChange={handleProveedorChange}
+            required
+          />
+        </div>
+        <div className="mb-2">
+          <input
+            type="text"
+            className="form-control"
+            name="telefono"
+            placeholder="Teléfono (opcional)"
+            value={nuevoProveedor.telefono}
+            onChange={handleProveedorChange}
+          />
+        </div>
+        <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
       </form>
     </>
   );
