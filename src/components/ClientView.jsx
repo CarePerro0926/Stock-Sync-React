@@ -1,10 +1,25 @@
-// src/components/ClientView.js
+// src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
+import { usePayment } from '../hooks/usePayment'; // ✅ Importa el hook
 import { filtroProductos } from '../utils/helpers';
 
-const ClientView = ({ productos, carrito, setCarrito, total, onLogout, onPay }) => {
+const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
+
+  // ✅ Usa el hook de pago
+  const {
+    showCreditCardModal,
+    showConfirmationModal,
+    confirmationData,
+    handlePayCard,
+    handlePayEfecty,
+    handlePayCardConfirm,
+    closeModals
+  } = usePayment(() => setCarrito([])); // Limpia el carrito al pagar
+
+  const total = carrito.reduce((sum, item) => sum + item.precio, 0);
 
   const categorias = useMemo(() => {
     const cats = [...new Set(productos.map(p => p.categoria))];
@@ -36,14 +51,12 @@ const ClientView = ({ productos, carrito, setCarrito, total, onLogout, onPay }) 
     });
   };
 
-  // Esta función maneja el comportamiento de eliminar '0' al enfocar el input
   const handleInputFocus = (e) => {
     if (e.target.value === '0' || e.target.value === 0) {
       e.target.value = '';
     }
   };
 
-  // Esta función maneja el comportamiento de eliminar '0' mientras se escribe
   const handleInputInput = (e) => {
     if (e.target.value === '0' || e.target.value === 0) {
       e.target.value = '';
@@ -100,19 +113,19 @@ const ClientView = ({ productos, carrito, setCarrito, total, onLogout, onPay }) 
                         type="number"
                         min="0"
                         className="form-control form-control-sm qty-input"
-                        id={`qty-${p.id}`} // ID único por producto
-                        data-id={p.id} // Usar data-id para identificar el producto
-                        data-precio={p.precio} // Usar data-precio para el cálculo
+                        id={`qty-${p.id}`}
+                        data-id={p.id}
+                        data-precio={p.precio}
                         value={cantidadActual > 0 ? cantidadActual : ''}
                         placeholder="0"
                         onChange={handleQuantityChange(p.id, p.precio)}
-                        onFocus={handleInputFocus} // Añadir onFocus
-                        onInput={handleInputInput} // Añadir onInput
+                        onFocus={handleInputFocus}
+                        onInput={handleInputInput}
                       />
                     </td>
                     <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-                          {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-                        </td>
+                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
+                    </td>
                   </tr>
                 );
               })
@@ -126,10 +139,91 @@ const ClientView = ({ productos, carrito, setCarrito, total, onLogout, onPay }) 
           <span id="totalLbl" style={{ color: '#222' }}>{total.toLocaleString('es-CO')} COP</span>
         </strong>
         <div>
-          <button onClick={onPay} id="btnPay" className="btn btn-success me-2">Pagar</button>
+          {/* ✅ Reemplaza el alert por la apertura del modal de pago */}
+          <button onClick={() => setShowPaymentModal(true)} id="btnPay" className="btn btn-success me-2">Pagar</button>
           <button onClick={onLogout} id="btnLogout" className="btn btn-danger">Cerrar Sesión</button>
         </div>
       </div>
+
+      {/* ✅ Modal de selección de método de pago */}
+      {showPaymentModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content p-4">
+              <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title text-primary w-100 text-center">Método de Pago</h5>
+                <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)}></button>
+              </div>
+              <div className="modal-body px-0 pt-3 pb-4">
+                <button onClick={() => { handlePayCard(); setShowPaymentModal(false); }} id="payCard" className="btn btn-dark w-100 mb-2">Tarjeta</button>
+                <button onClick={() => { handlePayEfecty(); setShowPaymentModal(false); }} id="payEfecty" className="btn btn-success w-100">Consignación en Efecty</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Modal de tarjeta */}
+      {showCreditCardModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content p-4">
+              <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title text-primary w-100 text-center">Agregar Tarjeta</h5>
+                <button type="button" className="btn-close" onClick={closeModals}></button>
+              </div>
+              <div className="modal-body px-0 pt-3 pb-4">
+                <div className="mb-3">
+                  <label className="form-label">Número de tarjeta</label>
+                  <input type="text" className="form-control" placeholder="1234 5678 9012 3456" />
+                </div>
+                <div className="row g-2 mb-3">
+                  <div className="col-6">
+                    <label className="form-label">Fecha de vencimiento</label>
+                    <input type="text" className="form-control" placeholder="MM/AA" />
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label">CVC</label>
+                    <input type="text" className="form-control" placeholder="123" />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Nombre del titular</label>
+                  <input type="text" className="form-control" placeholder="Juan Pérez" />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Tipo de tarjeta</label>
+                  <select className="form-select">
+                    <option>Visa</option>
+                    <option>Mastercard</option>
+                    <option>American Express</option>
+                    <option>Diners Club</option>
+                  </select>
+                </div>
+                <button onClick={handlePayCardConfirm} className="btn btn-primary w-100">Pagar con tarjeta</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Modal de confirmación (Efecty) */}
+      {showConfirmationModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content p-4">
+              <div className="modal-header border-0 pb-0">
+                <h5 className="modal-title text-primary w-100 text-center">{confirmationData.title}</h5>
+                <button type="button" className="btn-close" onClick={closeModals}></button>
+              </div>
+              <div className="modal-body px-0 pt-3 pb-4">
+                <div dangerouslySetInnerHTML={{ __html: confirmationData.body }} />
+                <button onClick={closeModals} className="btn btn-secondary w-100 mt-3">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

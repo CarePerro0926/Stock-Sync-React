@@ -7,7 +7,7 @@ export async function migrarDatos() {
   const { error: errProv } = await supabase.from('proveedores').insert(initialProveedores);
   if (errProv) return console.error('❌ Proveedores:', errProv.message);
 
-  // 2. Productos → usa 'productos', no 'products'
+  // 2. Productos
   const { error: errProd } = await supabase.from('productos').insert(initialProductos);
   if (errProd) return console.error('❌ Productos:', errProd.message);
 

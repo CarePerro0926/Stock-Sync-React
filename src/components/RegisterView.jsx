@@ -1,7 +1,8 @@
-// src/components/RegisterView.js
+// src/components/RegisterView.jsx
 import React, { useState } from 'react';
+import { supabase } from '../services/supabaseClient';
 
-const RegisterView = ({ usuarios, onRegister, onShowLogin }) => {
+const RegisterView = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -18,28 +19,43 @@ const RegisterView = ({ usuarios, onRegister, onShowLogin }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const { role, email, user, pass, ...rest } = formData;
 
+    // Validación de correo para admin
     if (role === 'admin' && !email.toLowerCase().endsWith('@stocksync.com')) {
       alert('Los administradores deben registrarse con un correo @stocksync.com');
       return;
     }
 
-    if (Object.values(rest).some(v => !v)) {
+    // Validar campos obligatorios
+    if (Object.values(rest).some(v => !v) || !user || !pass || !email) {
       alert('Completa todos los campos');
       return;
     }
 
-    if (usuarios.some(u => u.user === user && u.pass === pass)) {
-      alert('Usuario ya existe');
-      return;
-    }
+    try {
+      // Guardar directamente en Supabase
+      const { error } = await supabase.from('usuarios').insert({
+        username: user,
+        pass: pass,
+        role: role === 'admin' ? 'admin' : 'client', // ajustar según tu esquema
+        nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        cedula: formData.cedula,
+        fecha_nacimiento: formData.fecha,
+        email: formData.email
+      });
 
-    onRegister({ ...formData });
-    alert('Usuario registrado');
-    onShowLogin();
+      if (error) throw error;
+
+      alert('Usuario registrado con éxito');
+      onShowLogin(); // Volver al login
+    } catch (error) {
+      console.error('Error al registrar:', error);
+      alert('Error al crear el usuario. Inténtalo de nuevo.');
+    }
   };
 
   return (

@@ -1,111 +1,105 @@
-// src/components/Admin/AddTab.js
+// src/components/Admin/AddTab.jsx
 import React, { useState } from 'react';
 
-const AddTab = ({ onAddProducto }) => {
-  const [formData, setFormData] = useState({
+const AddTab = ({ onAddProducto, onAddCategoria, proveedores = [], categorias = [] }) => {
+  const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
     categoria: '',
     cantidad: '',
-    precio: ''
+    precio: '',
+    provider_id: ''
   });
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
 
-  const handleChange = (e) => {
+  const handleProductoChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setNuevoProducto({
+      ...nuevoProducto,
+      [name]: ['cantidad', 'precio', 'provider_id'].includes(name)
+        ? value === '' ? '' : Number(value)
+        : value
+    });
   };
 
-  const handleSubmit = (e) => {
+  const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const producto = {
-      ...formData,
-      cantidad: parseInt(formData.cantidad) || 0,
-      precio: parseInt(formData.precio) || 0
-    };
-
-    if (!producto.id || !producto.nombre || !producto.categoria || producto.cantidad < 0 || producto.precio < 0) {
-      alert('Completa todos los campos correctamente.');
+    const { id, nombre, categoria, cantidad, precio, provider_id } = nuevoProducto;
+    if (!id || !nombre || !categoria || !cantidad || !precio || !provider_id) {
+      alert('Por favor completa todos los campos del producto.');
       return;
     }
-
-    // Validar si ID ya existe
-    if (producto.id && producto.id.trim() !== '') {
-        // const productosExistentes = JSON.parse(JSON.stringify(formData)); // Simula getInventario()
-        // if (productosExistentes.some(p => p.id === producto.id)) { // Simula getInventario()
-        //     alert('ID ya existe');
-        //     return;
-        // }
-        // Usamos el estado global de productos para verificar
-        if (productos.some(p => p.id === producto.id)) {
-            alert('ID ya existe');
-            return;
-        }
-    }
-
-    onAddProducto(producto);
-    setFormData({ id: '', nombre: '', categoria: '', cantidad: '', precio: '' });
-    alert('Producto agregado');
+    onAddProducto(nuevoProducto);
+    setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
   };
+
+  const handleAddCategoriaSubmit = (e) => {
+    e.preventDefault();
+    if (!nuevaCategoria.trim()) {
+      alert('Ingresa el nombre de la categoría.');
+      return;
+    }
+    onAddCategoria(nuevaCategoria.trim());
+    setNuevaCategoria('');
+  };
+
+  const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
 
   return (
     <>
       <h5>Agregar Producto</h5>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleAddProductoSubmit} className="mb-4">
+        <div className="mb-2">
+          <input type="text" className="form-control" name="id" placeholder="ID" value={nuevoProducto.id} onChange={handleProductoChange} required />
+        </div>
+        <div className="mb-2">
+          <input type="text" className="form-control" name="nombre" placeholder="Nombre" value={nuevoProducto.nombre} onChange={handleProductoChange} required />
+        </div>
+        <div className="mb-2">
+          <select className="form-control" name="categoria" value={nuevoProducto.categoria} onChange={handleProductoChange} required>
+            <option value="">Seleccionar categoría</option>
+            {categorias.map(cat => (
+              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mb-2">
+          <input type="number" className="form-control" name="cantidad" placeholder="Cantidad" value={nuevoProducto.cantidad} onChange={handleProductoChange} required />
+        </div>
+        <div className="mb-2">
+          <input type="number" className="form-control" name="precio" placeholder="Precio" value={nuevoProducto.precio} onChange={handleProductoChange} required />
+        </div>
+        <div className="mb-2">
+          <select className="form-control" name="provider_id" value={nuevoProducto.provider_id} onChange={handleProductoChange} required>
+            <option value="">Seleccionar proveedor</option>
+            {listaProveedores.length > 0 ? (
+              listaProveedores.map(prov => (
+                <option key={prov.id} value={prov.id}>{prov.nombre}</option>
+              ))
+            ) : (
+              <option disabled>No hay proveedores</option>
+            )}
+          </select>
+        </div>
+        <button type="submit" className="btn btn-success w-100">Agregar Producto</button>
+      </form>
+
+      <hr className="my-4" />
+
+      <h5>Agregar Categoría</h5>
+      <form onSubmit={handleAddCategoriaSubmit}>
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
             <input
-              name="id"
-              id="addId"
               className="form-control"
-              placeholder="ID"
-              value={formData.id}
-              onChange={handleChange}
+              placeholder="Nombre de la categoría"
+              value={nuevaCategoria}
+              onChange={(e) => setNuevaCategoria(e.target.value)}
+              required
             />
           </div>
           <div className="col-12 col-md">
-            <input
-              name="nombre"
-              id="addName"
-              className="form-control"
-              placeholder="Nombre"
-              value={formData.nombre}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-12 col-md">
-            <input
-              name="categoria"
-              id="addCat"
-              className="form-control"
-              placeholder="Categoría"
-              value={formData.categoria}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-12 col-md">
-            <input
-              name="cantidad"
-              id="addQty"
-              type="number"
-              className="form-control"
-              placeholder="Cantidad"
-              value={formData.cantidad}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-12 col-md">
-            <input
-              name="precio"
-              id="addPrice"
-              type="number"
-              className="form-control"
-              placeholder="Precio"
-              value={formData.precio}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-12 col-md">
-            <button type="submit" id="btnAddProd" className="btn btn-success w-100">Agregar</button>
+            <button type="submit" className="btn btn-info w-100">Agregar Categoría</button>
           </div>
         </div>
       </form>
