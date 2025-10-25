@@ -9,7 +9,17 @@ import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 import UpdateTab from './Admin/UpdateTab';
 
-const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onLogout }) => {
+const AdminView = ({
+  productos,
+  proveedores,
+  categorias,
+  onAddProducto,
+  onDeleteProducto,
+  onAddProveedor,
+  onAddCategoria,
+  onDeleteCategoria,
+  onLogout
+}) => {
   const [vistaActiva, setVistaActiva] = useState('inventory');
   const [showMenu, setShowMenu] = useState(false);
 
@@ -48,7 +58,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
   const handleUpdateProductoLocal = async (productoActualizado) => {
     try {
       await productService.update(productoActualizado);
-      onAddProducto(); // Recarga la lista completa
+      onAddProducto(); // recarga la lista completa
     } catch (error) {
       console.error('Error al actualizar producto:', error);
       alert('Error al actualizar el producto');
@@ -97,7 +107,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     }
   };
 
-  const toggleMenu = () => setShowMenu(!showMenu);
+  const toggleMenu = () => setShowMenu((s) => !s);
   const selectTab = (tabId) => {
     setVistaActiva(tabId);
     setShowMenu(false);
@@ -118,11 +128,13 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
 
+      {/* Header móvil */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button id="btnMenuHamburguesa" className="btn btn-primary me-3" onClick={toggleMenu}>&#9776;</button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
 
+      {/* Menú móvil */}
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none">
           <button className="list-group-item" onClick={() => selectTab('inventory')}>Inventario</button>
@@ -133,17 +145,26 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
         </div>
       )}
 
+      {/* Tabs escritorio */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
-        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>Inventario</button></li>
-        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>Agregar</button></li>
-        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>Actualizar</button></li>
-        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>Eliminar</button></li>
-        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button></li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>Inventario</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>Agregar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>Actualizar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>Eliminar</button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button>
+        </li>
       </ul>
 
-      {/* Wrappers .responsive-table para asegurar que el CSS responsivo funcione en móvil.
-          Muchos tabs renderizan tablas internamente; envolverlos en este contenedor garantiza
-          que la clase responsive-table esté presente si el tab no la incluye internamente. */}
+      {/* Vistas: asegúrate que en cada Tab las tablas usan data-title en sus <td> */}
       {vistaActiva === 'inventory' && (
         <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
           <InventoryTab productos={productos} />
@@ -151,7 +172,6 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
       )}
 
       {vistaActiva === 'add' && (
-        // AddTab no necesariamente contiene tablas, lo renderizamos directo
         <AddTab
           onAddProducto={handleAddProductoLocal}
           onAddCategoria={handleAddCategoriaLocal}
@@ -166,7 +186,7 @@ const AdminView = ({ productos, proveedores, categorias, onAddProducto, onDelete
           <UpdateTab
             productos={productos}
             onUpdateProducto={handleUpdateProductoLocal}
-            categorias={(categorias || []).map(c => c && c.nombre ? c.nombre : c).filter(Boolean)}
+            categorias={(categorias || []).map(c => (c && c.nombre ? c.nombre : c)).filter(Boolean)}
           />
         </div>
       )}
