@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 
 const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
-  // Estados para producto
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
@@ -12,16 +11,16 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     provider_id: ''
   });
 
-  // Estado para nueva categoría
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
-  // Estado para nuevo proveedor
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
     telefono: '',
-    categorias: [] // Array de IDs de categorías seleccionadas
+    categorias: [] // Array de IDs
   });
+
+  const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
 
   // Manejadores de producto
   const handleProductoChange = (e) => {
@@ -45,7 +44,6 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
   };
 
-  // Manejador de categoría
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -56,10 +54,20 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     setNuevaCategoria('');
   };
 
-  // Manejadores de proveedor
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
     setNuevoProveedor({ ...nuevoProveedor, [name]: value });
+  };
+
+  const toggleCategoria = (id) => {
+    setNuevoProveedor(prev => {
+      const categorias = prev.categorias;
+      if (categorias.includes(id)) {
+        return { ...prev, categorias: categorias.filter(c => c !== id) };
+      } else {
+        return { ...prev, categorias: [...categorias, id] };
+      }
+    });
   };
 
   const handleAddProveedorSubmit = (e) => {
@@ -74,6 +82,11 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   };
 
   const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
+
+  // Nombres de categorías seleccionadas para mostrar en el botón
+  const categoriasSeleccionadas = categorias
+    .filter(cat => nuevoProveedor.categorias.includes(cat.id))
+    .map(cat => cat.nombre);
 
   return (
     <>
@@ -174,36 +187,55 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* ✅ CHECKBOXES PARA CATEGORÍAS (ideal para móviles) */}
+        {/* ✅ Dropdown con checkboxes (funciona en móvil) */}
         <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
-          <div className="d-flex flex-column gap-2 mt-2">
-            {categorias.length > 0 ? (
-              categorias.map(cat => (
-                <div key={cat.id} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`cat-${cat.id}`}
-                    checked={nuevoProveedor.categorias.includes(cat.id)}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      setNuevoProveedor(prev => {
-                        if (isChecked) {
-                          return { ...prev, categorias: [...prev.categorias, cat.id] };
-                        } else {
-                          return { ...prev, categorias: prev.categorias.filter(id => id !== cat.id) };
-                        }
-                      });
-                    }}
-                  />
-                  <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                    {cat.nombre}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <small className="text-muted">No hay categorías disponibles.</small>
+          <div className="dropdown" style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="form-control text-start d-flex justify-content-between align-items-center"
+              onClick={() => setShowCategoriaDropdown(!showCategoriaDropdown)}
+              style={{ cursor: 'pointer' }}
+            >
+              {categoriasSeleccionadas.length > 0
+                ? categoriasSeleccionadas.join(', ')
+                : 'Seleccionar categorías'}
+              <span>▼</span>
+            </button>
+
+            {showCategoriaDropdown && (
+              <div
+                className="dropdown-menu show"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  zIndex: 1000,
+                  backgroundColor: 'white',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '0.375rem',
+                  padding: '0.5rem'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {categorias.map(cat => (
+                  <div key={cat.id} className="form-check" style={{ margin: '0.25rem 0' }}>
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`cat-${cat.id}`}
+                      checked={nuevoProveedor.categorias.includes(cat.id)}
+                      onChange={() => toggleCategoria(cat.id)}
+                    />
+                    <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
+                      {cat.nombre}
+                    </label>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
