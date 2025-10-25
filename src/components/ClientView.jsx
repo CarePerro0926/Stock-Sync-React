@@ -102,32 +102,33 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
                 const itemCarrito = carrito.find(item => item.id === p.id);
                 const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
 
-                return (
-                  <tr key={p.id} className="table-row">
-                    <td className="table-cell" dataTitle="ID">{p.id}</td>
-                    <td className="table-cell" dataTitle="Nombre">{p.nombre}</td>
-                    <td className="table-cell" dataTitle="Categoria">{p.categoria}</td>
-                    <td className="table-cell" dataTitle="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                    <td className="table-cell qty-input-container" dataTitle="Cantidad">
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-control form-control-sm qty-input"
-                        id={`qty-${p.id}`}
-                        data-id={p.id}
-                        data-precio={p.precio}
-                        value={cantidadActual > 0 ? cantidadActual : ''}
-                        placeholder="0"
-                        onChange={handleQuantityChange(p.id, p.precio)}
-                        onFocus={handleInputFocus}
-                        onInput={handleInputInput}
-                      />
-                    </td>
-                    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-                    </td>
-                  </tr>
-                );
+// reemplaza este bloque dentro de productosFiltrados.map(...)
+return (
+  <tr key={p.id} className="table-row">
+    <td className="table-cell" data-title="ID">{p.id}</td>
+    <td className="table-cell" data-title="Nombre">{p.nombre}</td>
+    <td className="table-cell" data-title="Categoria">{p.categoria}</td>
+    <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
+    <td className="table-cell qty-input-container" data-title="Cantidad">
+      <input
+        type="number"
+        min="0"
+        className="form-control form-control-sm qty-input"
+        id={`qty-${p.id}`}
+        data-id={p.id}
+        data-precio={p.precio}
+        value={cantidadActual > 0 ? cantidadActual : ''}
+        placeholder="0"
+        onChange={handleQuantityChange(p.id, p.precio)}
+        onFocus={handleInputFocus}
+        onInput={handleInputInput}
+      />
+    </td>
+    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
+      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
+    </td>
+  </tr>
+);
               })
             )}
           </tbody>
