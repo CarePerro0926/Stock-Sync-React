@@ -8,7 +8,7 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
   const [filtroTxt, setFiltroTxt] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
 
-  // ✅ Usa el hook de pago
+  // Usa el hook de pago
   const {
     showCreditCardModal,
     showConfirmationModal,
@@ -140,13 +140,13 @@ return (
           <span id="totalLbl" style={{ color: '#222' }}>{total.toLocaleString('es-CO')} COP</span>
         </strong>
         <div>
-          {/* ✅ Reemplaza el alert por la apertura del modal de pago */}
+          {/* Reemplaza el alert por la apertura del modal de pago */}
           <button onClick={() => setShowPaymentModal(true)} id="btnPay" className="btn btn-success me-2">Pagar</button>
           <button onClick={onLogout} id="btnLogout" className="btn btn-danger">Cerrar Sesión</button>
         </div>
       </div>
 
-      {/* ✅ Modal de selección de método de pago */}
+      {/* Modal de selección de método de pago */}
       {showPaymentModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
@@ -164,7 +164,7 @@ return (
         </div>
       )}
 
-      {/* ✅ Modal de tarjeta */}
+      {/* Modal de tarjeta */}
       {showCreditCardModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
@@ -208,7 +208,7 @@ return (
         </div>
       )}
 
-      {/* ✅ Modal de confirmación (Efecty) */}
+      {/* Modal de confirmación (Efecty) */}
       {showConfirmationModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
