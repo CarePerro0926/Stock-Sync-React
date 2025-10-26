@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Función para validar número de teléfono colombiano
 const validarTelefonoColombiano = (telefono) => {
@@ -18,6 +18,11 @@ const AddTab = ({
   categorias = [],
   productos = []
 }) => {
+  // Depuración: mostrar qué se está recibiendo en la prop `proveedores`
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('AddTab - proveedores prop:', proveedores);
+  }, [proveedores]);
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
@@ -235,20 +240,25 @@ const AddTab = ({
           <label className="form-label">Proveedores (selecciona uno o más)</label>
           <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
             {proveedores.length > 0 ? (
-              proveedores.map((prov) => (
-                <div key={prov.id} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`prov-${prov.id}`}
-                    checked={nuevoProducto.proveedores.includes(prov.id)}
-                    onChange={() => toggleProveedorProducto(prov.id)}
-                  />
-                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
-                    {prov.nombre}
-                  </label>
-                </div>
-              ))
+              proveedores.map((prov) => {
+                // Soportar distintas formas de IDs (`id`, `_id`, etc.) y nombres
+                const provId = prov.id ?? prov._id ?? prov.proveedor_id ?? '';
+                const provNombre = prov.nombre ?? prov.name ?? prov.nombre_proveedor ?? 'Proveedor';
+                return (
+                  <div key={provId || provNombre} className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id={`prov-${provId}`}
+                      checked={nuevoProducto.proveedores.includes(provId)}
+                      onChange={() => toggleProveedorProducto(provId)}
+                    />
+                    <label className="form-check-label" htmlFor={`prov-${provId}`}>
+                      {provNombre}
+                    </label>
+                  </div>
+                );
+              })
             ) : (
               <small className="text-muted">No hay proveedores disponibles.</small>
             )}
