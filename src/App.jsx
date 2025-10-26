@@ -90,7 +90,7 @@ function App() {
             onAddProveedor={handleAddProveedor}
             onAddCategoria={handleAddCategoria}
             onDeleteCategoria={handleDeleteCategoria}
-            onDeleteProveedor={handleDeleteProveedor} // ✅ Añadido
+            onDeleteProveedor={handleDeleteProveedor}
             onLogout={handleLogout}
           />
         );
@@ -116,8 +116,6 @@ function App() {
       const productoParaInsertar = {
         ...nuevoProducto, // Copia todas las propiedades de nuevoProducto
         categoria_id: categoriaSeleccionada.id // Asigna el ID encontrado
-        // Elimina la propiedad 'categoria' (nombre) del objeto que se inserta
-        // Esto es importante si la tabla en Supabase solo tiene categoria_id
         // delete productoParaInsertar.categoria; // Opcional pero recomendado si la columna 'categoria' no existe en Supabase
       };
 

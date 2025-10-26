@@ -14,7 +14,7 @@ const validarTelefonoColombiano = (telefono) => {
 
 const AddTab = ({
   onAddProducto,
-  onAddCategoria, // <-- Asegúrate de recibir esta prop
+  onAddCategoria,
   onAddProveedor,
   proveedores = [],
   categorias = [],
@@ -26,7 +26,7 @@ const AddTab = ({
     categoria: '', // ← ahora usamos 'categoria' (nombre), no 'categoria_id'
     cantidad: '',
     precio: '',
-    proveedores: []
+    proveedores: [] // Array para almacenar IDs de proveedores seleccionados
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
