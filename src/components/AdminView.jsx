@@ -33,7 +33,7 @@ const AdminView = ({
     return () => document.removeEventListener('click', handleClick);
   }, [showMenu]);
 
-  // Productos
+  // === Handlers (sin cambios en lógica) ===
   const handleAddProductoLocal = async (producto) => {
     try {
       await productService.create(producto);
@@ -54,18 +54,16 @@ const AdminView = ({
     }
   };
 
-  // Actualizar producto
   const handleUpdateProductoLocal = async (productoActualizado) => {
     try {
       await productService.update(productoActualizado);
-      onAddProducto(); // recarga la lista completa
+      onAddProducto();
     } catch (error) {
       console.error('Error al actualizar producto:', error);
       alert('Error al actualizar el producto');
     }
   };
 
-  // Proveedores
   const handleAddProveedorLocal = async (proveedor) => {
     try {
       await providerService.create(proveedor);
@@ -86,7 +84,6 @@ const AdminView = ({
     }
   };
 
-  // Categorías
   const handleAddCategoriaLocal = async (nombre) => {
     try {
       await categoryService.create(nombre);
@@ -125,7 +122,7 @@ const AdminView = ({
   };
 
   return (
-    <div className="card p-4">
+    <div className="card p-4 d-flex flex-column" style={{ height: '100%', maxHeight: '100vh', overflow: 'hidden' }}>
       <h4 className="mb-3">Panel Administrador</h4>
 
       {/* Header móvil */}
@@ -164,54 +161,57 @@ const AdminView = ({
         </li>
       </ul>
 
-      {/* Vistas: asegúrate que en cada Tab las tablas usan data-title en sus <td> */}
-      {vistaActiva === 'inventory' && (
-        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
-          <InventoryTab productos={productos} />
-        </div>
-      )}
+      {/* Área de contenido con scroll único */}
+      <div className="flex-grow-1 overflow-auto" style={{ minHeight: 0 }}>
+        {vistaActiva === 'inventory' && (
+          <div className="table-responsive responsive-table">
+            <InventoryTab productos={productos} />
+          </div>
+        )}
 
-      {vistaActiva === 'add' && (
-        <AddTab
-          onAddProducto={handleAddProductoLocal}
-          onAddCategoria={handleAddCategoriaLocal}
-          onAddProveedor={handleAddProveedorLocal}
-          proveedores={proveedores || []}
-          categorias={categorias || []}
-        />
-      )}
-
-      {vistaActiva === 'update' && (
-        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
-          <UpdateTab
-            productos={productos}
-            onUpdateProducto={handleUpdateProductoLocal}
-            categorias={(categorias || []).map(c => (c && c.nombre ? c.nombre : c)).filter(Boolean)}
-          />
-        </div>
-      )}
-
-      {vistaActiva === 'delete' && (
-        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
-          <DeleteTab
-            productos={productos}
-            categorias={categorias || []}
-            onDeleteProducto={handleDeleteProductoLocal}
-            onDeleteProveedor={handleDeleteProveedorLocal}
-            onDeleteCategoria={handleDeleteCategoriaLocal}
-          />
-        </div>
-      )}
-
-      {vistaActiva === 'providers' && (
-        <div className="table-responsive responsive-table" style={{ maxHeight: '400px', overflow: 'auto' }}>
-          <ProvidersTab
-            proveedores={proveedores}
+        {vistaActiva === 'add' && (
+          <AddTab
+            onAddProducto={handleAddProductoLocal}
+            onAddCategoria={handleAddCategoriaLocal}
             onAddProveedor={handleAddProveedorLocal}
+            proveedores={proveedores || []}
+            categorias={categorias || []}
           />
-        </div>
-      )}
+        )}
 
+        {vistaActiva === 'update' && (
+          <div className="table-responsive responsive-table">
+            <UpdateTab
+              productos={productos}
+              onUpdateProducto={handleUpdateProductoLocal}
+              categorias={(categorias || []).map(c => (c && c.nombre ? c.nombre : c)).filter(Boolean)}
+            />
+          </div>
+        )}
+
+        {vistaActiva === 'delete' && (
+          <div className="table-responsive responsive-table">
+            <DeleteTab
+              productos={productos}
+              categorias={categorias || []}
+              onDeleteProducto={handleDeleteProductoLocal}
+              onDeleteProveedor={handleDeleteProveedorLocal}
+              onDeleteCategoria={handleDeleteCategoriaLocal}
+            />
+          </div>
+        )}
+
+        {vistaActiva === 'providers' && (
+          <div className="table-responsive responsive-table">
+            <ProvidersTab
+              proveedores={proveedores}
+              onAddProveedor={handleAddProveedorLocal}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Botón de cerrar sesión (siempre visible) */}
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
       </div>
