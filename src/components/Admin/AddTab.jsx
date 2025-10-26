@@ -175,27 +175,6 @@ const AddTab = ({
         </div>
 
         <div className="mb-2">
-          <select
-            className="form-control"
-            name="categoria"
-            value={nuevoProducto.categoria}
-            onChange={handleProductoChange}
-            required
-          >
-            <option value="">Seleccionar categoría</option>
-            {categorias.length > 0 ? (
-              categorias.map((cat) => (
-                <option key={cat.nombre} value={cat.nombre}>
-                  {cat.nombre}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No hay categorías disponibles</option>
-            )}
-          </select>
-        </div>
-
-        <div className="mb-2">
           <input
             type="number"
             className="form-control"
@@ -291,31 +270,7 @@ const AddTab = ({
           />
         </div>
 
-        <div className="mb-3">
-          <label className="form-label">Productos que surte</label>
-          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {productos.length > 0 ? (
-              productos.map((prod) => (
-                <div key={prod.id} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`prov-prod-${prod.id}`}
-                    checked={nuevoProveedor.productos.includes(prod.id)}
-                    onChange={() => toggleProductoProveedor(prod.id)}
-                  />
-                  <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
-                    {prod.nombre}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <small className="text-muted">No hay productos disponibles.</small>
-            )}
-          </div>
-        </div>
-
-        
+               
 
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
