@@ -9,6 +9,7 @@ import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
+import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
 
 function App() {
   const [productos, setProductos] = useState([]);
