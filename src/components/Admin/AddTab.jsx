@@ -42,7 +42,7 @@ const AddTab = ({
     const { id, nombre, categoria_id, cantidad, precio, provider_id } = nuevoProducto;
 
     if (!id || !nombre || !categoria_id || !cantidad || !precio || !provider_id) {
-      alert('Completa todos los campos del producto.');
+      alert('Por favor completa todos los campos del producto.');
       return;
     }
 
@@ -139,6 +139,7 @@ const AddTab = ({
             required
           >
             <option value="">Seleccionar categoría</option>
+
             {categorias.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.id} — {cat.nombre}
@@ -180,9 +181,10 @@ const AddTab = ({
             required
           >
             <option value="">Seleccionar proveedor</option>
+
             {proveedores.map((prov) => (
               <option key={prov.id} value={prov.id}>
-                {prov.id} — {prov.nombre}
+                {prov.nombre}
               </option>
             ))}
           </select>
