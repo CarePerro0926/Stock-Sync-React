@@ -20,20 +20,32 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión al cargar
+  // 🔑 Restaurar sesión desde Supabase Auth (persistente)
   useEffect(() => {
     const restoreSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: { user: fullUser } } = await supabase.auth.getUser();
-        const role = fullUser?.user_metadata?.role || 'client';
+        const { data: perfil, error } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single();
 
-        setUsuarioActual({
+        if (error) {
+          console.error('Error al obtener el perfil del usuario:', error);
+          setVistaActual('login');
+          return;
+        }
+
+        const usr = {
           id: session.user.id,
           email: session.user.email,
-          role
-        });
-        setVistaActual(role === 'admin' ? 'admin' : 'client');
+          username: perfil?.username || session.user.email.split('@')[0],
+          role: perfil?.role || 'client'
+        };
+
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
       } else {
         setVistaActual('login');
       }
@@ -61,12 +73,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // === Handlers ===
   const handleLogin = (usr) => {
-    if (!usr) {
-      alert('Usuario/clave inválidos');
-      return;
-    }
     setUsuarioActual(usr);
     setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
   };
@@ -117,7 +124,6 @@ function App() {
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // === Renderizado ===
   if (vistaActual === 'loading') {
     return (
       <div className="container-fluid p-4 text-center">
@@ -183,9 +189,7 @@ function App() {
 
   return (
     <div className="container-fluid p-4">
-      <div className="d-flex justify-content-center">
-        {renderView()}
-      </div>
+      <div className="d-flex justify-content-center">{renderView()}</div>
       <ForgotPasswordModal
         show={showForgotModal}
         onClose={() => setShowForgotModal(false)}
