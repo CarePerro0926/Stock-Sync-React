@@ -1,24 +1,79 @@
-// src/components/Admin/InventoryTab.js
-import React, { useState, useMemo } from 'react';
-import { filtroProductos } from '../../utils/helpers';
+// src/components/Admin/InventoryTab.jsx
+import React, { useState, useEffect } from 'react';
+import ResponsiveTable from '../ResponsiveTable'; // Asumiendo componente reutilizable
 
-const InventoryTab = ({ productos }) => {
+const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [productosFiltrados, setProductosFiltrados] = useState([]);
 
-  const categorias = useMemo(() => {
-    const cats = [...new Set(productos.map(p => p.categoria))];
-    return ['Todas', ...cats];
-  }, [productos]);
+  // Actualizar lista de categorías en el filtro si cambian las categorías
+  useEffect(() => {
+    const cats = ['Todas', ...categorias.map(c => c.nombre)];
+    if (!cats.includes(filtroCat)) setFiltroCat('Todas');
+  }, [categorias, filtroCat]);
 
-  const productosFiltrados = useMemo(() => {
-    return filtroProductos(productos, filtroTxt, filtroCat);
-  }, [productos, filtroTxt, filtroCat]);
+  // Aplicar filtros cuando cambian productos, filtro de categoría o texto
+  useEffect(() => {
+    let filtered = productos;
 
-  console.log(' Productos filtrados:', productosFiltrados);
+    if (filtroCat !== 'Todas') {
+      // Busca el ID de la categoría por nombre
+      const categoriaSeleccionada = categorias.find(cat => cat.nombre === filtroCat);
+      if (categoriaSeleccionada) {
+         filtered = filtered.filter(p => p.categoria_id === categoriaSeleccionada.id);
+      } else {
+         filtered = []; // Si no se encuentra la categoría por nombre, no hay resultados
+      }
+    }
+
+    if (filtroTxt) {
+      const txtLower = filtroTxt.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.id.includes(txtLower) ||
+        p.nombre.toLowerCase().includes(txtLower)
+      );
+    }
+
+    setProductosFiltrados(filtered);
+  }, [productos, categorias, filtroCat, filtroTxt]);
+
+  // Preparar datos para la tabla, mapeando categoria_id a nombre
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoriaNombre', label: 'Categoria' }, // <-- Mostrar NOMBRE, no ID
+    { key: 'cantidad', label: 'Stock', align: 'center' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' },
+    { key: 'acciones', label: 'Acciones', align: 'center' } // Columna para botones de acción
+  ];
+
+  const tableData = productosFiltrados.map(p => {
+    // Buscar el nombre de la categoría
+    const categoriaObj = categorias.find(cat => cat.id === p.categoria_id);
+    const nombreCategoria = categoriaObj ? categoriaObj.nombre : 'Categoría Desconocida'; // Manejar caso no encontrado
+
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      categoriaNombre: nombreCategoria, // <-- Usar el nombre encontrado
+      cantidad: p.cantidad,
+      precio: p.precio.toLocaleString('es-CO'),
+      acciones: (
+        <button
+          className="btn btn-sm btn-danger"
+          onClick={() => onDeleteProducto(p.id)}
+        >
+          Eliminar
+        </button>
+      )
+    };
+  });
+
+  const listaCategoriasFiltro = ['Todas', ...categorias.map(c => c.nombre)]; // Lista de NOMBRES para el select
 
   return (
-    <>
+    <div>
       <h5>Inventario</h5>
       <div className="row g-2 mb-3">
         <div className="col">
@@ -26,10 +81,10 @@ const InventoryTab = ({ productos }) => {
             id="filtroCatAdmin"
             className="form-select"
             value={filtroCat}
-            onChange={(e) => setFiltroCat(e.target.value)}
+            onChange={(e) => setFiltroCat(e.target.value)} // <-- Actualiza estado filtro
           >
-            {categorias.map(c => (
-              <option key={c} value={c}>{c}</option>
+            {listaCategoriasFiltro.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
@@ -39,46 +94,16 @@ const InventoryTab = ({ productos }) => {
             className="form-control"
             placeholder="Buscar..."
             value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
+            onChange={(e) => setFiltroTxt(e.target.value)} // <-- Actualiza estado filtro
           />
         </div>
       </div>
-
-      <div className="table-responsive responsive-table" style={{ maxHeight: '250px', overflow: 'auto' }}>
-        <table className="table table-bordered table-sm mb-0">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th style={{ width: '60px', textAlign: 'center' }}>Stock</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
-            </tr>
-          </thead>
-          <tbody id="tblAdminInv">
-            {productosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="text-center">No se encontraron productos.</td>
-              </tr>
-            ) : (
-              productosFiltrados.map(p => (
-                <tr key={p.id} className="table-row">
-                  <td className="table-cell" dataTitle="ID">{p.id}</td>
-                  <td className="table-cell" dataTitle="Nombre">{p.nombre}</td>
-                  <td className="table-cell" dataTitle="Categoria">{p.categoria}</td>
-                  <td className="table-cell" dataTitle="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                  <td className="table-cell" dataTitle="Precio Unidad" style={{ textAlign: 'right' }}>
-                    {typeof p.precio === 'number'
-                      ? p.precio.toLocaleString('es-CO')
-                      : '—'}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
+      <ResponsiveTable
+        headers={tableHeaders}
+        data={tableData}
+        maxHeight="250px"
+      />
+    </div>
   );
 };
 

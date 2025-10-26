@@ -8,10 +8,14 @@ export async function migrarDatos() {
   if (errProv) return console.error('❌ Proveedores:', errProv.message);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // 2. Productos → usa 'productos', no 'products'
 =======
   // 2. Productos
 >>>>>>> 58cb29c (ultima version)
+=======
+  // 2. Productos
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
   const { error: errProd } = await supabase.from('productos').insert(initialProductos);
   if (errProd) return console.error('❌ Productos:', errProd.message);
 

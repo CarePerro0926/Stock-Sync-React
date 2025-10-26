@@ -1,10 +1,11 @@
-// src/components/AdminView.js
-import React, { useState, useEffect } from 'react';
+// src/components/AdminView.jsx
+import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 
+<<<<<<< HEAD
 // ✅ Define las categorías aquí (o impórtalas desde otro archivo)
 const CATEGORIAS_PERMITIDAS = [
   'Procesadores',
@@ -33,7 +34,22 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
         setShowMenu(false);
       }
     };
+=======
+const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => {
 
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Cerrar menú si se hace click fuera (en móvil)
+  const handleClickOutside = (event) => {
+    const menu = document.getElementById('adminMenu');
+    const button = document.getElementById('btnMenuHamburguesa');
+    if (showMenu && menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
+      setShowMenu(false);
+    }
+  };
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
+
+  React.useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showMenu]);
@@ -115,6 +131,7 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
         </li>
       </ul>
 
+<<<<<<< HEAD
       {/* ✅ Solo una vez, con ambas props */}
       {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
       {vistaActiva === 'add' && (
@@ -126,6 +143,21 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
       )}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
+=======
+      {/* Renderizar la vista activa */}
+      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />}
+      {/* CORREGIDO: Pasamos todas las props necesarias */}
+      {vistaActiva === 'add' && <AddTab
+        onAddProducto={onAddProducto}
+        onAddCategoria={onAddCategoria}
+        onAddProveedor={onAddProveedor}
+        categorias={categorias}
+        productos={productos}
+        proveedores={proveedores}
+      />}
+      {vistaActiva === 'delete' && <DeleteTab productos={productos} onDeleteProducto={onDeleteProducto} />}
+      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />}
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
