@@ -3,32 +3,69 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
-  const [user, setUser] = useState('');
-  const [pass, setPass] = useState('');
-
-  // Lógica de validación movida aquí
-  const validarUsuario = async (username, password) => {
-    const u = username.trim().toLowerCase();
-    const p = password.trim();
-
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('username', u)
-      .eq('pass', p);
-
-    if (error) {
-      console.error('Error al consultar usuario:', error);
-      return null;
-    }
-
-    return data?.[0] || null;
-  };
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const usr = await validarUsuario(user, pass);
-    onLogin(usr); // Envía el resultado a App.jsx
+
+    let emailToUse = identifier.trim();
+
+    // Si no es un email, busca el email por username
+    if (!identifier.includes('@')) {
+      const {  } = await supabase
+        .from('usuarios')
+        .select('email')
+        .eq('username', identifier.trim())
+        .single();
+
+      if (error) {
+        console.error('Error al buscar usuario:', error);
+        alert('Usuario no encontrado');
+        return;
+      }
+
+      if (!data) {
+        alert('Usuario no encontrado');
+        return;
+      }
+
+      emailToUse = data.email;
+    }
+
+    // Iniciar sesión con Supabase Auth
+    const {  } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password: password.trim()
+    });
+
+    if (error) {
+      console.error('Error de login:', error.message);
+      alert('Credenciales incorrectas');
+      return;
+    }
+
+    if (session?.user) {
+      // Obtener perfil desde tu tabla 'usuarios'
+      const {  } = await supabase
+        .from('usuarios')
+        .select('username, role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Error al cargar perfil:', error);
+      }
+
+      const usr = {
+        id: session.user.id,
+        email: session.user.email,
+        username: data?.username || session.user.email.split('@')[0],
+        role: data?.role || 'client'
+      };
+
+      onLogin(usr);
+    }
   };
 
   return (
@@ -36,30 +73,30 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       <h3 className="text-center text-login mb-3">Stock-Sync</h3>
       <form onSubmit={handleSubmit}>
         <input
-          id="loginUser"
           className="form-control mb-2"
-          placeholder="Usuario"
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
+          placeholder="Correo o usuario"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          required
         />
         <input
-          id="loginPass"
           type="password"
           className="form-control mb-2"
           placeholder="Contraseña"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
         <div className="d-flex justify-content-center gap-2 mb-2">
-          <button type="submit" id="btnLogin" className="btn btn-primary">Iniciar Sesión</button>
-          <button type="button" onClick={onShowRegister} id="btnShowRegister" className="btn btn-success">Registrarse</button>
+          <button type="submit" className="btn btn-primary">Iniciar Sesión</button>
+          <button type="button" onClick={onShowRegister} className="btn btn-success">Registrarse</button>
         </div>
       </form>
-      <button onClick={onShowCatalog} id="btnShowCatalog" className="btn btn-outline-primary w-100 mb-2">
+      <button onClick={onShowCatalog} className="btn btn-outline-primary w-100 mb-2">
         Ver Catálogo
       </button>
       <div className="text-end">
-        <span id="btnForgot" className="pointer text-info" onClick={onShowForgot}>
+        <span className="pointer text-info" onClick={onShowForgot}>
           ¿Olvidaste tu contraseña?
         </span>
       </div>
