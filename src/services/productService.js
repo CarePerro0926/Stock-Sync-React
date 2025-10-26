@@ -30,7 +30,6 @@ export const productService = {
       .from('productos')
       .insert([{ id, nombre, precio, cantidad, categoria_id }]);
     if (error) throw error;
-<<<<<<< HEAD
 
     if (Array.isArray(proveedores) && proveedores.length > 0) {
       const relaciones = proveedores.map(provId => ({ producto_id: id, proveedor_id: provId }));
@@ -55,16 +54,6 @@ export const productService = {
     return true;
   },
 
-=======
-    if (Array.isArray(proveedores) && proveedores.length) {
-      const relaciones = proveedores.map(provId => ({ producto_id: id, proveedor_id: provId }));
-      const { error: relErr } = await supabase.from('producto_proveedor').insert(relaciones).onConflict(['producto_id','proveedor_id']).ignore();
-      if (relErr) throw relErr;
-    }
-    return true;
-  },
-
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
   remove: async (id) => {
     const { error } = await supabase.from('productos').delete().eq('id', id);
     if (error) throw error;

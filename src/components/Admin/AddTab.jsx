@@ -1,28 +1,6 @@
 // src/components/Admin/AddTab.jsx
 import React, { useState } from 'react';
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-const CATEGORIAS_PERMITIDAS = [
-  'Procesadores',
-  'Tarjetas Gráficas',
-  'Memorias RAM',
-  'Discos Duros',
-  'Boards',
-  'Fuentes de Poder',
-  'Gabinetes',
-  'Periféricos',
-  'Monitores',
-  'Refrigeración',
-  'Redes',
-  'Accesorios',
-  'Mobiliario'
-];
-
-const AddTab = ({ onAddProducto, proveedores = [] }) => {
-=======
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
 // Función para validar número de teléfono colombiano
 const validarTelefonoColombiano = (telefono) => {
   if (!telefono || telefono.trim() === '') return true; // Permitir teléfono vacío
@@ -42,25 +20,13 @@ const AddTab = ({
   categorias = [],
   productos = []
 }) => {
-<<<<<<< HEAD
-=======
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
     categoria: '', // ← ahora usamos 'categoria' (nombre), no 'categoria_id'
     cantidad: '',
     precio: '',
-<<<<<<< HEAD
     proveedores: [] // Array para almacenar IDs de proveedores seleccionados
-=======
-<<<<<<< HEAD
-    provider_id: ''
-=======
-    proveedores: [] // Array para almacenar IDs de proveedores seleccionados
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
@@ -76,47 +42,6 @@ const AddTab = ({
   /* ---------- Producto ---------- */
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
-<<<<<<< HEAD
-    setNuevoProducto((prev) => ({
-      ...prev,
-      [name]: ['cantidad', 'precio'].includes(name)
-=======
-<<<<<<< HEAD
-    setNuevoProducto({
-      ...nuevoProducto,
-      [name]: ['cantidad', 'precio', 'provider_id'].includes(name)
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
-        ? value === '' ? '' : Number(value)
-        : value
-    }));
-  };
-
-  const toggleProveedorProducto = (proveedorId) => {
-    setNuevoProducto((prev) => {
-      const isSelected = prev.proveedores.includes(proveedorId);
-      return {
-        ...prev,
-        proveedores: isSelected
-          ? prev.proveedores.filter((id) => id !== proveedorId)
-          : [...prev.proveedores, proveedorId]
-      };
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-<<<<<<< HEAD
-=======
-    const { id, nombre, categoria, cantidad, precio, provider_id } = nuevoProducto;
-
-    if (!id || !nombre || !categoria || !cantidad || !precio || !provider_id) {
-      alert('Por favor completa todos los campos.');
-      return;
-    }
-
-    onAddProducto(nuevoProducto);
-    setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
-=======
     setNuevoProducto((prev) => ({
       ...prev,
       [name]: ['cantidad', 'precio'].includes(name)
@@ -139,7 +64,6 @@ const AddTab = ({
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
     const { id, nombre, categoria, cantidad, precio, proveedores: provs } = nuevoProducto;
     if (!id || !nombre || !categoria || !cantidad || !precio || provs.length === 0) {
       alert('Por favor completa todos los campos e incluye al menos un proveedor.');
@@ -237,103 +161,9 @@ const AddTab = ({
       productos: [],
       categorias: []
     });
-<<<<<<< HEAD
   };
 
-=======
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
-  };
-
-  // ✅ Asegúrate de que proveedores sea un array
-  const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
-
->>>>>>> b1285e0b9da81a9779ff39410e8985af52b9e36e
   return (
-<<<<<<< HEAD
-    <form onSubmit={handleSubmit}>
-      <div className="mb-2">
-        <input
-          type="text"
-          className="form-control"
-          name="id"
-          placeholder="ID"
-          value={nuevoProducto.id}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="mb-2">
-        <input
-          type="text"
-          className="form-control"
-          name="nombre"
-          placeholder="Nombre"
-          value={nuevoProducto.nombre}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="mb-2">
-        <select
-          className="form-control"
-          name="categoria"
-          value={nuevoProducto.categoria}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Seleccionar categoría</option>
-          {CATEGORIAS_PERMITIDAS.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-      <div className="mb-2">
-        <input
-          type="number"
-          className="form-control"
-          name="cantidad"
-          placeholder="Cantidad"
-          value={nuevoProducto.cantidad}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="mb-2">
-        <input
-          type="number"
-          className="form-control"
-          name="precio"
-          placeholder="Precio"
-          value={nuevoProducto.precio}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="mb-2">
-        <select
-          className="form-control"
-          name="provider_id"
-          value={nuevoProducto.provider_id}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Seleccionar proveedor</option>
-          {listaProveedores.length > 0 ? (
-            listaProveedores.map(prov => (
-              <option key={prov.id} value={prov.id}>
-                {prov.nombre}
-              </option>
-            ))
-          ) : (
-            <option disabled>No hay proveedores</option>
-          )}
-        </select>
-      </div>
-      <button type="submit" className="btn btn-success w-100">
-        Agregar Producto
-      </button>
-    </form>
-=======
     <>
       {/* -------------------- Agregar Producto -------------------- */}
       <h5>Agregar Producto</h5>
@@ -537,7 +367,6 @@ const AddTab = ({
         </button>
       </form>
     </>
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
   );
 };
 
