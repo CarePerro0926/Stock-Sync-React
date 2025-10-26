@@ -3,20 +3,25 @@ import supabase from './supabaseClient';
 
 export const productService = {
   // Obtener productos; trae también categoria_id (UUID) y opcionalmente nombre de categoría
-  getAll: async () => {
-    // Si quieres el nombre de la categoría, usa join mediante RPC o consulta manual; aquí devolvemos campos base
-    const { data, error } = await supabase
-      .from('productos')
-      .select('id,nombre,precio,cantidad,categoria_id');
-    if (error) throw error;
-    return (data || []).map(p => ({
-      id: p.id,
-      nombre: p.nombre,
-      precio: p.precio,
-      cantidad: p.cantidad,
-      categoria_id: p.categoria_id
-    }));
-  },
+getAll: async () => {
+  const { data, error } = await supabase
+    .from('productos')
+    .select(`
+      id,
+      nombre,
+      precio,
+      cantidad,
+      categorias!inner(nombre)
+    `);
+  if (error) throw error;
+  return (data || []).map(p => ({
+    id: p.id,
+    nombre: p.nombre,
+    precio: p.precio,
+    cantidad: p.cantidad,
+    categoria: p.categorias.nombre  // ← ahora es el nombre
+  }));
+},
 
   // Crear producto y (opcional) insertar relaciones en producto_proveedor
   // producto = { id, nombre, precio, cantidad, categoria_id, proveedores: [provId,...] }
