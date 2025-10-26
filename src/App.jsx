@@ -6,7 +6,6 @@ import PublicCatalogView from './components/PublicCatalogView';
 import ClientView from './components/ClientView';
 import AdminView from './components/AdminView';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
-
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
@@ -22,6 +21,7 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
+  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -31,11 +31,13 @@ function App() {
           categoryService.getAll()
         ]);
 
-        setProductos(Array.isArray(productosDB) && productosDB.length > 0 ? productosDB : initialProductos);
-        setProveedores(Array.isArray(proveedoresDB) && proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
-        setCategorias(Array.isArray(categoriasDB) && categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+        // Si los servicios devuelven vacío, usar datos iniciales
+        setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+        setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+        setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
       } catch (error) {
         console.error('Error al cargar datos:', error);
+        // En caso de error, usar datos iniciales
         setProductos(initialProductos);
         setProveedores(initialProveedores);
         setCategorias(initialCategorias);
@@ -50,8 +52,9 @@ function App() {
       return;
     }
     setUsuarioActual(usr);
-    setVistaActual(usr.role === 'administrador' || usr.role === 'admin' ? 'admin' : 'client');
-    if (usr.role === 'administrador' || usr.role === 'admin') setVistaAdminActiva('inventory');
+    // CORREGIDO: usa 'administrador' (tu preferencia)
+    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
 
   const handleLogout = () => {
@@ -64,23 +67,67 @@ function App() {
   const handleShowRegister = () => setVistaActual('register');
   const handleShowLogin = () => setVistaActual('login');
 
-  // Productos
+  const renderView = () => {
+    switch (vistaActual) {
+      case 'login':
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
+      case 'register':
+        return <RegisterView onShowLogin={handleShowLogin} />;
+      case 'catalog':
+        // CORREGIDO: pasar categorias a PublicCatalogView
+        return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />;
+      case 'client':
+        // CORREGIDO: pasar categorias a ClientView
+        return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
+      case 'admin':
+        return (
+          <AdminView
+            productos={productos}
+            proveedores={proveedores}
+            categorias={categorias}
+            vistaActiva={vistaAdminActiva}
+            setVistaActiva={setVistaAdminActiva}
+            onAddProducto={handleAddProducto}
+            onDeleteProducto={handleDeleteProducto}
+            onAddProveedor={handleAddProveedor}
+            onAddCategoria={handleAddCategoria}
+            onDeleteCategoria={handleDeleteCategoria}
+            onDeleteProveedor={handleDeleteProveedor}
+            onLogout={handleLogout}
+          />
+        );
+      default:
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
+    }
+  };
+
+  // CORREGIDO: ahora convierte 'categoria' (nombre) a 'categoria_id' (UUID) antes de insertar
   const handleAddProducto = async (nuevoProducto) => {
     try {
-      // si frontend envía categoria (nombre), convertir a categoria_id
-      let productoParaInsertar = { ...nuevoProducto };
-      if (nuevoProducto.categoria && !nuevoProducto.categoria_id) {
-        const cat = categorias.find(c => c.nombre === nuevoProducto.categoria);
-        if (!cat) {
-          alert('Categoría no encontrada. Agrégala antes o selecciona una existente.');
-          return;
-        }
-        productoParaInsertar.categoria_id = cat.id;
+      // 1. Buscar el objeto de categoría correspondiente al nombre recibido
+      const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
+
+      // 2. Validar que la categoría exista
+      if (!categoriaSeleccionada) {
+        alert('Categoría no encontrada en la base de datos. Por favor, agréguela primero o seleccione una existente.');
+        console.error("Categoría no encontrada para el nombre:", nuevoProducto.categoria);
+        return; // Detener la ejecución si no se encuentra la categoría
       }
 
+      // 3. Crear un objeto para insertar con el ID de la categoría en lugar del nombre
+      const productoParaInsertar = {
+        ...nuevoProducto, // Copia todas las propiedades de nuevoProducto
+        categoria_id: categoriaSeleccionada.id // Asigna el ID encontrado
+        // delete productoParaInsertar.categoria; // Opcional pero recomendado si la columna 'categoria' no existe en Supabase
+      };
+
+      // 4. Llamar al servicio con el objeto corregido
       await productService.create(productoParaInsertar);
+
+      // 5. Actualizar el estado local después de la inserción exitosa
       const updated = await productService.getAll();
       setProductos(updated);
+
     } catch (error) {
       console.error('Error al crear producto:', error);
       alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
@@ -97,12 +144,13 @@ function App() {
     }
   };
 
-  // Proveedores
+  // CORREGIDO: ahora recibe los datos del nuevo proveedor
   const handleAddProveedor = async (nuevoProveedor) => {
     try {
+      // Validación de teléfono colombiano (opcional pero recomendada)
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
-        if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
             !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
@@ -128,7 +176,7 @@ function App() {
     }
   };
 
-  // Categorías
+  // CORREGIDO: ahora recibe el nombre de la categoría
   const handleAddCategoria = async (nombreCategoria) => {
     try {
       await categoryService.create({ nombre: nombreCategoria });
@@ -147,38 +195,6 @@ function App() {
     } catch (error) {
       console.error('Error al eliminar categoría:', error);
       alert('Error al eliminar la categoría');
-    }
-  };
-
-  const renderView = () => {
-    switch (vistaActual) {
-      case 'login':
-        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
-      case 'register':
-        return <RegisterView onShowLogin={handleShowLogin} />;
-      case 'catalog':
-        return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />;
-      case 'client':
-        return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
-      case 'admin':
-        return (
-          <AdminView
-            productos={productos}
-            proveedores={proveedores}
-            categorias={categorias}
-            vistaActiva={vistaAdminActiva}
-            setVistaActiva={setVistaAdminActiva}
-            onAddProducto={handleAddProducto}
-            onDeleteProducto={handleDeleteProducto}
-            onAddProveedor={handleAddProveedor}
-            onAddCategoria={handleAddCategoria}
-            onDeleteCategoria={handleDeleteCategoria}
-            onDeleteProveedor={handleDeleteProveedor}
-            onLogout={handleLogout}
-          />
-        );
-      default:
-        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
     }
   };
 
