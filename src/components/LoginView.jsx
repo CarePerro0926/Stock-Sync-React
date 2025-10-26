@@ -14,8 +14,9 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     try {
       let emailToUse = identifier.trim();
 
+      // Si el identificador no es un correo, buscar por username
       if (!identifier.includes('@')) {
-        const {  } = await supabase
+        const { data, error } = await supabase
           .from('usuarios')
           .select('email')
           .eq('username', identifier.trim())
@@ -29,33 +30,40 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         emailToUse = data.email;
       }
 
-      const {  } = await supabase.auth.signInWithPassword({
+      // Intentar iniciar sesión con Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailToUse,
-        password: password.trim()
+        password: password.trim(),
       });
 
-      if (error) {
+      if (authError) {
         alert('Credenciales incorrectas');
         setLoading(false);
         return;
       }
 
-      if (session?.user) {
-        const {  } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', session.user.id)
-          .single();
+      // Obtener datos adicionales del usuario desde tu tabla 'usuarios'
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select('username, role')
+        .eq('id', authData.user.id)
+        .single();
 
-        const usr = {
-          id: session.user.id,
-          email: session.user.email,
-          username: data?.username || session.user.email.split('@')[0],
-          role: data?.role || 'client'
-        };
-
-        onLogin(usr);
+      if (userError) {
+        console.error('Error al cargar perfil:', userError);
+        alert('No se pudo cargar tu perfil. Contacta al administrador.');
+        setLoading(false);
+        return;
       }
+
+      const usr = {
+        id: authData.user.id,
+        email: authData.user.email,
+        username: userData?.username || authData.user.email.split('@')[0],
+        role: userData?.role || 'cliente', // usa 'cliente' como fallback
+      };
+
+      onLogin(usr);
     } catch (err) {
       console.error('Error inesperado:', err);
       alert('Error interno. Revisa la consola.');
