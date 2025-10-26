@@ -7,6 +7,29 @@ import ProvidersTab from './Admin/ProvidersTab';
 
 // Añadimos 'categorias' como prop
 const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
+  // 👇 TEMPORAL: Usa datos de prueba si las props son undefined o vacías
+  const mockCategorias = [
+    { id: 'CAT001', nombre: 'Electrónicos' },
+    { id: 'CAT002', nombre: 'Ropa' },
+    { id: 'CAT003', nombre: 'Alimentos' }
+  ];
+
+  const mockProductos = [
+    { id: 'PROD001', nombre: 'Laptop', categoria_id: 'CAT001', cantidad: 10, precio: 800 },
+    { id: 'PROD002', nombre: 'Camiseta', categoria_id: 'CAT002', cantidad: 50, precio: 20 },
+    { id: 'PROD003', nombre: 'Manzana', categoria_id: 'CAT003', cantidad: 100, precio: 1 }
+  ];
+
+  const mockProveedores = [
+    { id: 'PROV001', nombre: 'Proveedor A', email: 'a@proveedor.com', telefono: '123456789' },
+    { id: 'PROV002', nombre: 'Proveedor B', email: 'b@proveedor.com', telefono: '987654321' }
+  ];
+
+  // Usa los datos de prueba si las props originales están vacías o no existen
+  const finalCategorias = categorias && categorias.length > 0 ? categorias : mockCategorias;
+  const finalProductos = productos && productos.length > 0 ? productos : mockProductos;
+  const finalProveedores = proveedores && proveedores.length > 0 ? proveedores : mockProveedores;
+
   const [showMenu, setShowMenu] = useState(false);
 
   // Cerrar menú si se hace click fuera (en móvil)
@@ -104,18 +127,18 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
       </ul>
 
       {/* Renderizar la vista activa */}
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
+      {vistaActiva === 'inventory' && <InventoryTab productos={finalProductos} />}
       {/* CORREGIDO: Pasamos todas las props necesarias, omitiendo onAddCategoria si no existe */}
       {vistaActiva === 'add' && <AddTab
         onAddProducto={onAddProducto}
         // onAddCategoria={...} // <-- Comenta o elimina esta línea si no tienes la función
         onAddProveedor={onAddProveedor}
-        categorias={categorias || []}
-        productos={productos || []}
-        proveedores={proveedores || []}
+        categorias={finalCategorias}
+        productos={finalProductos}
+        proveedores={finalProveedores}
       />}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
-      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
+      {vistaActiva === 'providers' && <ProvidersTab proveedores={finalProveedores} onAddProveedor={onAddProveedor} />}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
