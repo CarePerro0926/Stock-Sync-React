@@ -13,34 +13,34 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
 
     // Si no es un email, buscar por username
     if (!identifier.includes('@')) {
-      const {  usuario, error } = await supabase
+      const {  } = await supabase
         .from('usuarios')
         .select('email')
         .eq('username', identifier.trim())
         .single();
 
-      if (error || !usuario) {
+      if (error || !data) {
         alert('Usuario no encontrado');
         return;
       }
 
-      emailToUse = usuario.email;
+      emailToUse = data.email;
     }
 
     // Iniciar sesión con Supabase Auth
-    const {  session, error: authError } = await supabase.auth.signInWithPassword({
+    const {  } = await supabase.auth.signInWithPassword({
       email: emailToUse,
       password: password.trim()
     });
 
-    if (authError) {
-      console.error('Error de login:', authError.message);
+    if (error) {
+      console.error('Error de login:', error.message);
       alert('Credenciales incorrectas');
       return;
     }
 
     if (session?.user) {
-      const {  perfil } = await supabase
+      const {  } = await supabase
         .from('usuarios')
         .select('username, role')
         .eq('id', session.user.id)
@@ -49,8 +49,8 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       const usr = {
         id: session.user.id,
         email: session.user.email,
-        username: perfil?.username || session.user.email.split('@')[0],
-        role: perfil?.role || 'client'
+        username: data?.username || session.user.email.split('@')[0],
+        role: data?.role || 'client'
       };
 
       onLogin(usr);
