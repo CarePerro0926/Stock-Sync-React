@@ -1,20 +1,5 @@
 import React, { useState } from 'react';
 
-/**
- * AddTab.jsx
- * - Agregar Producto: seleccionar categoría (id — nombre) y uno o varios proveedores (checkboxes).
- * - Agregar Categoría: campo simple para crear categoría.
- * - Agregar Proveedor: seleccionar productos que surte (checkboxes) y categorías que surte (checkboxes).
- *
- * Props:
- * - onAddProducto(productoObj)
- * - onAddCategoria(nombreCategoria)
- * - onAddProveedor(proveedorObj)
- * - proveedores = [{ id, nombre, ... }]
- * - categorias = [{ id, nombre, ... }]
- * - productos = [{ id, nombre, categoria_id, ... }]
- */
-
 const AddTab = ({
   onAddProducto,
   onAddCategoria,
@@ -26,7 +11,7 @@ const AddTab = ({
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria_id: '',
+    categoria: '', // ← ahora usamos 'categoria' (nombre), no 'categoria_id'
     cantidad: '',
     precio: '',
     proveedores: []
@@ -39,7 +24,7 @@ const AddTab = ({
     email: '',
     telefono: '',
     productos: [],
-    categorias: []
+    categorias: [] // ← guarda nombres de categorías, ej: ["Procesadores", "Boards"]
   });
 
   /* ---------- Producto ---------- */
@@ -48,7 +33,7 @@ const AddTab = ({
     const { name, value } = e.target;
     setNuevoProducto((prev) => ({
       ...prev,
-      [name]: ['cantidad', 'precio', 'categoria_id'].includes(name)
+      [name]: ['cantidad', 'precio'].includes(name)
         ? value === '' ? '' : Number(value)
         : value
     }));
@@ -68,9 +53,9 @@ const AddTab = ({
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const { id, nombre, categoria_id, cantidad, precio, proveedores: provs } = nuevoProducto;
+    const { id, nombre, categoria, cantidad, precio, proveedores: provs } = nuevoProducto;
 
-    if (!id || !nombre || !categoria_id || !cantidad || !precio || provs.length === 0) {
+    if (!id || !nombre || !categoria || !cantidad || !precio || provs.length === 0) {
       alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
@@ -80,14 +65,14 @@ const AddTab = ({
     setNuevoProducto({
       id: '',
       nombre: '',
-      categoria_id: '',
+      categoria: '',
       cantidad: '',
       precio: '',
       proveedores: []
     });
   };
 
-  /* ---------- Categoria ---------- */
+  /* ---------- Categoría ---------- */
 
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
@@ -121,14 +106,14 @@ const AddTab = ({
     });
   };
 
-  const toggleCategoriaProveedor = (categoriaId) => {
+  const toggleCategoriaProveedor = (categoriaNombre) => {
     setNuevoProveedor((prev) => {
-      const isSelected = prev.categorias.includes(categoriaId);
+      const isSelected = prev.categorias.includes(categoriaNombre);
       return {
         ...prev,
         categorias: isSelected
-          ? prev.categorias.filter((id) => id !== categoriaId)
-          : [...prev.categorias, categoriaId]
+          ? prev.categorias.filter((nombre) => nombre !== categoriaNombre)
+          : [...prev.categorias, categoriaNombre]
       };
     });
   };
@@ -192,16 +177,16 @@ const AddTab = ({
         <div className="mb-2">
           <select
             className="form-control"
-            name="categoria_id"
-            value={nuevoProducto.categoria_id}
+            name="categoria"
+            value={nuevoProducto.categoria}
             onChange={handleProductoChange}
             required
           >
             <option value="">Seleccionar categoría</option>
-            {categorias && categorias.length > 0 ? (
+            {categorias.length > 0 ? (
               categorias.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.id} — {cat.nombre}
+                <option key={cat.nombre} value={cat.nombre}>
+                  {cat.nombre}
                 </option>
               ))
             ) : (
@@ -248,7 +233,7 @@ const AddTab = ({
                     onChange={() => toggleProveedorProducto(prov.id)}
                   />
                   <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
-                    {prov.id} — {prov.nombre}
+                    {prov.nombre}
                   </label>
                 </div>
               ))
@@ -343,7 +328,7 @@ const AddTab = ({
                     onChange={() => toggleProductoProveedor(prod.id)}
                   />
                   <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
-                    {prod.id} — {prod.nombre}
+                    {prod.nombre}
                   </label>
                 </div>
               ))
@@ -358,16 +343,16 @@ const AddTab = ({
           <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
             {categorias.length > 0 ? (
               categorias.map((cat) => (
-                <div key={cat.id} className="form-check">
+                <div key={cat.nombre} className="form-check">
                   <input
                     className="form-check-input"
                     type="checkbox"
-                    id={`prov-cat-${cat.id}`}
-                    checked={nuevoProveedor.categorias.includes(cat.id)}
-                    onChange={() => toggleCategoriaProveedor(cat.id)}
+                    id={`prov-cat-${cat.nombre}`}
+                    checked={nuevoProveedor.categorias.includes(cat.nombre)}
+                    onChange={() => toggleCategoriaProveedor(cat.nombre)}
                   />
-                  <label className="form-check-label" htmlFor={`prov-cat-${cat.id}`}>
-                    {cat.id} — {cat.nombre}
+                  <label className="form-check-label" htmlFor={`prov-cat-${cat.nombre}`}>
+                    {cat.nombre}
                   </label>
                 </div>
               ))
