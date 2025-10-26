@@ -47,3 +47,10 @@ export const initialProductos = [
   { id: '29', nombre: 'Silla Ergonómica Gamer', cantidad: 10, precio: 750000, categoria: 'Mobiliario', id_proveedor: '6' },
   { id: '30', nombre: 'Alfombrilla RGB XL', cantidad: 40, precio: 90000, categoria: 'Accesorios', id_proveedor: '3' }
 ];
+
+// Extraer categorías únicas de los productos
+const todasLasCategorias = [...new Set(initialProductos.map(p => p.categoria))];
+export const initialCategorias = todasLasCategorias.map((nombre, index) => ({
+  id: (index + 1).toString(),
+  nombre
+}));
