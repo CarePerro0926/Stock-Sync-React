@@ -104,7 +104,14 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
 
       {/* Renderizar la vista activa */}
       {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
-      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} />}
+      {vistaActiva === 'add' && <AddTab
+          onAddProducto={onAddProducto}
+          onAddCategoria={onAddCategoria}
+          onAddProveedor={onAddProveedor}
+          categorias={categorias}
+          productos={productos}
+          proveedores={proveedores}
+        />}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
 
