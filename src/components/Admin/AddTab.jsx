@@ -1,6 +1,19 @@
-// src/components/AddTab.js (o donde lo tengas)
-
 import React, { useState } from 'react';
+
+/**
+ * AddTab.jsx
+ * - Agregar Producto: seleccionar categoría (id — nombre) y uno o varios proveedores (checkboxes).
+ * - Agregar Categoría: campo simple para crear categoría.
+ * - Agregar Proveedor: seleccionar productos que surte (checkboxes) y categorías que surte (checkboxes).
+ *
+ * Props:
+ * - onAddProducto(productoObj)
+ * - onAddCategoria(nombreCategoria)
+ * - onAddProveedor(proveedorObj)
+ * - proveedores = [{ id, nombre, ... }]
+ * - categorias = [{ id, nombre, ... }]
+ * - productos = [{ id, nombre, categoria_id, ... }]
+ */
 
 const AddTab = ({
   onAddProducto,
@@ -19,13 +32,17 @@ const AddTab = ({
     proveedores: []
   });
 
-    const [nuevoProveedor, setNuevoProveedor] = useState({
-      nombre: '',
-      email: '',
-      telefono: '',
-      productos: [],
-      categorias: [] // ✅ necesario para checkboxes
-    });
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
+
+  const [nuevoProveedor, setNuevoProveedor] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    productos: [],
+    categorias: []
+  });
+
+  /* ---------- Producto ---------- */
 
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
@@ -43,7 +60,7 @@ const AddTab = ({
       return {
         ...prev,
         proveedores: isSelected
-          ? prev.proveedores.filter(id => id !== proveedorId)
+          ? prev.proveedores.filter((id) => id !== proveedorId)
           : [...prev.proveedores, proveedorId]
       };
     });
@@ -51,9 +68,9 @@ const AddTab = ({
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const { id, nombre, categoria_id, cantidad, precio, proveedores } = nuevoProducto;
+    const { id, nombre, categoria_id, cantidad, precio, proveedores: provs } = nuevoProducto;
 
-    if (!id || !nombre || !categoria_id || !cantidad || !precio || proveedores.length === 0) {
+    if (!id || !nombre || !categoria_id || !cantidad || !precio || provs.length === 0) {
       alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
@@ -70,6 +87,8 @@ const AddTab = ({
     });
   };
 
+  /* ---------- Categoria ---------- */
+
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -79,6 +98,8 @@ const AddTab = ({
     onAddCategoria(nuevaCategoria.trim());
     setNuevaCategoria('');
   };
+
+  /* ---------- Proveedor ---------- */
 
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
@@ -94,34 +115,55 @@ const AddTab = ({
       return {
         ...prev,
         productos: isSelected
-          ? prev.productos.filter(id => id !== productoId)
+          ? prev.productos.filter((id) => id !== productoId)
           : [...prev.productos, productoId]
+      };
+    });
+  };
+
+  const toggleCategoriaProveedor = (categoriaId) => {
+    setNuevoProveedor((prev) => {
+      const isSelected = prev.categorias.includes(categoriaId);
+      return {
+        ...prev,
+        categorias: isSelected
+          ? prev.categorias.filter((id) => id !== categoriaId)
+          : [...prev.categorias, categoriaId]
       };
     });
   };
 
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
-    const { nombre, email, telefono, productos } = nuevoProveedor;
+    const { nombre, email, telefono, productos: prods, categorias: cats } = nuevoProveedor;
 
-    if (!nombre || !email || productos.length === 0 || categorias.length === 0) {
-  alert('Completa nombre, correo, al menos un producto y una categoría.');
-  return;
-}
+    if (!nombre || !email || prods.length === 0 || cats.length === 0) {
+      alert('Completa nombre, correo, al menos un producto y al menos una categoría.');
+      return;
+    }
 
-    onAddProveedor({ nombre, email, telefono, productos });
+    onAddProveedor({
+      nombre,
+      email,
+      telefono,
+      productos: prods,
+      categorias: cats
+    });
 
     setNuevoProveedor({
       nombre: '',
       email: '',
       telefono: '',
-      productos: []
+      productos: [],
+      categorias: []
     });
   };
 
   return (
     <>
+      {/* -------------------- Agregar Producto -------------------- */}
       <h5>Agregar Producto</h5>
+
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
           <input
@@ -134,6 +176,7 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="text"
@@ -145,22 +188,24 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-2">
-        <select
-          className="form-control"
-          name="categoria_id"
-          value={nuevoProducto.categoria_id}
-          onChange={handleProductoChange}
-          required
-        >
-          <option value="">Seleccionar categoría</option>
-          {categorias.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.id} — {cat.nombre}
-            </option>
-          ))}
-        </select>
+          <select
+            className="form-control"
+            name="categoria_id"
+            value={nuevoProducto.categoria_id}
+            onChange={handleProductoChange}
+            required
+          >
+            <option value="">Seleccionar categoría</option>
+            {categorias.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.id} — {cat.nombre}
+              </option>
+            ))}
+          </select>
         </div>
+
         <div className="mb-2">
           <input
             type="number"
@@ -172,6 +217,7 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="number"
@@ -183,9 +229,10 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-3">
           <label className="form-label">Proveedores</label>
-          <div className="d-flex flex-column gap-2 mt-2">
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
             {proveedores.length > 0 ? (
               proveedores.map((prov) => (
                 <div key={prov.id} className="form-check">
@@ -197,7 +244,7 @@ const AddTab = ({
                     onChange={() => toggleProveedorProducto(prov.id)}
                   />
                   <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
-                    {prov.nombre}
+                    {prov.id} — {prov.nombre}
                   </label>
                 </div>
               ))
@@ -206,6 +253,7 @@ const AddTab = ({
             )}
           </div>
         </div>
+
         <button type="submit" className="btn btn-success w-100">
           Agregar Producto
         </button>
@@ -213,7 +261,9 @@ const AddTab = ({
 
       <hr className="my-4" />
 
+      {/* -------------------- Agregar Categoría -------------------- */}
       <h5>Agregar Categoría</h5>
+
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
@@ -225,6 +275,7 @@ const AddTab = ({
               required
             />
           </div>
+
           <div className="col-12 col-md">
             <button type="submit" className="btn btn-info w-100">
               Agregar Categoría
@@ -235,7 +286,9 @@ const AddTab = ({
 
       <hr className="my-4" />
 
+      {/* -------------------- Agregar Proveedor -------------------- */}
       <h5>Agregar Proveedor</h5>
+
       <form onSubmit={handleAddProveedorSubmit}>
         <div className="mb-2">
           <input
@@ -248,6 +301,7 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="email"
@@ -259,6 +313,7 @@ const AddTab = ({
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="text"
@@ -269,12 +324,10 @@ const AddTab = ({
             onChange={handleProveedorChange}
           />
         </div>
+
         <div className="mb-3">
           <label className="form-label">Productos que surte</label>
-          <div
-            className="d-flex flex-column gap-2 mt-2"
-            style={{ maxHeight: '200px', overflowY: 'auto' }}
-          >
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
             {productos.length > 0 ? (
               productos.map((prod) => (
                 <div key={prod.id} className="form-check">
@@ -286,7 +339,7 @@ const AddTab = ({
                     onChange={() => toggleProductoProveedor(prod.id)}
                   />
                   <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
-                    {prod.nombre}
+                    {prod.id} — {prod.nombre}
                   </label>
                 </div>
               ))
@@ -295,37 +348,31 @@ const AddTab = ({
             )}
           </div>
         </div>
+
         <div className="mb-3">
-  <label className="form-label">Categorías que surte</label>
-  <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-    {categorias.length > 0 ? (
-      categorias.map((cat) => (
-        <div key={cat.id} className="form-check">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id={`prov-cat-${cat.id}`}
-            checked={nuevoProveedor.categorias?.includes?.(cat.id) || false}
-            onChange={(e) => {
-              const isChecked = e.target.checked;
-              setNuevoProveedor((prev) => ({
-                ...prev,
-                categorias: isChecked
-                  ? [...(prev.categorias || []), cat.id]
-                  : (prev.categorias || []).filter((id) => id !== cat.id)
-              }));
-            }}
-          />
-          <label className="form-check-label" htmlFor={`prov-cat-${cat.id}`}>
-            {cat.id} — {cat.nombre}
-          </label>
+          <label className="form-label">Categorías que surte</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <div key={cat.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-cat-${cat.id}`}
+                    checked={nuevoProveedor.categorias.includes(cat.id)}
+                    onChange={() => toggleCategoriaProveedor(cat.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-cat-${cat.id}`}>
+                    {cat.id} — {cat.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay categorías disponibles.</small>
+            )}
+          </div>
         </div>
-      ))
-    ) : (
-      <small className="text-muted">No hay categorías disponibles.</small>
-    )}
-  </div>
-</div>
+
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
         </button>
