@@ -22,29 +22,29 @@ function App() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Cargar datos iniciales
-    useEffect(() => {
-      const cargarDatos = async () => {
-        try {
-          const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
-            productService.getAll(),
-            providerService.getAll(),
-            categoryService.getAll()
-          ]);
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
+          productService.getAll(),
+          providerService.getAll(),
+          categoryService.getAll()
+        ]);
 
-          // Si los servicios devuelven vacío, usar datos iniciales
-          setProductos(productosDB.length > 0 ? productosDB : initialProductos);
-          setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
-          setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
-        } catch (error) {
-          console.error('Error al cargar datos:', error);
-          // En caso de error, usar datos iniciales
-          setProductos(initialProductos);
-          setProveedores(initialProveedores);
-          setCategorias(initialCategorias);
-        }
-      };
-      cargarDatos();
-    }, []);
+        // Si los servicios devuelven vacío, usar datos iniciales
+        setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+        setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+        setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        // En caso de error, usar datos iniciales
+        setProductos(initialProductos);
+        setProveedores(initialProveedores);
+        setCategorias(initialCategorias);
+      }
+    };
+    cargarDatos();
+  }, []);
 
   const handleLogin = (usr) => {
     if (!usr) {
@@ -99,12 +99,35 @@ function App() {
     }
   };
 
-  // CORREGIDO: ahora recibe los datos del nuevo producto
+  // CORREGIDO: ahora convierte 'categoria' (nombre) a 'categoria_id' (UUID) antes de insertar
   const handleAddProducto = async (nuevoProducto) => {
     try {
-      await productService.create(nuevoProducto);
+      // 1. Buscar el objeto de categoría correspondiente al nombre recibido
+      const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
+
+      // 2. Validar que la categoría exista
+      if (!categoriaSeleccionada) {
+        alert('Categoría no encontrada en la base de datos. Por favor, agréguela primero o seleccione una existente.');
+        console.error("Categoría no encontrada para el nombre:", nuevoProducto.categoria);
+        return; // Detener la ejecución si no se encuentra la categoría
+      }
+
+      // 3. Crear un objeto para insertar con el ID de la categoría en lugar del nombre
+      const productoParaInsertar = {
+        ...nuevoProducto, // Copia todas las propiedades de nuevoProducto
+        categoria_id: categoriaSeleccionada.id // Asigna el ID encontrado
+        // Elimina la propiedad 'categoria' (nombre) del objeto que se inserta
+        // Esto es importante si la tabla en Supabase solo tiene categoria_id
+        // delete productoParaInsertar.categoria; // Opcional pero recomendado si la columna 'categoria' no existe en Supabase
+      };
+
+      // 4. Llamar al servicio con el objeto corregido
+      await productService.create(productoParaInsertar);
+
+      // 5. Actualizar el estado local después de la inserción exitosa
       const updated = await productService.getAll();
       setProductos(updated);
+
     } catch (error) {
       console.error('Error al crear producto:', error);
       alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
