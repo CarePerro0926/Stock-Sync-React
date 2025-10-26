@@ -5,44 +5,60 @@ const AddTab = ({
   onAddCategoria,
   onAddProveedor,
   proveedores = [],
-  categorias = []
+  categorias = [],
+  productos = [] // ← Nueva prop: lista de productos
 }) => {
+  // Estado para nuevo producto: ahora con array de proveedores
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
     categoria_id: '',
     cantidad: '',
     precio: '',
-    provider_id: ''
+    proveedores: [] // array de IDs de proveedores
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
+  // Estado para nuevo proveedor: ahora con array de productos que surte
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
     telefono: '',
-    categorias: []
+    productos: [] // array de IDs de productos
   });
 
+  // Manejo de cambios en campos de texto/número del producto
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
-
     setNuevoProducto((prev) => ({
       ...prev,
-      [name]: ['cantidad', 'precio', 'provider_id', 'categoria_id'].includes(name)
+      [name]: ['cantidad', 'precio', 'categoria_id'].includes(name)
         ? value === '' ? '' : Number(value)
         : value
     }));
   };
 
+  // Toggle para seleccionar/deseleccionar proveedores en producto
+  const toggleProveedorProducto = (proveedorId) => {
+    setNuevoProducto((prev) => {
+      const isSelected = prev.proveedores.includes(proveedorId);
+      return {
+        ...prev,
+        proveedores: isSelected
+          ? prev.proveedores.filter(id => id !== proveedorId)
+          : [...prev.proveedores, proveedorId]
+      };
+    });
+  };
+
+  // Envío de nuevo producto
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
+    const { id, nombre, categoria_id, cantidad, precio, proveedores } = nuevoProducto;
 
-    const { id, nombre, categoria_id, cantidad, precio, provider_id } = nuevoProducto;
-
-    if (!id || !nombre || !categoria_id || !cantidad || !precio || !provider_id) {
-      alert('Por favor completa todos los campos del producto.');
+    if (!id || !nombre || !categoria_id || !cantidad || !precio || proveedores.length === 0) {
+      alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
 
@@ -54,49 +70,60 @@ const AddTab = ({
       categoria_id: '',
       cantidad: '',
       precio: '',
-      provider_id: ''
+      proveedores: []
     });
   };
 
+  // Envío de nueva categoría
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
-
     if (!nuevaCategoria.trim()) {
       alert('Ingresa el nombre de la categoría.');
       return;
     }
-
     onAddCategoria(nuevaCategoria.trim());
-
     setNuevaCategoria('');
   };
 
+  // Manejo de cambios en campos del proveedor
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
-
     setNuevoProveedor((prev) => ({
       ...prev,
       [name]: value
     }));
   };
 
+  // Toggle para seleccionar/deseleccionar productos en proveedor
+  const toggleProductoProveedor = (productoId) => {
+    setNuevoProveedor((prev) => {
+      const isSelected = prev.productos.includes(productoId);
+      return {
+        ...prev,
+        productos: isSelected
+          ? prev.productos.filter(id => id !== productoId)
+          : [...prev.productos, productoId]
+      };
+    });
+  };
+
+  // Envío de nuevo proveedor
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
+    const { nombre, email, telefono, productos } = nuevoProveedor;
 
-    const { nombre, email, telefono, categorias } = nuevoProveedor;
-
-    if (!nombre || !email || categorias.length === 0) {
-      alert('Completa nombre, correo y al menos una categoría.');
+    if (!nombre || !email || productos.length === 0) {
+      alert('Completa nombre, correo y al menos un producto que surta.');
       return;
     }
 
-    onAddProveedor({ nombre, email, telefono, categorias });
+    onAddProveedor({ nombre, email, telefono, productos });
 
     setNuevoProveedor({
       nombre: '',
       email: '',
       telefono: '',
-      categorias: []
+      productos: []
     });
   };
 
@@ -104,7 +131,6 @@ const AddTab = ({
     <>
       {/* Agregar Producto */}
       <h5>Agregar Producto</h5>
-
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
           <input
@@ -139,7 +165,6 @@ const AddTab = ({
             required
           >
             <option value="">Seleccionar categoría</option>
-
             {categorias.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.id} — {cat.nombre}
@@ -172,22 +197,29 @@ const AddTab = ({
           />
         </div>
 
-        <div className="mb-2">
-          <select
-            className="form-control"
-            name="provider_id"
-            value={nuevoProducto.provider_id}
-            onChange={handleProductoChange}
-            required
-          >
-            <option value="">Seleccionar proveedor</option>
-
-            {proveedores.map((prov) => (
-              <option key={prov.id} value={prov.id}>
-                {prov.nombre}
-              </option>
-            ))}
-          </select>
+        {/* Selección múltiple de proveedores */}
+        <div className="mb-3">
+          <label className="form-label">Proveedores</label>
+          <div className="d-flex flex-column gap-2 mt-2">
+            {proveedores.length > 0 ? (
+              proveedores.map((prov) => (
+                <div key={prov.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-${prov.id}`}
+                    checked={nuevoProducto.proveedores.includes(prov.id)}
+                    onChange={() => toggleProveedorProducto(prov.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
+                    {prov.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay proveedores disponibles.</small>
+            )}
+          </div>
         </div>
 
         <button type="submit" className="btn btn-success w-100">
@@ -199,7 +231,6 @@ const AddTab = ({
 
       {/* Agregar Categoría */}
       <h5>Agregar Categoría</h5>
-
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
@@ -211,7 +242,6 @@ const AddTab = ({
               required
             />
           </div>
-
           <div className="col-12 col-md">
             <button type="submit" className="btn btn-info w-100">
               Agregar Categoría
@@ -224,7 +254,6 @@ const AddTab = ({
 
       {/* Agregar Proveedor */}
       <h5>Agregar Proveedor</h5>
-
       <form onSubmit={handleAddProveedorSubmit}>
         <div className="mb-2">
           <input
@@ -261,44 +290,30 @@ const AddTab = ({
           />
         </div>
 
+        {/* Selección múltiple de productos que surte */}
         <div className="mb-3">
-          <label className="form-label">Categorías que surte</label>
-
-          <div className="d-flex flex-column gap-2 mt-2">
-            {categorias.length > 0 ? (
-              categorias.map((cat) => (
-                <div key={cat.id} className="form-check">
+          <label className="form-label">Productos que surte</label>
+          <div
+            className="d-flex flex-column gap-2 mt-2"
+            style={{ maxHeight: '200px', overflowY: 'auto' }}
+          >
+            {productos.length > 0 ? (
+              productos.map((prod) => (
+                <div key={prod.id} className="form-check">
                   <input
                     className="form-check-input"
                     type="checkbox"
-                    id={`cat-${cat.id}`}
-                    checked={nuevoProveedor.categorias.includes(cat.id)}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-
-                      setNuevoProveedor((prev) => {
-                        if (isChecked) {
-                          return {
-                            ...prev,
-                            categorias: [...prev.categorias, cat.id]
-                          };
-                        } else {
-                          return {
-                            ...prev,
-                            categorias: prev.categorias.filter((id) => id !== cat.id)
-                          };
-                        }
-                      });
-                    }}
+                    id={`prov-prod-${prod.id}`}
+                    checked={nuevoProveedor.productos.includes(prod.id)}
+                    onChange={() => toggleProductoProveedor(prod.id)}
                   />
-
-                  <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                    {cat.id} — {cat.nombre}
+                  <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
+                    {prod.id} — {prod.nombre}
                   </label>
                 </div>
               ))
             ) : (
-              <small className="text-muted">No hay categorías disponibles.</small>
+              <small className="text-muted">No hay productos disponibles.</small>
             )}
           </div>
         </div>
