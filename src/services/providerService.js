@@ -2,12 +2,14 @@
 import { supabase } from './supabaseClient';
 
 export const providerService = {
+  // Obtener proveedores + sus categorías
   getAll: async () => {
     const { data, error } = await supabase
       .from('proveedores')
       .select('*');
     if (error) throw error;
 
+    // Para cada proveedor, cargar sus categorías
     const proveedoresConCategorias = await Promise.all(
       data.map(async (prov) => {
         const { data: cats } = await supabase
@@ -24,9 +26,11 @@ export const providerService = {
     return proveedoresConCategorias;
   },
 
+  // Crear proveedor + sus categorías
   create: async (proveedor) => {
     const { nombre, email, telefono, categorias = [] } = proveedor;
 
+    // 1. Crear el proveedor
     const { data, error } = await supabase
       .from('proveedores')
       .insert({ nombre, email, telefono })
@@ -35,6 +39,7 @@ export const providerService = {
 
     if (error) throw error;
 
+    // 2. Crear relaciones en proveedor_categorias
     if (categorias.length > 0) {
       const relaciones = categorias.map(catId => ({
         proveedor_id: data.id,
@@ -50,6 +55,7 @@ export const providerService = {
   },
 
   remove: async (id) => {
+    // Al eliminar proveedor, las relaciones se borran por CASCADE
     const { error } = await supabase
       .from('proveedores')
       .delete()
