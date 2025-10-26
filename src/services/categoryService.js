@@ -2,16 +2,27 @@
 import { supabase } from './supabaseClient';
 
 export const categoryService = {
-  getAll: () => supabase.from('categorias').select('*').then(r => {
-    if (r.error) throw r.error;
-    return r.data;
-  }),
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('id, nombre')
+      .order('nombre', { ascending: true });
+    if (error) throw error;
+    return data; // [{ id: 'uuid', nombre: '...' }]
+  },
 
-  create: (nombre) => supabase.from('categorias').insert({ nombre }).then(r => {
-    if (r.error) throw r.error;
-  }),
+  create: async (nombre) => {
+    const { error } = await supabase
+      .from('categorias')
+      .insert({ nombre });
+    if (error) throw error;
+  },
 
-  remove: (id) => supabase.from('categorias').delete().eq('id', id).then(r => {
-    if (r.error) throw r.error;
-  })
+  remove: async (id) => {
+    const { error } = await supabase
+      .from('categorias')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  }
 };
