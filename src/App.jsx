@@ -74,9 +74,9 @@ function App() {
       case 'register':
         return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
-        return <PublicCatalogView productos={productos} onBack={handleShowLogin} />;
+        return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />; // CORREGIDO: pasar categorias
       case 'client':
-        return <ClientView productos={productos} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
+        return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />; // CORREGIDO: pasar categorias
       case 'admin':
         return (
           <AdminView
