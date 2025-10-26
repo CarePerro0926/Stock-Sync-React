@@ -55,3 +55,17 @@ export const initialCategorias = nombresCategorias.map((nombre, index) => ({
   id: (index + 1).toString(),
   nombre
 }));
+
+/**
+ * Filtra la lista de productos por una categoría específica.
+ * @param {string} categoria - El nombre de la categoría por la cual filtrar.
+ * @returns {Array} - Un array de productos que pertenecen a la categoría especificada.
+ */
+export const filtrarProductosPorCategoria = (categoria) => {
+  // Si la categoría es 'Todas' o similar, devolver todos los productos
+  if (!categoria || categoria === 'Todas') {
+    return initialProductos;
+  }
+  // Filtrar productos cuya propiedad 'categoria' coincida con el parámetro
+  return initialProductos.filter(producto => producto.categoria === categoria);
+};
