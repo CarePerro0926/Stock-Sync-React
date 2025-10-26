@@ -20,20 +20,28 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión al cargar
+  // 🔑 Restaurar sesión — versión estable y segura
   useEffect(() => {
     const restoreSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: { user: fullUser } } = await supabase.auth.getUser();
-        const role = fullUser?.user_metadata?.role || 'client';
+      const {  sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
 
-        setUsuarioActual({
+      if (session?.user) {
+        const {  perfilData } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single();
+
+        const usr = {
           id: session.user.id,
           email: session.user.email,
-          role
-        });
-        setVistaActual(role === 'admin' ? 'admin' : 'client');
+          username: perfilData?.username || session.user.email.split('@')[0],
+          role: perfilData?.role || 'client'
+        };
+
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
       } else {
         setVistaActual('login');
       }
@@ -42,8 +50,10 @@ function App() {
     restoreSession();
   }, []);
 
-  // 📦 Cargar datos del catálogo
+  // 📦 Cargar catálogo solo si estás autenticado
   useEffect(() => {
+    if (vistaActual !== 'admin' && vistaActual !== 'client') return;
+
     const cargarDatos = async () => {
       try {
         const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
@@ -58,15 +68,11 @@ function App() {
         console.error('Error al cargar datos:', error);
       }
     };
-    cargarDatos();
-  }, []);
 
-  // === Handlers ===
+    cargarDatos();
+  }, [vistaActual]);
+
   const handleLogin = (usr) => {
-    if (!usr) {
-      alert('Usuario/clave inválidos');
-      return;
-    }
     setUsuarioActual(usr);
     setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
   };
@@ -117,15 +123,19 @@ function App() {
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // === Renderizado ===
+  // 🔄 Pantalla de carga
   if (vistaActual === 'loading') {
     return (
       <div className="container-fluid p-4 text-center">
-        Cargando sesión...
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p className="mt-2">Cargando sesión...</p>
       </div>
     );
   }
 
+  // 🖼️ Renderizar vista actual
   const renderView = () => {
     switch (vistaActual) {
       case 'login':
@@ -140,12 +150,7 @@ function App() {
       case 'register':
         return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
-        return (
-          <PublicCatalogView
-            productos={productos}
-            onBack={handleShowLogin}
-          />
-        );
+        return <PublicCatalogView productos={productos} onBack={handleShowLogin} />;
       case 'client':
         return (
           <ClientView
@@ -170,22 +175,13 @@ function App() {
           />
         );
       default:
-        return (
-          <LoginView
-            onLogin={handleLogin}
-            onShowRegister={handleShowRegister}
-            onShowCatalog={handleShowCatalog}
-            onShowForgot={() => setShowForgotModal(true)}
-          />
-        );
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
     }
   };
 
   return (
     <div className="container-fluid p-4">
-      <div className="d-flex justify-content-center">
-        {renderView()}
-      </div>
+      <div className="d-flex justify-content-center">{renderView()}</div>
       <ForgotPasswordModal
         show={showForgotModal}
         onClose={() => setShowForgotModal(false)}
