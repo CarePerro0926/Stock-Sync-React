@@ -3,64 +3,57 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      let emailToUse = identifier.trim();
+    let emailToUse = user.trim();
 
-      if (!identifier.includes('@')) {
-        const {  } = await supabase
-          .from('usuarios')
-          .select('email')
-          .eq('username', identifier.trim())
-          .single();
+    // Si no es un email, busca el email por username
+    if (!user.includes('@')) {
+      const {  } = await supabase
+        .from('usuarios')
+        .select('email')
+        .eq('username', user.trim())
+        .single();
 
-        if (error || !data) {
-          alert('Usuario no encontrado');
-          setLoading(false);
-          return;
-        }
-        emailToUse = data.email;
-      }
-
-      const {  } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password: password.trim()
-      });
-
-      if (error) {
-        alert('Credenciales incorrectas');
-        setLoading(false);
+      if (error || !data) {
+        alert('Usuario no encontrado');
         return;
       }
+      emailToUse = data.email;
+    }
 
-      if (session?.user) {
-        const {  } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', session.user.id)
-          .single();
+    // Iniciar sesión con Supabase Auth
+    const {  } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password: pass.trim()
+    });
 
-        const usr = {
-          id: session.user.id,
-          email: session.user.email,
-          username: data?.username || session.user.email.split('@')[0],
-          role: data?.role || 'client'
-        };
+    if (error) {
+      console.error('Error de login:', error.message);
+      alert('Credenciales incorrectas');
+      return;
+    }
 
-        onLogin(usr);
-      }
-    } catch (err) {
-      console.error('Error inesperado:', err);
-      alert('Error interno. Revisa la consola.');
-    } finally {
-      setLoading(false);
+    if (session?.user) {
+      // Obtener perfil desde tu tabla 'usuarios'
+      const {  } = await supabase
+        .from('usuarios')
+        .select('username, role')
+        .eq('id', session.user.id)
+        .single();
+
+      const usr = {
+        id: session.user.id,
+        email: session.user.email,
+        username: data?.username || session.user.email.split('@')[0],
+        role: data?.role || 'client'
+      };
+
+      onLogin(usr);
     }
   };
 
@@ -71,9 +64,9 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         <input
           id="loginUser"
           className="form-control mb-2"
-          placeholder="Correo o usuario"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          placeholder="Usuario"
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
           required
         />
         <input
@@ -81,43 +74,20 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           type="password"
           className="form-control mb-2"
           placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={pass}
+          onChange={(e) => setPass(e.target.value)}
           required
         />
         <div className="d-flex justify-content-center gap-2 mb-2">
-          <button
-            type="submit"
-            id="btnLogin"
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
-          </button>
-          <button
-            type="button"
-            onClick={onShowRegister}
-            id="btnShowRegister"
-            className="btn btn-success"
-          >
-            Registrarse
-          </button>
+          <button type="submit" id="btnLogin" className="btn btn-primary">Iniciar Sesión</button>
+          <button type="button" onClick={onShowRegister} id="btnShowRegister" className="btn btn-success">Registrarse</button>
         </div>
       </form>
-      <button
-        onClick={onShowCatalog}
-        id="btnShowCatalog"
-        className="btn btn-outline-primary w-100 mb-2"
-      >
+      <button onClick={onShowCatalog} id="btnShowCatalog" className="btn btn-outline-primary w-100 mb-2">
         Ver Catálogo
       </button>
       <div className="text-end">
-        <span
-          id="btnForgot"
-          className="pointer text-info"
-          onClick={onShowForgot}
-          style={{ cursor: 'pointer' }}
-        >
+        <span id="btnForgot" className="pointer text-info" onClick={onShowForgot}>
           ¿Olvidaste tu contraseña?
         </span>
       </div>
