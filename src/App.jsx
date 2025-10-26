@@ -112,7 +112,7 @@ function App() {
     }
   };
 
-  // ✅ Categorías
+  // Categorías
   const handleAddCategoria = async () => {
     try {
       const updated = await categoryService.getAll();
