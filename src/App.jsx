@@ -20,14 +20,12 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión — CORREGIDO
+  // 🔑 Restaurar sesión — SINTAXIS SEGURA
   useEffect(() => {
     const restoreSession = async () => {
-      const {  sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
-
+      const {  } = await supabase.auth.getSession();
       if (session?.user) {
-        const {  perfilData, error } = await supabase
+        const {  } = await supabase
           .from('usuarios')
           .select('username, role')
           .eq('id', session.user.id)
@@ -42,8 +40,8 @@ function App() {
         const usr = {
           id: session.user.id,
           email: session.user.email,
-          username: perfilData?.username || session.user.email.split('@')[0],
-          role: perfilData?.role || 'client'
+          username: data?.username || session.user.email.split('@')[0],
+          role: data?.role || 'client'
         };
 
         setUsuarioActual(usr);
