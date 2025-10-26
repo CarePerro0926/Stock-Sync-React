@@ -4,20 +4,8 @@ import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
-import CategoriesTab from './Admin/CategoriesTab'; // Nuevo: gestión de categorías
 
-const AdminView = ({
-  productos,
-  categorias,
-  proveedores,
-  vistaActiva,
-  setVistaActiva,
-  onAddProducto,
-  onDeleteProducto,
-  onAddProveedor,
-  onAddCategoria, // Nueva función
-  onLogout
-}) => {
+const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
   const [showMenu, setShowMenu] = useState(false);
 
   // Cerrar menú si se hace click fuera (en móvil)
@@ -40,16 +28,15 @@ const AdminView = ({
 
   const selectTab = (tabId) => {
     setVistaActiva(tabId);
-    setShowMenu(false);
+    setShowMenu(false); // Cierra el menú móvil al seleccionar una pestaña
   };
 
   const getTitle = () => {
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
-      case 'add': return 'Agregar Producto';
-      case 'categorias': return 'Categorías';
-      case 'providers': return 'Proveedores';
+      case 'add': return 'Agregar';
       case 'delete': return 'Eliminar';
+      case 'providers': return 'Proveedores';
       default: return 'Panel Administrador';
     }
   };
@@ -57,8 +44,7 @@ const AdminView = ({
   return (
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
-
-      {/* Barra superior móvil */}
+      {/* Barra superior con botón de menú hamburguesa (visible en móviles) */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button
           id="btnMenuHamburguesa"
@@ -67,57 +53,60 @@ const AdminView = ({
           aria-label="Menú de navegación"
           onClick={toggleMenu}
         >
-          &#9776;
+          &#9776; {/* Este es el símbolo ☰ */}
         </button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
-
-      {/* Menú móvil */}
+      {/* Menú desplegable para móviles (inicialmente oculto) */}
       {showMenu && (
-        <div id="adminMenu" className="list-group mb-3 d-md-none">
-          <button className="list-group-item list-group-item-action" onClick={() => selectTab('inventory')}>Inventario</button>
-          <button className="list-group-item list-group-item-action" onClick={() => selectTab('add')}>Agregar Producto</button>
-          <button className="list-group-item list-group-item-action" onClick={() => selectTab('categorias')}>Categorías</button>
-          <button className="list-group-item list-group-item-action" onClick={() => selectTab('providers')}>Proveedores</button>
-          <button className="list-group-item list-group-item-action" onClick={() => selectTab('delete')}>Eliminar</button>
+        <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
         </div>
       )}
-
-      {/* Pestañas escritorio */}
+      {/* Pestañas de navegación estándar (ocultas en móviles, visibles en escritorio) */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
         <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>
+          <button
+            className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`}
+            onClick={() => selectTab('inventory')}
+          >
             Inventario
           </button>
         </li>
         <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>
-            Agregar Producto
+          <button
+            className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`}
+            onClick={() => selectTab('add')}
+          >
+            Agregar
           </button>
         </li>
         <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'categorias' ? 'active' : ''}`} onClick={() => selectTab('categorias')}>
-            Categorías
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
-            Proveedores
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>
+          <button
+            className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`}
+            onClick={() => selectTab('delete')}
+          >
             Eliminar
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`}
+            onClick={() => selectTab('providers')}
+          >
+            Proveedores
           </button>
         </li>
       </ul>
 
-      {/* Contenido dinámico */}
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} proveedores={proveedores} />}
-      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} categorias={categorias} proveedores={proveedores} />}
+      {/* Renderizar la vista activa */}
+      {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
+      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} />}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
-      {vistaActiva === 'categorias' && <CategoriesTab categorias={categorias} onAddCategoria={onAddCategoria} />}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
