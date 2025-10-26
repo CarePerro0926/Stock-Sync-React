@@ -85,7 +85,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
   };
 
-  // ✅ Usa la función segura
+  // Usa la función segura
   const listaCategorias = getListaCategorias();
 
   return (
