@@ -1,6 +1,8 @@
+// src/components/Admin/AddTab.jsx
 import React, { useState } from 'react';
 
 const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
+  // Estados para producto
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
@@ -10,15 +12,18 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     provider_id: ''
   });
 
+  // Estado para nueva categoría
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
+  // Estado para nuevo proveedor
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
     telefono: '',
-    categorias: []
+    categorias: [] // Array de IDs de categorías seleccionadas
   });
 
+  // Manejadores de producto
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
     setNuevoProducto({
@@ -40,6 +45,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
   };
 
+  // Manejador de categoría
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -50,6 +56,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     setNuevaCategoria('');
   };
 
+  // Manejadores de proveedor
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
     setNuevoProveedor({ ...nuevoProveedor, [name]: value });
@@ -58,8 +65,8 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
     const { nombre, email, telefono, categorias } = nuevoProveedor;
-    if (!nombre || !email || categorias.length === 0) {
-      alert('Completa nombre, correo y al menos una categoría.');
+    if (!nombre || !email) {
+      alert('Por favor completa al menos nombre y correo del proveedor.');
       return;
     }
     onAddProveedor({ nombre, email, telefono, categorias });
@@ -83,7 +90,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           <select className="form-control" name="categoria" value={nuevoProducto.categoria} onChange={handleProductoChange} required>
             <option value="">Seleccionar categoría</option>
             {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
             ))}
           </select>
         </div>
@@ -167,7 +174,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* Checkboxes para categorías */}
+        {/* ✅ CHECKBOXES PARA CATEGORÍAS (ideal para móviles) */}
         <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
           <div className="d-flex flex-column gap-2 mt-2">
