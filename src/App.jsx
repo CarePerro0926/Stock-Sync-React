@@ -52,7 +52,7 @@ function App() {
       return;
     }
     setUsuarioActual(usr);
-    // ✅ CORREGIDO: usa 'administrador' (tu preferencia)
+    // CORREGIDO: usa 'administrador' (tu preferencia)
     setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
     if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
@@ -99,7 +99,7 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe los datos del nuevo producto
+  // CORREGIDO: ahora recibe los datos del nuevo producto
   const handleAddProducto = async (nuevoProducto) => {
     try {
       await productService.create(nuevoProducto);
@@ -121,7 +121,7 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe los datos del nuevo proveedor
+  // CORREGIDO: ahora recibe los datos del nuevo proveedor
   const handleAddProveedor = async (nuevoProveedor) => {
     try {
       // Validación de teléfono colombiano (opcional pero recomendada)
@@ -153,7 +153,7 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe el nombre de la categoría
+  // CORREGIDO: ahora recibe el nombre de la categoría
   const handleAddCategoria = async (nombreCategoria) => {
     try {
       await categoryService.create({ nombre: nombreCategoria });
