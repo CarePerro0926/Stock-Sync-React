@@ -20,18 +20,24 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión — CORREGIDO: sintaxis válida
+  // 🔑 Restaurar sesión — CORREGIDO
   useEffect(() => {
     const restoreSession = async () => {
       const {  sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
 
       if (session?.user) {
-        const {  perfilData } = await supabase
+        const {  perfilData, error } = await supabase
           .from('usuarios')
           .select('username, role')
           .eq('id', session.user.id)
           .single();
+
+        if (error) {
+          console.error('Error al cargar perfil:', error);
+          setVistaActual('login');
+          return;
+        }
 
         const usr = {
           id: session.user.id,
@@ -43,7 +49,7 @@ function App() {
         setUsuarioActual(usr);
         setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
       } else {
-        setVistaActual('login'); // ← Esto es clave: muestra el login
+        setVistaActual('login');
       }
     };
 
@@ -123,7 +129,6 @@ function App() {
     setCategorias((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // 🔄 Pantalla de carga
   if (vistaActual === 'loading') {
     return (
       <div className="container-fluid p-4 text-center">
@@ -135,7 +140,6 @@ function App() {
     );
   }
 
-  // 🖼️ Renderizar la vista actual
   const renderView = () => {
     switch (vistaActual) {
       case 'login':
