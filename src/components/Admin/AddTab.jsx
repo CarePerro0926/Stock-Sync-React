@@ -175,6 +175,27 @@ const AddTab = ({
         </div>
 
         <div className="mb-2">
+          <select
+            className="form-control"
+            name="categoria"
+            value={nuevoProducto.categoria}
+            onChange={handleProductoChange}
+            required
+          >
+            <option value="">Seleccionar categoría</option>
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <option key={cat.nombre} value={cat.nombre}>
+                  {cat.nombre}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No hay categorías disponibles</option>
+            )}
+          </select>
+        </div>
+
+        <div className="mb-2">
           <input
             type="number"
             className="form-control"
@@ -198,6 +219,29 @@ const AddTab = ({
           />
         </div>
 
+        <div className="mb-3">
+          <label className="form-label">Proveedores</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
+            {proveedores.length > 0 ? (
+              proveedores.map((prov) => (
+                <div key={prov.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-${prov.id}`}
+                    checked={nuevoProducto.proveedores.includes(prov.id)}
+                    onChange={() => toggleProveedorProducto(prov.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
+                    {prov.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay proveedores disponibles.</small>
+            )}
+          </div>
+        </div>
 
         <button type="submit" className="btn btn-success w-100">
           Agregar Producto
@@ -270,7 +314,53 @@ const AddTab = ({
           />
         </div>
 
-               
+        <div className="mb-3">
+          <label className="form-label">Productos que surte</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {productos.length > 0 ? (
+              productos.map((prod) => (
+                <div key={prod.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-prod-${prod.id}`}
+                    checked={nuevoProveedor.productos.includes(prod.id)}
+                    onChange={() => toggleProductoProveedor(prod.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
+                    {prod.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay productos disponibles.</small>
+            )}
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Categorías que surte</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <div key={cat.nombre} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-cat-${cat.nombre}`}
+                    checked={nuevoProveedor.categorias.includes(cat.nombre)}
+                    onChange={() => toggleCategoriaProveedor(cat.nombre)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-cat-${cat.nombre}`}>
+                    {cat.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay categorías disponibles.</small>
+            )}
+          </div>
+        </div>
 
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
