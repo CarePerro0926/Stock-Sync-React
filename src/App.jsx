@@ -8,12 +8,12 @@ import AdminView from './components/AdminView';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
-import { categoryService } from './services/categoryService'; // ✅ Nuevo
+import { categoryService } from './services/categoryService';
 
 function App() {
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [categorias, setCategorias] = useState([]); // ✅ Nuevo
+  const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [vistaActual, setVistaActual] = useState('login');
@@ -27,11 +27,11 @@ function App() {
         const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
           productService.getAll(),
           providerService.getAll(),
-          categoryService.getAll() // ✅ Nuevo
+          categoryService.getAll()
         ]);
         setProductos(productosDB);
         setProveedores(proveedoresDB);
-        setCategorias(categoriasDB); // ✅ Nuevo
+        setCategorias(categoriasDB);
       } catch (error) {
         console.error('Error al cargar datos:', error);
       }
@@ -45,8 +45,9 @@ function App() {
       return;
     }
     setUsuarioActual(usr);
-    setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
-    if (usr.role === 'admin') setVistaAdminActiva('inventory');
+    // ✅ CORREGIDO: usa 'administrador' (tu preferencia)
+    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
 
   const handleLogout = () => {
@@ -74,12 +75,15 @@ function App() {
           <AdminView
             productos={productos}
             proveedores={proveedores}
-            categorias={categorias} // ✅ Nuevo
+            categorias={categorias}
+            vistaActiva={vistaAdminActiva}
+            setVistaActiva={setVistaAdminActiva}
             onAddProducto={handleAddProducto}
             onDeleteProducto={handleDeleteProducto}
             onAddProveedor={handleAddProveedor}
-            onAddCategoria={handleAddCategoria} // ✅ Nuevo
-            onDeleteCategoria={handleDeleteCategoria} // ✅ Nuevo
+            onAddCategoria={handleAddCategoria}
+            onDeleteCategoria={handleDeleteCategoria}
+            onDeleteProveedor={handleDeleteProveedor} // ✅ Añadido
             onLogout={handleLogout}
           />
         );
@@ -88,42 +92,80 @@ function App() {
     }
   };
 
-  // Productos
-  const handleAddProducto = async () => {
+  // ✅ CORREGIDO: ahora recibe los datos del nuevo producto
+  const handleAddProducto = async (nuevoProducto) => {
     try {
+      await productService.create(nuevoProducto);
       const updated = await productService.getAll();
       setProductos(updated);
     } catch (error) {
-      console.error('Error al recargar productos:', error);
+      console.error('Error al crear producto:', error);
+      alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
     }
   };
 
-  const handleDeleteProducto = (id) => {
-    setProductos(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProducto = async (id) => {
+    try {
+      await productService.remove(id);
+      setProductos(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      alert('Error al eliminar el producto');
+    }
   };
 
-  // Proveedores
-  const handleAddProveedor = async () => {
+  // ✅ CORREGIDO: ahora recibe los datos del nuevo proveedor
+  const handleAddProveedor = async (nuevoProveedor) => {
     try {
+      // Validación de teléfono colombiano (opcional pero recomendada)
+      if (nuevoProveedor.telefono) {
+        const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
+            !(cleaned.length === 12 && cleaned.startsWith('573'))) {
+          alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
+          return;
+        }
+      }
+
+      await providerService.create(nuevoProveedor);
       const updated = await providerService.getAll();
       setProveedores(updated);
     } catch (error) {
-      console.error('Error al recargar proveedores:', error);
+      console.error('Error al crear proveedor:', error);
+      alert('Error al crear el proveedor: ' + (error.message || 'Desconocido'));
     }
   };
 
-  // Categorías
-  const handleAddCategoria = async () => {
+  const handleDeleteProveedor = async (id) => {
     try {
+      await providerService.remove(id);
+      setProveedores(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar proveedor:', error);
+      alert('Error al eliminar el proveedor');
+    }
+  };
+
+  // ✅ CORREGIDO: ahora recibe el nombre de la categoría
+  const handleAddCategoria = async (nombreCategoria) => {
+    try {
+      await categoryService.create({ nombre: nombreCategoria });
       const updated = await categoryService.getAll();
       setCategorias(updated);
     } catch (error) {
-      console.error('Error al recargar categorías:', error);
+      console.error('Error al crear categoría:', error);
+      alert('Error al crear la categoría: ' + (error.message || 'Ya existe'));
     }
   };
 
-  const handleDeleteCategoria = (id) => {
-    setCategorias(prev => prev.filter(c => c.id !== id));
+  const handleDeleteCategoria = async (id) => {
+    try {
+      await categoryService.remove(id);
+      setCategorias(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar categoría:', error);
+      alert('Error al eliminar la categoría');
+    }
   };
 
   return (
