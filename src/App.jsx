@@ -20,7 +20,6 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -45,7 +44,6 @@ function App() {
       return;
     }
     setUsuarioActual(usr);
-    // ✅ CORREGIDO: usa 'administrador' (tu preferencia)
     setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
     if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
@@ -83,7 +81,7 @@ function App() {
             onAddProveedor={handleAddProveedor}
             onAddCategoria={handleAddCategoria}
             onDeleteCategoria={handleDeleteCategoria}
-            onDeleteProveedor={handleDeleteProveedor} // ✅ Añadido
+            onDeleteProveedor={handleDeleteProveedor}
             onLogout={handleLogout}
           />
         );
@@ -92,7 +90,6 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe los datos del nuevo producto
   const handleAddProducto = async (nuevoProducto) => {
     try {
       await productService.create(nuevoProducto);
@@ -114,14 +111,13 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe los datos del nuevo proveedor
+  // ✅ Validación mejorada de teléfono colombiano
   const handleAddProveedor = async (nuevoProveedor) => {
     try {
-      // Validación de teléfono colombiano (opcional pero recomendada)
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
-        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
-            !(cleaned.length === 12 && cleaned.startsWith('573'))) {
+        // Acepta: 3001234567 o +573001234567
+        if (!/^573[0-9]{9}$/.test(cleaned) && !/^3[0-9]{9}$/.test(cleaned)) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
         }
@@ -146,7 +142,6 @@ function App() {
     }
   };
 
-  // ✅ CORREGIDO: ahora recibe el nombre de la categoría
   const handleAddCategoria = async (nombreCategoria) => {
     try {
       await categoryService.create({ nombre: nombreCategoria });
