@@ -8,83 +8,48 @@ import AdminView from './components/AdminView';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
-import { categoryService } from './services/categoryService';
-import { supabase } from './services/supabaseClient';
+import { categoryService } from './services/categoryService'; // ✅ Nuevo
 
 function App() {
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
-  const [categorias, setCategorias] = useState([]);
+  const [categorias, setCategorias] = useState([]); // ✅ Nuevo
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [vistaActual, setVistaActual] = useState('loading');
+  const [vistaActual, setVistaActual] = useState('login');
+  const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión — CORREGIDO
+  // Cargar datos iniciales
   useEffect(() => {
-    const restoreSession = async () => {
-      const {  sessionData } = await supabase.auth.getSession();
-      const session = sessionData.session;
-
-      if (session?.user) {
-        const {  perfilData, error } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error('Error al cargar perfil:', error);
-          setVistaActual('login');
-          return;
-        }
-
-        const usr = {
-          id: session.user.id,
-          email: session.user.email,
-          username: perfilData?.username || session.user.email.split('@')[0],
-          role: perfilData?.role || 'client'
-        };
-
-        setUsuarioActual(usr);
-        setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
-      } else {
-        setVistaActual('login');
-      }
-    };
-
-    restoreSession();
-  }, []);
-
-  // 📦 Cargar datos solo si estás autenticado
-  useEffect(() => {
-    if (vistaActual !== 'admin' && vistaActual !== 'client') return;
-
     const cargarDatos = async () => {
       try {
         const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
           productService.getAll(),
           providerService.getAll(),
-          categoryService.getAll()
+          categoryService.getAll() // ✅ Nuevo
         ]);
         setProductos(productosDB);
         setProveedores(proveedoresDB);
-        setCategorias(categoriasDB);
+        setCategorias(categoriasDB); // ✅ Nuevo
       } catch (error) {
         console.error('Error al cargar datos:', error);
       }
     };
-
     cargarDatos();
-  }, [vistaActual]);
+  }, []);
 
   const handleLogin = (usr) => {
+    if (!usr) {
+      alert('Usuario/clave inválidos');
+      return;
+    }
     setUsuarioActual(usr);
     setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
+    if (usr.role === 'admin') setVistaAdminActiva('inventory');
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
     setUsuarioActual(null);
     setCarrito([]);
     setVistaActual('login');
@@ -94,6 +59,36 @@ function App() {
   const handleShowRegister = () => setVistaActual('register');
   const handleShowLogin = () => setVistaActual('login');
 
+  const renderView = () => {
+    switch (vistaActual) {
+      case 'login':
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
+      case 'register':
+        return <RegisterView onShowLogin={handleShowLogin} />;
+      case 'catalog':
+        return <PublicCatalogView productos={productos} onBack={handleShowLogin} />;
+      case 'client':
+        return <ClientView productos={productos} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
+      case 'admin':
+        return (
+          <AdminView
+            productos={productos}
+            proveedores={proveedores}
+            categorias={categorias} // ✅ Nuevo
+            onAddProducto={handleAddProducto}
+            onDeleteProducto={handleDeleteProducto}
+            onAddProveedor={handleAddProveedor}
+            onAddCategoria={handleAddCategoria} // ✅ Nuevo
+            onDeleteCategoria={handleDeleteCategoria} // ✅ Nuevo
+            onLogout={handleLogout}
+          />
+        );
+      default:
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
+    }
+  };
+
+  // Productos
   const handleAddProducto = async () => {
     try {
       const updated = await productService.getAll();
@@ -104,9 +99,10 @@ function App() {
   };
 
   const handleDeleteProducto = (id) => {
-    setProductos((prev) => prev.filter((p) => p.id !== id));
+    setProductos(prev => prev.filter(p => p.id !== id));
   };
 
+  // Proveedores
   const handleAddProveedor = async () => {
     try {
       const updated = await providerService.getAll();
@@ -116,6 +112,7 @@ function App() {
     }
   };
 
+  // Categorías
   const handleAddCategoria = async () => {
     try {
       const updated = await categoryService.getAll();
@@ -126,70 +123,13 @@ function App() {
   };
 
   const handleDeleteCategoria = (id) => {
-    setCategorias((prev) => prev.filter((c) => c.id !== id));
-  };
-
-  if (vistaActual === 'loading') {
-    return (
-      <div className="container-fluid p-4 text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p className="mt-2">Cargando sesión...</p>
-      </div>
-    );
-  }
-
-  const renderView = () => {
-    switch (vistaActual) {
-      case 'login':
-        return (
-          <LoginView
-            onLogin={handleLogin}
-            onShowRegister={handleShowRegister}
-            onShowCatalog={handleShowCatalog}
-            onShowForgot={() => setShowForgotModal(true)}
-          />
-        );
-      case 'register':
-        return <RegisterView onShowLogin={handleShowLogin} />;
-      case 'catalog':
-        return <PublicCatalogView productos={productos} onBack={handleShowLogin} />;
-      case 'client':
-        return (
-          <ClientView
-            productos={productos}
-            carrito={carrito}
-            setCarrito={setCarrito}
-            onLogout={handleLogout}
-          />
-        );
-      case 'admin':
-        return (
-          <AdminView
-            productos={productos}
-            proveedores={proveedores}
-            categorias={categorias}
-            onAddProducto={handleAddProducto}
-            onDeleteProducto={handleDeleteProducto}
-            onAddProveedor={handleAddProveedor}
-            onAddCategoria={handleAddCategoria}
-            onDeleteCategoria={handleDeleteCategoria}
-            onLogout={handleLogout}
-          />
-        );
-      default:
-        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
-    }
+    setCategorias(prev => prev.filter(c => c.id !== id));
   };
 
   return (
     <div className="container-fluid p-4">
       <div className="d-flex justify-content-center">{renderView()}</div>
-      <ForgotPasswordModal
-        show={showForgotModal}
-        onClose={() => setShowForgotModal(false)}
-      />
+      <ForgotPasswordModal show={showForgotModal} onClose={() => setShowForgotModal(false)} />
     </div>
   );
 }
