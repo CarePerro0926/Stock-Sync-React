@@ -1,11 +1,16 @@
-// src/components/Admin/AddTab.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 
-const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
+const AddTab = ({
+  onAddProducto,
+  onAddCategoria,
+  onAddProveedor,
+  proveedores = [],
+  categorias = []
+}) => {
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria_id: '', // ← Cambiado a categoria_id para usar ID
+    categoria_id: '',
     cantidad: '',
     precio: '',
     provider_id: ''
@@ -17,151 +22,184 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     nombre: '',
     email: '',
     telefono: '',
-    categorias: [] // Array de IDs de categorías
+    categorias: []
   });
 
-  const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
-  const [searchCategoria, setSearchCategoria] = useState('');
-  const dropdownRef = useRef(null);
-  const searchRef = useRef(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowCategoriaDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Focus input when opening dropdown
-  useEffect(() => {
-    if (showCategoriaDropdown && searchRef.current) {
-      searchRef.current.focus();
-    }
-  }, [showCategoriaDropdown]);
-
-  // Manejadores de producto
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
-    setNuevoProducto({
-      ...nuevoProducto,
+
+    setNuevoProducto((prev) => ({
+      ...prev,
       [name]: ['cantidad', 'precio', 'provider_id', 'categoria_id'].includes(name)
         ? value === '' ? '' : Number(value)
         : value
-    });
+    }));
   };
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
+
     const { id, nombre, categoria_id, cantidad, precio, provider_id } = nuevoProducto;
+
     if (!id || !nombre || !categoria_id || !cantidad || !precio || !provider_id) {
       alert('Por favor completa todos los campos del producto.');
       return;
     }
-    // Enviamos el objeto con categoria_id (ID numérico/uuid)
-    onAddProducto({ ...nuevoProducto });
-    setNuevoProducto({ id: '', nombre: '', categoria_id: '', cantidad: '', precio: '', provider_id: '' });
+
+    onAddProducto(nuevoProducto);
+
+    setNuevoProducto({
+      id: '',
+      nombre: '',
+      categoria_id: '',
+      cantidad: '',
+      precio: '',
+      provider_id: ''
+    });
   };
 
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
+
     if (!nuevaCategoria.trim()) {
       alert('Ingresa el nombre de la categoría.');
       return;
     }
+
     onAddCategoria(nuevaCategoria.trim());
+
     setNuevaCategoria('');
   };
 
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
-    setNuevoProveedor({ ...nuevoProveedor, [name]: value });
-  };
 
-  const toggleCategoria = (id) => {
-    setNuevoProveedor(prev => {
-      const categorias = prev.categorias;
-      if (categorias.includes(id)) {
-        return { ...prev, categorias: categorias.filter(c => c !== id) };
-      } else {
-        return { ...prev, categorias: [...categorias, id] };
-      }
-    });
+    setNuevoProveedor((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
+
     const { nombre, email, telefono, categorias } = nuevoProveedor;
-    if (!nombre || !email) {
-      alert('Por favor completa al menos nombre y correo del proveedor.');
+
+    if (!nombre || !email || categorias.length === 0) {
+      alert('Completa nombre, correo y al menos una categoría.');
       return;
     }
+
     onAddProveedor({ nombre, email, telefono, categorias });
-    setNuevoProveedor({ nombre: '', email: '', telefono: '', categorias: [] });
-    setSearchCategoria('');
-    setShowCategoriaDropdown(false);
+
+    setNuevoProveedor({
+      nombre: '',
+      email: '',
+      telefono: '',
+      categorias: []
+    });
   };
-
-  const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
-
-  // Nombres de categorías seleccionadas para mostrar en el botón
-  const categoriasSeleccionadas = categorias
-    .filter(cat => nuevoProveedor.categorias.includes(cat.id))
-    .map(cat => cat.nombre);
-
-  // Filtrado por búsqueda (case-insensitive)
-  const categoriesFiltered = categorias.filter(cat =>
-    cat.nombre.toLowerCase().includes(searchCategoria.trim().toLowerCase())
-  );
 
   return (
     <>
       {/* Agregar Producto */}
       <h5>Agregar Producto</h5>
+
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
-          <input type="text" className="form-control" name="id" placeholder="ID" value={nuevoProducto.id} onChange={handleProductoChange} required />
+          <input
+            type="text"
+            className="form-control"
+            name="id"
+            placeholder="ID"
+            value={nuevoProducto.id}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
+
         <div className="mb-2">
-          <input type="text" className="form-control" name="nombre" placeholder="Nombre" value={nuevoProducto.nombre} onChange={handleProductoChange} required />
+          <input
+            type="text"
+            className="form-control"
+            name="nombre"
+            placeholder="Nombre"
+            value={nuevoProducto.nombre}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
+
         <div className="mb-2">
-          {/* SELECT CORREGIDO: ahora usa ID como valor */}
-          <select className="form-control" name="categoria_id" value={nuevoProducto.categoria_id} onChange={handleProductoChange} required>
+          <select
+            className="form-control"
+            name="categoria_id"
+            value={nuevoProducto.categoria_id}
+            onChange={handleProductoChange}
+            required
+          >
             <option value="">Seleccionar categoría</option>
-            {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+
+            {categorias.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.id} — {cat.nombre}
+              </option>
             ))}
           </select>
         </div>
+
         <div className="mb-2">
-          <input type="number" className="form-control" name="cantidad" placeholder="Cantidad" value={nuevoProducto.cantidad} onChange={handleProductoChange} required />
+          <input
+            type="number"
+            className="form-control"
+            name="cantidad"
+            placeholder="Cantidad"
+            value={nuevoProducto.cantidad}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
+
         <div className="mb-2">
-          <input type="number" className="form-control" name="precio" placeholder="Precio" value={nuevoProducto.precio} onChange={handleProductoChange} required />
+          <input
+            type="number"
+            className="form-control"
+            name="precio"
+            placeholder="Precio"
+            value={nuevoProducto.precio}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
+
         <div className="mb-2">
-          <select className="form-control" name="provider_id" value={nuevoProducto.provider_id} onChange={handleProductoChange} required>
+          <select
+            className="form-control"
+            name="provider_id"
+            value={nuevoProducto.provider_id}
+            onChange={handleProductoChange}
+            required
+          >
             <option value="">Seleccionar proveedor</option>
-            {listaProveedores.length > 0 ? (
-              listaProveedores.map(prov => (
-                <option key={prov.id} value={prov.id}>{prov.nombre}</option>
-              ))
-            ) : (
-              <option disabled>No hay proveedores</option>
-            )}
+
+            {proveedores.map((prov) => (
+              <option key={prov.id} value={prov.id}>
+                {prov.nombre}
+              </option>
+            ))}
           </select>
         </div>
-        <button type="submit" className="btn btn-success w-100">Agregar Producto</button>
+
+        <button type="submit" className="btn btn-success w-100">
+          Agregar Producto
+        </button>
       </form>
 
       <hr className="my-4" />
 
       {/* Agregar Categoría */}
       <h5>Agregar Categoría</h5>
+
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
@@ -173,8 +211,11 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
               required
             />
           </div>
+
           <div className="col-12 col-md">
-            <button type="submit" className="btn btn-info w-100">Agregar Categoría</button>
+            <button type="submit" className="btn btn-info w-100">
+              Agregar Categoría
+            </button>
           </div>
         </div>
       </form>
@@ -183,6 +224,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
 
       {/* Agregar Proveedor */}
       <h5>Agregar Proveedor</h5>
+
       <form onSubmit={handleAddProveedorSubmit}>
         <div className="mb-2">
           <input
@@ -195,6 +237,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="email"
@@ -206,6 +249,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
             required
           />
         </div>
+
         <div className="mb-2">
           <input
             type="text"
@@ -217,76 +261,51 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* Dropdown con checkboxes y búsqueda */}
-        <div className="mb-3" ref={dropdownRef} style={{ position: 'relative' }}>
+        <div className="mb-3">
           <label className="form-label">Categorías que surte</label>
 
-          <button
-            type="button"
-            className="form-control text-start d-flex justify-content-between align-items-center"
-            onClick={() => setShowCategoriaDropdown(s => !s)}
-            style={{ cursor: 'pointer' }}
-            aria-expanded={showCategoriaDropdown}
-          >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '85%' }}>
-              {categoriasSeleccionadas.length > 0 ? categoriasSeleccionadas.join(', ') : 'Seleccionar categorías'}
-            </span>
-            <span style={{ marginLeft: '0.5rem' }}>▾</span>
-          </button>
+          <div className="d-flex flex-column gap-2 mt-2">
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <div key={cat.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`cat-${cat.id}`}
+                    checked={nuevoProveedor.categorias.includes(cat.id)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
 
-          {showCategoriaDropdown && (
-            <div
-              className="dropdown-menu show"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                maxHeight: '240px',
-                overflowY: 'auto',
-                zIndex: 1000,
-                backgroundColor: 'white',
-                border: '1px solid #dee2e6',
-                borderRadius: '0.375rem',
-                padding: '0.5rem'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ marginBottom: '0.5rem' }}>
-                <input
-                  ref={searchRef}
-                  type="search"
-                  className="form-control"
-                  placeholder="Buscar categoría..."
-                  value={searchCategoria}
-                  onChange={(e) => setSearchCategoria(e.target.value)}
-                  aria-label="Buscar categoría"
-                />
-              </div>
+                      setNuevoProveedor((prev) => {
+                        if (isChecked) {
+                          return {
+                            ...prev,
+                            categorias: [...prev.categorias, cat.id]
+                          };
+                        } else {
+                          return {
+                            ...prev,
+                            categorias: prev.categorias.filter((id) => id !== cat.id)
+                          };
+                        }
+                      });
+                    }}
+                  />
 
-              <div>
-                {categoriesFiltered.length > 0 ? categoriesFiltered.map(cat => (
-                  <div key={cat.id} className="form-check" style={{ margin: '0.25rem 0' }}>
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id={`cat-${cat.id}`}
-                      checked={nuevoProveedor.categorias.includes(cat.id)}
-                      onChange={() => toggleCategoria(cat.id)}
-                    />
-                    <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                      {cat.nombre}
-                    </label>
-                  </div>
-                )) : (
-                  <div className="text-muted" style={{ padding: '0.5rem' }}>No hay categorías.</div>
-                )}
-              </div>
-            </div>
-          )}
+                  <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
+                    {cat.id} — {cat.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay categorías disponibles.</small>
+            )}
+          </div>
         </div>
 
-        <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
+        <button type="submit" className="btn btn-primary w-100">
+          Agregar Proveedor
+        </button>
       </form>
     </>
   );
