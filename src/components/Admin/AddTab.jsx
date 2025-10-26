@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Admin/AddTab.jsx
+import React, { useState } from 'react';
 
 // Función para validar número de teléfono colombiano
 const validarTelefonoColombiano = (telefono) => {
+  if (!telefono || telefono.trim() === '') return true; // Permitir teléfono vacío
   // Expresión regular para números colombianos (10 dígitos, empiezan con 3)
   // Acepta formatos como 3123456789, 312 345 6789, 312.345.6789, +57 312 345 6789, etc.
   const regex = /^(\+?57)?\s?[3]\d{9}$/;
@@ -12,17 +14,12 @@ const validarTelefonoColombiano = (telefono) => {
 
 const AddTab = ({
   onAddProducto,
-  onAddCategoria,
+  onAddCategoria, // <-- Asegúrate de recibir esta prop
   onAddProveedor,
   proveedores = [],
   categorias = [],
   productos = []
 }) => {
-  // Depuración: mostrar qué se está recibiendo en la prop `proveedores`
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('AddTab - proveedores prop:', proveedores);
-  }, [proveedores]);
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
@@ -90,7 +87,12 @@ const AddTab = ({
       alert('Ingresa el nombre de la categoría.');
       return;
     }
-    onAddCategoria(nuevaCategoria.trim());
+    // CORRECCIÓN: Llamar a onAddCategoria
+    if (onAddCategoria) {
+      onAddCategoria(nuevaCategoria.trim());
+    } else {
+      console.error("onAddCategoria no está definida");
+    }
     setNuevaCategoria('');
   };
 
@@ -143,13 +145,7 @@ const AddTab = ({
             alert('Por favor ingresa un número de teléfono colombiano válido (10 dígitos, empieza con 3).');
             return;
         }
-    } else {
-        // Si se deja vacío, puedes permitirlo o pedirlo, aquí lo hago opcional, pero puedes cambiar la lógica
-        // Si quieres que sea obligatorio, descomenta la línea debajo
-        // alert('Por favor ingresa el número de teléfono del proveedor.');
-        // return;
     }
-
 
     onAddProveedor({
       nombre,
@@ -240,25 +236,20 @@ const AddTab = ({
           <label className="form-label">Proveedores (selecciona uno o más)</label>
           <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
             {proveedores.length > 0 ? (
-              proveedores.map((prov) => {
-                // Soportar distintas formas de IDs (`id`, `_id`, etc.) y nombres
-                const provId = prov.id ?? prov._id ?? prov.proveedor_id ?? '';
-                const provNombre = prov.nombre ?? prov.name ?? prov.nombre_proveedor ?? 'Proveedor';
-                return (
-                  <div key={provId || provNombre} className="form-check">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id={`prov-${provId}`}
-                      checked={nuevoProducto.proveedores.includes(provId)}
-                      onChange={() => toggleProveedorProducto(provId)}
-                    />
-                    <label className="form-check-label" htmlFor={`prov-${provId}`}>
-                      {provNombre}
-                    </label>
-                  </div>
-                );
-              })
+              proveedores.map((prov) => (
+                <div key={prov.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-${prov.id}`}
+                    checked={nuevoProducto.proveedores.includes(prov.id)}
+                    onChange={() => toggleProveedorProducto(prov.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
+                    {prov.nombre}
+                  </label>
+                </div>
+              ))
             ) : (
               <small className="text-muted">No hay proveedores disponibles.</small>
             )}
@@ -349,7 +340,7 @@ const AddTab = ({
           </div>
         </div>
         <div className="mb-3">
-          <label className="form-label">Categorías que surte (selecciona una o más)</label> {/* Actualizado label */}
+          <label className="form-label">Categorías que surte (selecciona una o más)</label>
           <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
             {categorias.length > 0 ? (
               categorias.map((cat) => (
