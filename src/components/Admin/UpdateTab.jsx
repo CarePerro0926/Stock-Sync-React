@@ -11,7 +11,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     categoria: ''
   });
 
-  // ✅ Normalizar categorías: siempre devuelve un array de strings
+  // Normalizar categorías: siempre devuelve un array de strings
   const getListaCategorias = () => {
     if (!categorias || !Array.isArray(categorias)) return [];
     
