@@ -1,3 +1,5 @@
+// src/components/AddTab.js (o donde lo tengas)
+
 import React, { useState } from 'react';
 
 const AddTab = ({
@@ -6,29 +8,26 @@ const AddTab = ({
   onAddProveedor,
   proveedores = [],
   categorias = [],
-  productos = [] // ← Nueva prop: lista de productos
+  productos = []
 }) => {
-  // Estado para nuevo producto: ahora con array de proveedores
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
     categoria_id: '',
     cantidad: '',
     precio: '',
-    proveedores: [] // array de IDs de proveedores
+    proveedores: []
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
 
-  // Estado para nuevo proveedor: ahora con array de productos que surte
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
     telefono: '',
-    productos: [] // array de IDs de productos
+    productos: []
   });
 
-  // Manejo de cambios en campos de texto/número del producto
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
     setNuevoProducto((prev) => ({
@@ -39,7 +38,6 @@ const AddTab = ({
     }));
   };
 
-  // Toggle para seleccionar/deseleccionar proveedores en producto
   const toggleProveedorProducto = (proveedorId) => {
     setNuevoProducto((prev) => {
       const isSelected = prev.proveedores.includes(proveedorId);
@@ -52,7 +50,6 @@ const AddTab = ({
     });
   };
 
-  // Envío de nuevo producto
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
     const { id, nombre, categoria_id, cantidad, precio, proveedores } = nuevoProducto;
@@ -74,7 +71,6 @@ const AddTab = ({
     });
   };
 
-  // Envío de nueva categoría
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -85,7 +81,6 @@ const AddTab = ({
     setNuevaCategoria('');
   };
 
-  // Manejo de cambios en campos del proveedor
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
     setNuevoProveedor((prev) => ({
@@ -94,7 +89,6 @@ const AddTab = ({
     }));
   };
 
-  // Toggle para seleccionar/deseleccionar productos en proveedor
   const toggleProductoProveedor = (productoId) => {
     setNuevoProveedor((prev) => {
       const isSelected = prev.productos.includes(productoId);
@@ -107,7 +101,6 @@ const AddTab = ({
     });
   };
 
-  // Envío de nuevo proveedor
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
     const { nombre, email, telefono, productos } = nuevoProveedor;
@@ -129,7 +122,6 @@ const AddTab = ({
 
   return (
     <>
-      {/* Agregar Producto */}
       <h5>Agregar Producto</h5>
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
@@ -143,7 +135,6 @@ const AddTab = ({
             required
           />
         </div>
-
         <div className="mb-2">
           <input
             type="text"
@@ -155,7 +146,6 @@ const AddTab = ({
             required
           />
         </div>
-
         <div className="mb-2">
           <select
             className="form-control"
@@ -167,12 +157,11 @@ const AddTab = ({
             <option value="">Seleccionar categoría</option>
             {categorias.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.id} — {cat.nombre}
+                {cat.nombre}
               </option>
             ))}
           </select>
         </div>
-
         <div className="mb-2">
           <input
             type="number"
@@ -184,7 +173,6 @@ const AddTab = ({
             required
           />
         </div>
-
         <div className="mb-2">
           <input
             type="number"
@@ -196,8 +184,6 @@ const AddTab = ({
             required
           />
         </div>
-
-        {/* Selección múltiple de proveedores */}
         <div className="mb-3">
           <label className="form-label">Proveedores</label>
           <div className="d-flex flex-column gap-2 mt-2">
@@ -221,7 +207,6 @@ const AddTab = ({
             )}
           </div>
         </div>
-
         <button type="submit" className="btn btn-success w-100">
           Agregar Producto
         </button>
@@ -229,7 +214,6 @@ const AddTab = ({
 
       <hr className="my-4" />
 
-      {/* Agregar Categoría */}
       <h5>Agregar Categoría</h5>
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
@@ -252,7 +236,6 @@ const AddTab = ({
 
       <hr className="my-4" />
 
-      {/* Agregar Proveedor */}
       <h5>Agregar Proveedor</h5>
       <form onSubmit={handleAddProveedorSubmit}>
         <div className="mb-2">
@@ -266,7 +249,6 @@ const AddTab = ({
             required
           />
         </div>
-
         <div className="mb-2">
           <input
             type="email"
@@ -278,7 +260,6 @@ const AddTab = ({
             required
           />
         </div>
-
         <div className="mb-2">
           <input
             type="text"
@@ -289,8 +270,6 @@ const AddTab = ({
             onChange={handleProveedorChange}
           />
         </div>
-
-        {/* Selección múltiple de productos que surte */}
         <div className="mb-3">
           <label className="form-label">Productos que surte</label>
           <div
@@ -308,7 +287,7 @@ const AddTab = ({
                     onChange={() => toggleProductoProveedor(prod.id)}
                   />
                   <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
-                    {prod.id} — {prod.nombre}
+                    {prod.nombre}
                   </label>
                 </div>
               ))
@@ -317,7 +296,6 @@ const AddTab = ({
             )}
           </div>
         </div>
-
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
         </button>
