@@ -198,11 +198,15 @@ const AddTab = ({
             required
           >
             <option value="">Seleccionar categoría</option>
-            {categorias.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.id} — {cat.nombre}
-              </option>
-            ))}
+            {categorias && categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.id} — {cat.nombre}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No hay categorías disponibles</option>
+            )}
           </select>
         </div>
 
