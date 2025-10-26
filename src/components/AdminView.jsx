@@ -1,14 +1,31 @@
-// src/components/AdminView.js
-import React, { useState, useEffect } from 'react';
+// src/components/AdminView.jsx
+import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 
+<<<<<<< HEAD
+// ✅ Define las categorías aquí (o impórtalas desde otro archivo)
+const CATEGORIAS_PERMITIDAS = [
+  'Procesadores',
+  'Tarjetas Gráficas',
+  'Memorias RAM',
+  'Discos Duros',
+  'Boards',
+  'Fuentes de Poder',
+  'Gabinetes',
+  'Periféricos',
+  'Monitores',
+  'Refrigeración',
+  'Redes',
+  'Accesorios',
+  'Mobiliario'
+];
+
 const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Cerrar menú si se hace click fuera (en móvil)
   useEffect(() => {
     const handleClickOutside = (event) => {
       const menu = document.getElementById('adminMenu');
@@ -17,7 +34,22 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
         setShowMenu(false);
       }
     };
+=======
+const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => {
 
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Cerrar menú si se hace click fuera (en móvil)
+  const handleClickOutside = (event) => {
+    const menu = document.getElementById('adminMenu');
+    const button = document.getElementById('btnMenuHamburguesa');
+    if (showMenu && menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
+      setShowMenu(false);
+    }
+  };
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
+
+  React.useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showMenu]);
@@ -28,7 +60,7 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
 
   const selectTab = (tabId) => {
     setVistaActiva(tabId);
-    setShowMenu(false); // Cierra el menú móvil al seleccionar una pestaña
+    setShowMenu(false);
   };
 
   const getTitle = () => {
@@ -44,7 +76,6 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
   return (
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
-      {/* Barra superior con botón de menú hamburguesa (visible en móviles) */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button
           id="btnMenuHamburguesa"
@@ -53,11 +84,10 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
           aria-label="Menú de navegación"
           onClick={toggleMenu}
         >
-          &#9776; {/* Este es el símbolo ☰ */}
+          &#9776;
         </button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
-      {/* Menú desplegable para móviles (inicialmente oculto) */}
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
@@ -66,7 +96,6 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
         </div>
       )}
-      {/* Pestañas de navegación estándar (ocultas en móviles, visibles en escritorio) */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
         <li className="nav-item">
           <button
@@ -102,11 +131,33 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
         </li>
       </ul>
 
-      {/* Renderizar la vista activa */}
+<<<<<<< HEAD
+      {/* ✅ Solo una vez, con ambas props */}
       {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
-      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} />}
+      {vistaActiva === 'add' && (
+        <AddTab 
+          onAddProducto={onAddProducto} 
+          proveedores={proveedores} 
+          categorias={CATEGORIAS_PERMITIDAS} 
+        />
+      )}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
+=======
+      {/* Renderizar la vista activa */}
+      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />}
+      {/* CORREGIDO: Pasamos todas las props necesarias */}
+      {vistaActiva === 'add' && <AddTab
+        onAddProducto={onAddProducto}
+        onAddCategoria={onAddCategoria}
+        onAddProveedor={onAddProveedor}
+        categorias={categorias}
+        productos={productos}
+        proveedores={proveedores}
+      />}
+      {vistaActiva === 'delete' && <DeleteTab productos={productos} onDeleteProducto={onDeleteProducto} />}
+      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />}
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>

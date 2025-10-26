@@ -7,6 +7,31 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+<<<<<<< HEAD
+  // ✅ Lógica de validación movida aquí
+  const validarUsuario = async (username, password) => {
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('username', u)
+      .eq('pass', p);
+
+    if (error) {
+      console.error('Error al consultar usuario:', error);
+      return null;
+    }
+
+    return data?.[0] || null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const usr = await validarUsuario(user, pass);
+    onLogin(usr); // Envía el resultado a App.jsx
+=======
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -70,6 +95,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     } finally {
       setLoading(false);
     }
+>>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
   };
 
   return (

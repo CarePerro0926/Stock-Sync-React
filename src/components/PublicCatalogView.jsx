@@ -1,74 +1,50 @@
-// src/components/PublicCatalogView.js
+// src/components/PublicCatalogView.jsx
 import React, { useState, useMemo } from 'react';
-import { filtroProductos } from '../utils/helpers';
 
-const PublicCatalogView = ({ productos, onBack }) => {
-  const [filtroCat, setFiltroCat] = useState('Todas');
-  const [filtroTxt, setFiltroTxt] = useState('');
-
-  const categorias = useMemo(() => {
-    const cats = [...new Set(productos.map(p => p.categoria))];
-    return ['Todas', ...cats];
-  }, [productos]);
+export default function PublicCatalogView({ productos = [], categorias = [] }) {
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
 
   const productosFiltrados = useMemo(() => {
-    return filtroProductos(productos, filtroTxt, filtroCat);
-  }, [productos, filtroTxt, filtroCat]);
+    if (!categoriaSeleccionada) return productos;
+    return productos.filter(p => p.categoria_id === categoriaSeleccionada);
+  }, [productos, categoriaSeleccionada]);
 
   return (
-    <div className="card p-4">
-      <h4 className="text-stock">Inventario Disponible</h4>
-      <div className="row g-2 mb-3">
-        <div className="col">
-          <select id="filtroCatPublic" className="form-select" value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="col">
-          <input
-            id="filtroTxtPublic"
-            className="form-control"
-            placeholder="Buscar..."
-            value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
-          />
-        </div>
+    <div className="w-100">
+      <div className="mb-3">
+        <label className="form-label">Filtrar por categoría</label>
+        <select
+          className="form-control"
+          value={categoriaSeleccionada}
+          onChange={e => setCategoriaSeleccionada(e.target.value)}
+        >
+          <option value="">Todas</option>
+          {Array.isArray(categorias) && categorias.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+          ))}
+        </select>
       </div>
-      <div className="table-responsive responsive-table" style={{ maxHeight: '300px', overflow: 'auto' }}>
-        <table className="table table-bordered table-sm mb-0">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th style={{ width: '60px', textAlign: 'center' }}>Stock</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
-            </tr>
-          </thead>
-          <tbody id="tblCatalogPublic">
-            {productosFiltrados.length === 0 ? (
-              <tr><td colSpan="5" className="text-center">No se encontraron productos.</td></tr>
-            ) : (
-              productosFiltrados.map(p => (
-                <tr key={p.id} className="table-row">
-                  <td className="table-cell" dataTitle="ID">{p.id}</td>
-                  <td className="table-cell" dataTitle="Nombre">{p.nombre}</td>
-                  <td className="table-cell" dataTitle="Categoria">{p.categoria}</td>
-                  <td className="table-cell" dataTitle="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                  <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-                      </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="text-end mt-3">
-        <button onClick={onBack} id="btnBackToLogin" className="btn btn-outline-secondary">Regresar</button>
+
+      <div>
+        {productosFiltrados.length === 0 ? (
+          <p className="text-muted">No hay productos disponibles.</p>
+        ) : (
+          <div className="row g-3">
+            {productosFiltrados.map(p => (
+              <div key={p.id} className="col-12 col-md-6 col-lg-4">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h5 className="card-title">{p.nombre}</h5>
+                    <p className="card-text">Precio: {p.precio}</p>
+                    <p className="card-text">Cantidad: {p.cantidad}</p>
+                    <p className="card-text text-muted">{p.categoria_nombre || ''}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default PublicCatalogView;
+}
