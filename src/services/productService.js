@@ -1,43 +1,62 @@
 // src/services/productService.js
-import { supabase } from './supabaseClient';
+import supabase from './supabaseClient';
 
 export const productService = {
-  getAll: () => supabase.from('productos').select('*').then(r => {
-    if (r.error) throw r.error;
-    return r.data.map(p => ({
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('productos')
+      .select(`
+        id,
+        nombre,
+        precio,
+        cantidad,
+        categoria_id,
+        categorias ( nombre )
+      `);
+    if (error) throw error;
+    return (data || []).map(p => ({
       id: p.id,
       nombre: p.nombre,
       precio: p.precio,
       cantidad: p.cantidad,
-      categoria: p.categoria
+      categoria_id: p.categoria_id,
+      categoria_nombre: p.categorias ? p.categorias.nombre : null
     }));
-  }),
+  },
 
-  create: (producto) => supabase.from('productos').insert({
-    id: producto.id,
-    nombre: producto.nombre,
-    precio: producto.precio,
-    cantidad: producto.cantidad,
-    categoria: producto.categoria,
-    id_proveedor: producto.provider_id
-  }).then(r => {
-    if (r.error) throw r.error;
-  }),
+  create: async (producto) => {
+    const { id, nombre, precio, cantidad, categoria_id, proveedores = [] } = producto;
+    const { error } = await supabase
+      .from('productos')
+      .insert([{ id, nombre, precio, cantidad, categoria_id }]);
+    if (error) throw error;
 
-  update: (producto) => supabase
-    .from('productos')
-    .update({
-      nombre: producto.nombre,
-      precio: producto.precio,
-      cantidad: producto.cantidad,
-      categoria: producto.categoria
-    })
-    .eq('id', producto.id)
-    .then(r => {
-      if (r.error) throw r.error;
-    }),
+    if (Array.isArray(proveedores) && proveedores.length > 0) {
+      const relaciones = proveedores.map(provId => ({ producto_id: id, proveedor_id: provId }));
+      const { error: relErr } = await supabase
+        .from('producto_proveedor')
+        .insert(relaciones)
+        .onConflict(['producto_id','proveedor_id'])
+        .ignore();
+      if (relErr) throw relErr;
+    }
 
-  remove: (id) => supabase.from('productos').delete().eq('id', id).then(r => {
-    if (r.error) throw r.error;
-  })
+    return true;
+  },
+
+  update: async (producto) => {
+    const { id, nombre, precio, cantidad, categoria_id } = producto;
+    const { error } = await supabase
+      .from('productos')
+      .update({ nombre, precio, cantidad, categoria_id })
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  remove: async (id) => {
+    const { error } = await supabase.from('productos').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
 };
