@@ -5,62 +5,62 @@ import { supabase } from '../services/supabaseClient';
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    let emailToUse = identifier.trim();
+    try {
+      let emailToUse = identifier.trim();
 
-    // Si no es un email, intentar resolver el email desde el username
-    if (!identifier.includes('@')) {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('email')
-        .eq('username', identifier.trim())
-        .single();
+      if (!identifier.includes('@')) {
+        const {  } = await supabase
+          .from('usuarios')
+          .select('email')
+          .eq('username', identifier.trim())
+          .single();
 
-      if (error || !data) {
-        alert('Usuario no encontrado');
+        if (error || !data) {
+          alert('Usuario no encontrado');
+          setLoading(false);
+          return;
+        }
+        emailToUse = data.email;
+      }
+
+      const {  } = await supabase.auth.signInWithPassword({
+        email: emailToUse,
+        password: password.trim()
+      });
+
+      if (error) {
+        alert('Credenciales incorrectas');
+        setLoading(false);
         return;
       }
 
-      emailToUse = data.email;
-    }
+      if (session?.user) {
+        const {  } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single();
 
-    // Iniciar sesión con Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailToUse,
-      password: password.trim()
-    });
+        const usr = {
+          id: session.user.id,
+          email: session.user.email,
+          username: data?.username || session.user.email.split('@')[0],
+          role: data?.role || 'client'
+        };
 
-    if (authError) {
-      console.error('Error de login:', authError.message);
-      alert('Credenciales incorrectas');
-      return;
-    }
-
-    const { session } = authData;
-
-    if (session?.user) {
-      // Obtener perfil adicional desde tu tabla 'usuarios'
-      const { data: perfil, error: perfilError } = await supabase
-        .from('usuarios')
-        .select('username, role')
-        .eq('id', session.user.id)
-        .single();
-
-      if (perfilError) {
-        console.warn('No se pudo cargar el perfil adicional:', perfilError);
+        onLogin(usr);
       }
-
-      const usr = {
-        id: session.user.id,
-        email: session.user.email,
-        username: perfil?.username || session.user.email.split('@')[0],
-        role: perfil?.role || 'client'
-      };
-
-      onLogin(usr);
+    } catch (err) {
+      console.error('Error inesperado:', err);
+      alert('Error interno. Revisa la consola.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,7 +86,14 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           required
         />
         <div className="d-flex justify-content-center gap-2 mb-2">
-          <button type="submit" id="btnLogin" className="btn btn-primary">Iniciar Sesión</button>
+          <button
+            type="submit"
+            id="btnLogin"
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+          </button>
           <button
             type="button"
             onClick={onShowRegister}
