@@ -1,11 +1,12 @@
-// src/components/AdminView.js
+// src/components/AdminView.jsx
 import React, { useState, useEffect } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 
-const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
+// Añadimos 'categorias' como prop
+const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
   const [showMenu, setShowMenu] = useState(false);
 
   // Cerrar menú si se hace click fuera (en móvil)
@@ -104,14 +105,15 @@ const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddP
 
       {/* Renderizar la vista activa */}
       {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
+      {/* CORREGIDO: Pasamos todas las props necesarias, omitiendo onAddCategoria si no existe */}
       {vistaActiva === 'add' && <AddTab
-          onAddProducto={onAddProducto}
-          onAddCategoria={onAddCategoria}
-          onAddProveedor={onAddProveedor}
-          categorias={categorias}
-          productos={productos}
-          proveedores={proveedores}
-        />}
+        onAddProducto={onAddProducto}
+        // onAddCategoria={...} // <-- Comenta o elimina esta línea si no tienes la función
+        onAddProveedor={onAddProveedor}
+        categorias={categorias || []}
+        productos={productos || []}
+        proveedores={proveedores || []}
+      />}
       {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
 
