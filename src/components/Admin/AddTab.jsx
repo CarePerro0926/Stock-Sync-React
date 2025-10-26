@@ -19,14 +19,13 @@ const AddTab = ({
     proveedores: []
   });
 
-  const [nuevaCategoria, setNuevaCategoria] = useState('');
-
-  const [nuevoProveedor, setNuevoProveedor] = useState({
-    nombre: '',
-    email: '',
-    telefono: '',
-    productos: []
-  });
+    const [nuevoProveedor, setNuevoProveedor] = useState({
+      nombre: '',
+      email: '',
+      telefono: '',
+      productos: [],
+      categorias: [] // ✅ necesario para checkboxes
+    });
 
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
@@ -105,10 +104,10 @@ const AddTab = ({
     e.preventDefault();
     const { nombre, email, telefono, productos } = nuevoProveedor;
 
-    if (!nombre || !email || productos.length === 0) {
-      alert('Completa nombre, correo y al menos un producto que surta.');
-      return;
-    }
+    if (!nombre || !email || productos.length === 0 || categorias.length === 0) {
+  alert('Completa nombre, correo, al menos un producto y una categoría.');
+  return;
+}
 
     onAddProveedor({ nombre, email, telefono, productos });
 
@@ -147,20 +146,20 @@ const AddTab = ({
           />
         </div>
         <div className="mb-2">
-          <select
-            className="form-control"
-            name="categoria_id"
-            value={nuevoProducto.categoria_id}
-            onChange={handleProductoChange}
-            required
-          >
-            <option value="">Seleccionar categoría</option>
-            {categorias.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nombre}
-              </option>
-            ))}
-          </select>
+        <select
+          className="form-control"
+          name="categoria_id"
+          value={nuevoProducto.categoria_id}
+          onChange={handleProductoChange}
+          required
+        >
+          <option value="">Seleccionar categoría</option>
+          {categorias.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.id} — {cat.nombre}
+            </option>
+          ))}
+        </select>
         </div>
         <div className="mb-2">
           <input
@@ -296,6 +295,37 @@ const AddTab = ({
             )}
           </div>
         </div>
+        <div className="mb-3">
+  <label className="form-label">Categorías que surte</label>
+  <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+    {categorias.length > 0 ? (
+      categorias.map((cat) => (
+        <div key={cat.id} className="form-check">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id={`prov-cat-${cat.id}`}
+            checked={nuevoProveedor.categorias?.includes?.(cat.id) || false}
+            onChange={(e) => {
+              const isChecked = e.target.checked;
+              setNuevoProveedor((prev) => ({
+                ...prev,
+                categorias: isChecked
+                  ? [...(prev.categorias || []), cat.id]
+                  : (prev.categorias || []).filter((id) => id !== cat.id)
+              }));
+            }}
+          />
+          <label className="form-check-label" htmlFor={`prov-cat-${cat.id}`}>
+            {cat.id} — {cat.nombre}
+          </label>
+        </div>
+      ))
+    ) : (
+      <small className="text-muted">No hay categorías disponibles.</small>
+    )}
+  </div>
+</div>
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
         </button>
