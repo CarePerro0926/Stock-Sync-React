@@ -6,7 +6,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
 
-  // ✅ Lógica de validación movida aquí
+  // Lógica de validación movida aquí
   const validarUsuario = async (username, password) => {
     const u = username.trim().toLowerCase();
     const p = password.trim();
