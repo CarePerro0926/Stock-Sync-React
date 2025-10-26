@@ -11,24 +11,24 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
 
     let emailToUse = identifier.trim();
 
-    // Si no es un email, intentar resolver el email desde el username
+    // Si no es un email, buscar por username
     if (!identifier.includes('@')) {
-      const { data, error } = await supabase
+      const {  usuario, error } = await supabase
         .from('usuarios')
         .select('email')
         .eq('username', identifier.trim())
         .single();
 
-      if (error || !data) {
+      if (error || !usuario) {
         alert('Usuario no encontrado');
         return;
       }
 
-      emailToUse = data.email;
+      emailToUse = usuario.email;
     }
 
     // Iniciar sesión con Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    const {  session, error: authError } = await supabase.auth.signInWithPassword({
       email: emailToUse,
       password: password.trim()
     });
@@ -39,19 +39,12 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       return;
     }
 
-    const { session } = authData;
-
     if (session?.user) {
-      // Obtener perfil adicional desde tu tabla 'usuarios'
-      const { data: perfil, error: perfilError } = await supabase
+      const {  perfil } = await supabase
         .from('usuarios')
         .select('username, role')
         .eq('id', session.user.id)
         .single();
-
-      if (perfilError) {
-        console.warn('No se pudo cargar el perfil adicional:', perfilError);
-      }
 
       const usr = {
         id: session.user.id,
