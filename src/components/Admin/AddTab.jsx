@@ -1,14 +1,32 @@
 // src/components/Admin/AddTab.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 
-const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [], categorias = [] }) => {
+// Función para validar número de teléfono colombiano
+const validarTelefonoColombiano = (telefono) => {
+  if (!telefono || telefono.trim() === '') return true; // Permitir teléfono vacío
+  // Expresión regular para números colombianos (10 dígitos, empiezan con 3)
+  // Acepta formatos como 3123456789, 312 345 6789, 312.345.6789, +57 312 345 6789, etc.
+  const regex = /^(\+?57)?\s?[3]\d{9}$/;
+  // Remover espacios, guiones y paréntesis para la validación
+  const numeroLimpio = telefono.replace(/\s|-|\(|\)/g, '');
+  return regex.test(numeroLimpio);
+};
+
+const AddTab = ({
+  onAddProducto,
+  onAddCategoria,
+  onAddProveedor,
+  proveedores = [],
+  categorias = [],
+  productos = []
+}) => {
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria: '',
+    categoria: '', // ← ahora usamos 'categoria' (nombre), no 'categoria_id'
     cantidad: '',
     precio: '',
-    provider_id: ''
+    proveedores: [] // Array para almacenar IDs de proveedores seleccionados
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
@@ -16,149 +34,233 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
-    telefono: '',
-    categorias: [] // Array de IDs
+    telefono: '', // Campo de teléfono
+    productos: [],
+    categorias: [] // ← guarda nombres de categorías, ej: ["Procesadores", "Boards"]
   });
 
-  const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
-  const [searchCategoria, setSearchCategoria] = useState('');
-  const dropdownRef = useRef(null);
-  const searchRef = useRef(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowCategoriaDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Focus input when opening dropdown
-  useEffect(() => {
-    if (showCategoriaDropdown && searchRef.current) {
-      searchRef.current.focus();
-    }
-  }, [showCategoriaDropdown]);
-
-  // Manejadores de producto
+  /* ---------- Producto ---------- */
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
-    setNuevoProducto({
-      ...nuevoProducto,
-      [name]: ['cantidad', 'precio', 'provider_id'].includes(name)
+    setNuevoProducto((prev) => ({
+      ...prev,
+      [name]: ['cantidad', 'precio'].includes(name)
         ? value === '' ? '' : Number(value)
         : value
+    }));
+  };
+
+  const toggleProveedorProducto = (proveedorId) => {
+    setNuevoProducto((prev) => {
+      const isSelected = prev.proveedores.includes(proveedorId);
+      return {
+        ...prev,
+        proveedores: isSelected
+          ? prev.proveedores.filter((id) => id !== proveedorId)
+          : [...prev.proveedores, proveedorId]
+      };
     });
   };
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const { id, nombre, categoria, cantidad, precio, provider_id } = nuevoProducto;
-    if (!id || !nombre || !categoria || !cantidad || !precio || !provider_id) {
-      alert('Por favor completa todos los campos del producto.');
+    const { id, nombre, categoria, cantidad, precio, proveedores: provs } = nuevoProducto;
+    if (!id || !nombre || !categoria || !cantidad || !precio || provs.length === 0) {
+      alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
     onAddProducto(nuevoProducto);
-    setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
+    setNuevoProducto({
+      id: '',
+      nombre: '',
+      categoria: '',
+      cantidad: '',
+      precio: '',
+      proveedores: []
+    });
   };
 
+  /* ---------- Categoría ---------- */
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
       alert('Ingresa el nombre de la categoría.');
       return;
     }
-    onAddCategoria(nuevaCategoria.trim());
+    // CORRECCIÓN: Llamar a onAddCategoria
+    if (onAddCategoria) {
+      onAddCategoria(nuevaCategoria.trim());
+    } else {
+      console.error("onAddCategoria no está definida");
+    }
     setNuevaCategoria('');
   };
 
+  /* ---------- Proveedor ---------- */
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
-    setNuevoProveedor({ ...nuevoProveedor, [name]: value });
+    setNuevoProveedor((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-  const toggleCategoria = (id) => {
-    setNuevoProveedor(prev => {
-      const categorias = prev.categorias;
-      if (categorias.includes(id)) {
-        return { ...prev, categorias: categorias.filter(c => c !== id) };
-      } else {
-        return { ...prev, categorias: [...categorias, id] };
-      }
+  const toggleProductoProveedor = (productoId) => {
+    setNuevoProveedor((prev) => {
+      const isSelected = prev.productos.includes(productoId);
+      return {
+        ...prev,
+        productos: isSelected
+          ? prev.productos.filter((id) => id !== productoId)
+          : [...prev.productos, productoId]
+      };
+    });
+  };
+
+  const toggleCategoriaProveedor = (categoriaNombre) => {
+    setNuevoProveedor((prev) => {
+      const isSelected = prev.categorias.includes(categoriaNombre);
+      return {
+        ...prev,
+        categorias: isSelected
+          ? prev.categorias.filter((nombre) => nombre !== categoriaNombre)
+          : [...prev.categorias, categoriaNombre]
+      };
     });
   };
 
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
-    const { nombre, email, telefono, categorias } = nuevoProveedor;
-    if (!nombre || !email) {
-      alert('Por favor completa al menos nombre y correo del proveedor.');
+    const { nombre, email, telefono, productos: prods, categorias: cats } = nuevoProveedor;
+
+    // Validación de campos requeridos
+    if (!nombre || !email || prods.length === 0 || cats.length === 0) {
+      alert('Completa nombre, correo, al menos un producto y al menos una categoría.');
       return;
     }
-    onAddProveedor({ nombre, email, telefono, categorias });
-    setNuevoProveedor({ nombre: '', email: '', telefono: '', categorias: [] });
-    setSearchCategoria('');
-    setShowCategoriaDropdown(false);
+
+    // Validación del teléfono si se ha ingresado
+    if (telefono && telefono.trim() !== '') {
+        if (!validarTelefonoColombiano(telefono)) {
+            alert('Por favor ingresa un número de teléfono colombiano válido (10 dígitos, empieza con 3).');
+            return;
+        }
+    }
+
+    onAddProveedor({
+      nombre,
+      email,
+      telefono, // Incluye el teléfono validado
+      productos: prods,
+      categorias: cats
+    });
+    setNuevoProveedor({
+      nombre: '',
+      email: '',
+      telefono: '', // Limpia teléfono también
+      productos: [],
+      categorias: []
+    });
   };
-
-  const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
-
-  // Nombres de categorías seleccionadas para mostrar en el botón
-  const categoriasSeleccionadas = categorias
-    .filter(cat => nuevoProveedor.categorias.includes(cat.id))
-    .map(cat => cat.nombre);
-
-  // Filtrado por búsqueda (case-insensitive)
-  const categoriesFiltered = categorias.filter(cat =>
-    cat.nombre.toLowerCase().includes(searchCategoria.trim().toLowerCase())
-  );
 
   return (
     <>
-      {/* Agregar Producto */}
+      {/* -------------------- Agregar Producto -------------------- */}
       <h5>Agregar Producto</h5>
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
         <div className="mb-2">
-          <input type="text" className="form-control" name="id" placeholder="ID" value={nuevoProducto.id} onChange={handleProductoChange} required />
+          <input
+            type="text"
+            className="form-control"
+            name="id"
+            placeholder="ID"
+            value={nuevoProducto.id}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
         <div className="mb-2">
-          <input type="text" className="form-control" name="nombre" placeholder="Nombre" value={nuevoProducto.nombre} onChange={handleProductoChange} required />
+          <input
+            type="text"
+            className="form-control"
+            name="nombre"
+            placeholder="Nombre"
+            value={nuevoProducto.nombre}
+            onChange={handleProductoChange}
+            required
+          />
         </div>
         <div className="mb-2">
-          <select className="form-control" name="categoria" value={nuevoProducto.categoria} onChange={handleProductoChange} required>
+          <select
+            className="form-control"
+            name="categoria"
+            value={nuevoProducto.categoria}
+            onChange={handleProductoChange}
+            required
+          >
             <option value="">Seleccionar categoría</option>
-            {categorias.map(cat => (
-              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
-            ))}
-          </select>
-        </div>
-        <div className="mb-2">
-          <input type="number" className="form-control" name="cantidad" placeholder="Cantidad" value={nuevoProducto.cantidad} onChange={handleProductoChange} required />
-        </div>
-        <div className="mb-2">
-          <input type="number" className="form-control" name="precio" placeholder="Precio" value={nuevoProducto.precio} onChange={handleProductoChange} required />
-        </div>
-        <div className="mb-2">
-          <select className="form-control" name="provider_id" value={nuevoProducto.provider_id} onChange={handleProductoChange} required>
-            <option value="">Seleccionar proveedor</option>
-            {listaProveedores.length > 0 ? (
-              listaProveedores.map(prov => (
-                <option key={prov.id} value={prov.id}>{prov.nombre}</option>
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <option key={cat.nombre} value={cat.nombre}>
+                  {cat.nombre}
+                </option>
               ))
             ) : (
-              <option disabled>No hay proveedores</option>
+              <option value="" disabled>No hay categorías disponibles</option>
             )}
           </select>
         </div>
-        <button type="submit" className="btn btn-success w-100">Agregar Producto</button>
+        <div className="mb-2">
+          <input
+            type="number"
+            className="form-control"
+            name="cantidad"
+            placeholder="Cantidad"
+            value={nuevoProducto.cantidad}
+            onChange={handleProductoChange}
+            required
+          />
+        </div>
+        <div className="mb-2">
+          <input
+            type="number"
+            className="form-control"
+            name="precio"
+            placeholder="Precio"
+            value={nuevoProducto.precio}
+            onChange={handleProductoChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label className="form-label">Proveedores (selecciona uno o más)</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
+            {proveedores.length > 0 ? (
+              proveedores.map((prov) => (
+                <div key={prov.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-${prov.id}`}
+                    checked={nuevoProducto.proveedores.includes(prov.id)}
+                    onChange={() => toggleProveedorProducto(prov.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
+                    {prov.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay proveedores disponibles.</small>
+            )}
+          </div>
+        </div>
+        <button type="submit" className="btn btn-success w-100">
+          Agregar Producto
+        </button>
       </form>
-
       <hr className="my-4" />
-
-      {/* Agregar Categoría */}
+      {/* -------------------- Agregar Categoría -------------------- */}
       <h5>Agregar Categoría</h5>
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
         <div className="row g-2 mb-3">
@@ -172,14 +274,14 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
             />
           </div>
           <div className="col-12 col-md">
-            <button type="submit" className="btn btn-info w-100">Agregar Categoría</button>
+            <button type="submit" className="btn btn-info w-100">
+              Agregar Categoría
+            </button>
           </div>
         </div>
       </form>
-
       <hr className="my-4" />
-
-      {/* Agregar Proveedor */}
+      {/* -------------------- Agregar Proveedor -------------------- */}
       <h5>Agregar Proveedor</h5>
       <form onSubmit={handleAddProveedorSubmit}>
         <div className="mb-2">
@@ -209,82 +311,60 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
             type="text"
             className="form-control"
             name="telefono"
-            placeholder="Teléfono (opcional)"
+            placeholder="Teléfono (Colombia, 10 dígitos emp. con 3)"
             value={nuevoProveedor.telefono}
             onChange={handleProveedorChange}
           />
         </div>
-
-        {/* Dropdown con checkboxes y búsqueda (móvil friendly) */}
-        <div className="mb-3" ref={dropdownRef} style={{ position: 'relative' }}>
-          <label className="form-label">Categorías que surte</label>
-
-          <button
-            type="button"
-            className="form-control text-start d-flex justify-content-between align-items-center"
-            onClick={() => setShowCategoriaDropdown(s => !s)}
-            style={{ cursor: 'pointer' }}
-            aria-expanded={showCategoriaDropdown}
-          >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '85%' }}>
-              {categoriasSeleccionadas.length > 0 ? categoriasSeleccionadas.join(', ') : 'Seleccionar categorías'}
-            </span>
-            <span style={{ marginLeft: '0.5rem' }}>▾</span>
-          </button>
-
-          {showCategoriaDropdown && (
-            <div
-              className="dropdown-menu show"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                maxHeight: '240px',
-                overflowY: 'auto',
-                zIndex: 1000,
-                backgroundColor: 'white',
-                border: '1px solid #dee2e6',
-                borderRadius: '0.375rem',
-                padding: '0.5rem'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ marginBottom: '0.5rem' }}>
-                <input
-                  ref={searchRef}
-                  type="search"
-                  className="form-control"
-                  placeholder="Buscar categoría..."
-                  value={searchCategoria}
-                  onChange={(e) => setSearchCategoria(e.target.value)}
-                  aria-label="Buscar categoría"
-                />
-              </div>
-
-              <div>
-                {categoriesFiltered.length > 0 ? categoriesFiltered.map(cat => (
-                  <div key={cat.id} className="form-check" style={{ margin: '0.25rem 0' }}>
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id={`cat-${cat.id}`}
-                      checked={nuevoProveedor.categorias.includes(cat.id)}
-                      onChange={() => toggleCategoria(cat.id)}
-                    />
-                    <label className="form-check-label" htmlFor={`cat-${cat.id}`}>
-                      {cat.nombre}
-                    </label>
-                  </div>
-                )) : (
-                  <div className="text-muted" style={{ padding: '0.5rem' }}>No hay categorías.</div>
-                )}
-              </div>
-            </div>
-          )}
+        <div className="mb-3">
+          <label className="form-label">Productos que surte (selecciona uno o más)</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {productos.length > 0 ? (
+              productos.map((prod) => (
+                <div key={prod.id} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-prod-${prod.id}`}
+                    checked={nuevoProveedor.productos.includes(prod.id)}
+                    onChange={() => toggleProductoProveedor(prod.id)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
+                    {prod.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay productos disponibles.</small>
+            )}
+          </div>
         </div>
-
-        <button type="submit" className="btn btn-primary w-100">Agregar Proveedor</button>
+        <div className="mb-3">
+          <label className="form-label">Categorías que surte (selecciona una o más)</label>
+          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {categorias.length > 0 ? (
+              categorias.map((cat) => (
+                <div key={cat.nombre} className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id={`prov-cat-${cat.nombre}`}
+                    checked={nuevoProveedor.categorias.includes(cat.nombre)}
+                    onChange={() => toggleCategoriaProveedor(cat.nombre)}
+                  />
+                  <label className="form-check-label" htmlFor={`prov-cat-${cat.nombre}`}>
+                    {cat.nombre}
+                  </label>
+                </div>
+              ))
+            ) : (
+              <small className="text-muted">No hay categorías disponibles.</small>
+            )}
+          </div>
+        </div>
+        <button type="submit" className="btn btn-primary w-100">
+          Agregar Proveedor
+        </button>
       </form>
     </>
   );
