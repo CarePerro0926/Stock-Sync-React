@@ -20,22 +20,15 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión desde Supabase Auth (persistente)
+  // 🔑 Restaurar sesión correctamente (persistente al recargar)
   useEffect(() => {
-    const restoreSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    const {  authData } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const { data: perfil, error } = await supabase
+        const {  perfil, error } = await supabase
           .from('usuarios')
           .select('username, role')
           .eq('id', session.user.id)
           .single();
-
-        if (error) {
-          console.error('Error al obtener el perfil del usuario:', error);
-          setVistaActual('login');
-          return;
-        }
 
         const usr = {
           id: session.user.id,
@@ -47,15 +40,27 @@ function App() {
         setUsuarioActual(usr);
         setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
       } else {
+        setUsuarioActual(null);
         setVistaActual('login');
       }
+    });
+
+    const timer = setTimeout(() => {
+      if (vistaActual === 'loading') {
+        setVistaActual('login');
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      authData.subscription.unsubscribe();
     };
+  }, [vistaActual]);
 
-    restoreSession();
-  }, []);
-
-  // 📦 Cargar datos del catálogo
+  // 📦 Cargar datos del catálogo (solo si estás autenticado)
   useEffect(() => {
+    if (!usuarioActual || vistaActual === 'loading') return;
+
     const cargarDatos = async () => {
       try {
         const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
@@ -70,8 +75,9 @@ function App() {
         console.error('Error al cargar datos:', error);
       }
     };
+
     cargarDatos();
-  }, []);
+  }, [usuarioActual, vistaActual]);
 
   const handleLogin = (usr) => {
     setUsuarioActual(usr);
@@ -127,7 +133,10 @@ function App() {
   if (vistaActual === 'loading') {
     return (
       <div className="container-fluid p-4 text-center">
-        Cargando sesión...
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p className="mt-2">Cargando sesión...</p>
       </div>
     );
   }
