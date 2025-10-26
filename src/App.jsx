@@ -22,23 +22,29 @@ function App() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   // Cargar datos iniciales
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
-          productService.getAll(),
-          providerService.getAll(),
-          categoryService.getAll()
-        ]);
-        setProductos(productosDB);
-        setProveedores(proveedoresDB);
-        setCategorias(categoriasDB);
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-      }
-    };
-    cargarDatos();
-  }, []);
+    useEffect(() => {
+      const cargarDatos = async () => {
+        try {
+          const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
+            productService.getAll(),
+            providerService.getAll(),
+            categoryService.getAll()
+          ]);
+
+          // Si los servicios devuelven vacío, usar datos iniciales
+          setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+          setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+          setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+        } catch (error) {
+          console.error('Error al cargar datos:', error);
+          // En caso de error, usar datos iniciales
+          setProductos(initialProductos);
+          setProveedores(initialProveedores);
+          setCategorias(initialCategorias);
+        }
+      };
+      cargarDatos();
+    }, []);
 
   const handleLogin = (usr) => {
     if (!usr) {
