@@ -48,9 +48,10 @@ export const initialProductos = [
   { id: '30', nombre: 'Alfombrilla RGB XL', cantidad: 40, precio: 90000, categoria: 'Accesorios', id_proveedor: '3' }
 ];
 
-// Extraer categorías únicas de los productos
-const todasLasCategorias = [...new Set(initialProductos.map(p => p.categoria))];
-export const initialCategorias = todasLasCategorias.map((nombre, index) => ({
+// Categorías únicas extraídas de los productos
+// Cada categoría es un objeto con { id, nombre } para compatibilidad con selects y listas
+const nombresCategorias = [...new Set(initialProductos.map(p => p.categoria))];
+export const initialCategorias = nombresCategorias.map((nombre, index) => ({
   id: (index + 1).toString(),
   nombre
 }));
