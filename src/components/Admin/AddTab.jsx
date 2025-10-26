@@ -5,7 +5,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria_id: '', // ← Cambiado a categoria_id para usar ID
+    categoria_id: '',
     cantidad: '',
     precio: '',
     provider_id: ''
@@ -17,7 +17,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     nombre: '',
     email: '',
     telefono: '',
-    categorias: [] // Array de IDs de categorías
+    categorias: []
   });
 
   const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
@@ -25,7 +25,6 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -36,21 +35,20 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Focus input when opening dropdown
   useEffect(() => {
     if (showCategoriaDropdown && searchRef.current) {
       searchRef.current.focus();
     }
   }, [showCategoriaDropdown]);
 
-  // Manejadores de producto
+  // ✅ CORREGIDO: solo cantidad y precio se convierten a número
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
     setNuevoProducto({
       ...nuevoProducto,
-      [name]: ['cantidad', 'precio', 'provider_id', 'categoria_id'].includes(name)
+      [name]: ['cantidad', 'precio'].includes(name)
         ? value === '' ? '' : Number(value)
-        : value
+        : value // provider_id y categoria_id permanecen como strings
     });
   };
 
@@ -61,7 +59,6 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
       alert('Por favor completa todos los campos del producto.');
       return;
     }
-    // Enviamos el objeto con categoria_id (ID numérico/uuid)
     onAddProducto({ ...nuevoProducto });
     setNuevoProducto({ id: '', nombre: '', categoria_id: '', cantidad: '', precio: '', provider_id: '' });
   };
@@ -106,13 +103,9 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   };
 
   const listaProveedores = Array.isArray(proveedores) ? proveedores : [];
-
-  // Nombres de categorías seleccionadas para mostrar en el botón
   const categoriasSeleccionadas = categorias
     .filter(cat => nuevoProveedor.categorias.includes(cat.id))
     .map(cat => cat.nombre);
-
-  // Filtrado por búsqueda (case-insensitive)
   const categoriesFiltered = categorias.filter(cat =>
     cat.nombre.toLowerCase().includes(searchCategoria.trim().toLowerCase())
   );
@@ -129,7 +122,6 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           <input type="text" className="form-control" name="nombre" placeholder="Nombre" value={nuevoProducto.nombre} onChange={handleProductoChange} required />
         </div>
         <div className="mb-2">
-          {/* SELECT CORREGIDO: ahora usa ID como valor */}
           <select className="form-control" name="categoria_id" value={nuevoProducto.categoria_id} onChange={handleProductoChange} required>
             <option value="">Seleccionar categoría</option>
             {categorias.map(cat => (
@@ -217,10 +209,8 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* Dropdown con checkboxes y búsqueda */}
         <div className="mb-3" ref={dropdownRef} style={{ position: 'relative' }}>
           <label className="form-label">Categorías que surte</label>
-
           <button
             type="button"
             className="form-control text-start d-flex justify-content-between align-items-center"
@@ -263,7 +253,6 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
                   aria-label="Buscar categoría"
                 />
               </div>
-
               <div>
                 {categoriesFiltered.length > 0 ? categoriesFiltered.map(cat => (
                   <div key={cat.id} className="form-check" style={{ margin: '0.25rem 0' }}>
