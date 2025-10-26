@@ -20,7 +20,7 @@ function App() {
   const [vistaActual, setVistaActual] = useState('loading');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 🔑 Restaurar sesión — versión estable y segura
+  // 🔑 Restaurar sesión — CORREGIDO: sintaxis válida
   useEffect(() => {
     const restoreSession = async () => {
       const {  sessionData } = await supabase.auth.getSession();
@@ -43,14 +43,14 @@ function App() {
         setUsuarioActual(usr);
         setVistaActual(usr.role === 'admin' ? 'admin' : 'client');
       } else {
-        setVistaActual('login');
+        setVistaActual('login'); // ← Esto es clave: muestra el login
       }
     };
 
     restoreSession();
   }, []);
 
-  // 📦 Cargar catálogo solo si estás autenticado
+  // 📦 Cargar datos solo si estás autenticado
   useEffect(() => {
     if (vistaActual !== 'admin' && vistaActual !== 'client') return;
 
@@ -135,7 +135,7 @@ function App() {
     );
   }
 
-  // 🖼️ Renderizar vista actual
+  // 🖼️ Renderizar la vista actual
   const renderView = () => {
     switch (vistaActual) {
       case 'login':
