@@ -5,7 +5,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria: '',
+    categoria_id: '', // ← Cambiado a categoria_id para usar ID
     cantidad: '',
     precio: '',
     provider_id: ''
@@ -17,7 +17,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     nombre: '',
     email: '',
     telefono: '',
-    categorias: [] // Array de IDs
+    categorias: [] // Array de IDs de categorías
   });
 
   const [showCategoriaDropdown, setShowCategoriaDropdown] = useState(false);
@@ -48,7 +48,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
     const { name, value } = e.target;
     setNuevoProducto({
       ...nuevoProducto,
-      [name]: ['cantidad', 'precio', 'provider_id'].includes(name)
+      [name]: ['cantidad', 'precio', 'provider_id', 'categoria_id'].includes(name)
         ? value === '' ? '' : Number(value)
         : value
     });
@@ -56,13 +56,14 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
 
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const { id, nombre, categoria, cantidad, precio, provider_id } = nuevoProducto;
-    if (!id || !nombre || !categoria || !cantidad || !precio || !provider_id) {
+    const { id, nombre, categoria_id, cantidad, precio, provider_id } = nuevoProducto;
+    if (!id || !nombre || !categoria_id || !cantidad || !precio || !provider_id) {
       alert('Por favor completa todos los campos del producto.');
       return;
     }
-    onAddProducto(nuevoProducto);
-    setNuevoProducto({ id: '', nombre: '', categoria: '', cantidad: '', precio: '', provider_id: '' });
+    // Enviamos el objeto con categoria_id (ID numérico/uuid)
+    onAddProducto({ ...nuevoProducto });
+    setNuevoProducto({ id: '', nombre: '', categoria_id: '', cantidad: '', precio: '', provider_id: '' });
   };
 
   const handleAddCategoriaSubmit = (e) => {
@@ -128,10 +129,11 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           <input type="text" className="form-control" name="nombre" placeholder="Nombre" value={nuevoProducto.nombre} onChange={handleProductoChange} required />
         </div>
         <div className="mb-2">
-          <select className="form-control" name="categoria" value={nuevoProducto.categoria} onChange={handleProductoChange} required>
+          {/* SELECT CORREGIDO: ahora usa ID como valor */}
+          <select className="form-control" name="categoria_id" value={nuevoProducto.categoria_id} onChange={handleProductoChange} required>
             <option value="">Seleccionar categoría</option>
             {categorias.map(cat => (
-              <option key={cat.id} value={cat.nombre}>{cat.nombre}</option>
+              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
             ))}
           </select>
         </div>
@@ -215,7 +217,7 @@ const AddTab = ({ onAddProducto, onAddCategoria, onAddProveedor, proveedores = [
           />
         </div>
 
-        {/* Dropdown con checkboxes y búsqueda (móvil friendly) */}
+        {/* Dropdown con checkboxes y búsqueda */}
         <div className="mb-3" ref={dropdownRef} style={{ position: 'relative' }}>
           <label className="form-label">Categorías que surte</label>
 
