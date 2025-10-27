@@ -101,7 +101,12 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
       </ul>
 
       {/* Renderizar la vista activa */}
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />}
+      {vistaActiva === 'inventory' && (
+        (() => {
+          console.log("AdminView: Renderizando InventoryTab con props:", { productos, categorias, onDeleteProducto });
+          return <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />;
+        })()
+      )}
       {/* CORREGIDO: Pasamos todas las props necesarias */}
       {vistaActiva === 'add' && <AddTab
         onAddProducto={onAddProducto}
