@@ -108,7 +108,7 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
           return <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />; // <-- Pasamos 'categorias'
         })()
       )}
-      {/* CORREGIDO: Pasamos todas las props necesarias */}
+      {/* Pasamos todas las props necesarias */}
       {vistaActiva === 'add' && <AddTab
         onAddProducto={onAddProducto}
         onAddCategoria={onAddCategoria}
