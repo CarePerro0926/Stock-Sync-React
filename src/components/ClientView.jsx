@@ -3,10 +3,32 @@ import React, { useState, useMemo } from 'react';
 import { usePayment } from '../hooks/usePayment'; // ✅ Importa el hook
 import { filtroProductos } from '../utils/helpers';
 
-const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
+const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => { // Recibe categorias
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
+
+  // Normaliza categorias por si viene undefined
+  const cats = Array.isArray(categorias) ? categorias : [];
+
+  // Mapear categoria_id a nombre si es necesario
+  const productosConNombreCategoria = useMemo(() => {
+    return productos.map(p => {
+      if (p.categoria_nombre) {
+        // Si ya tiene categoria_nombre, devolverlo como está
+        return p;
+      } else if (p.categoria_id) {
+        // Si tiene categoria_id, buscar el nombre
+        const categoria = cats.find(c => c.id === p.categoria_id);
+        return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida', categoria: categoria ? categoria.nombre : 'Categoría Desconocida' }; // Añadir 'categoria' también para compatibilidad con filtroProductos
+      } else if (p.categoria) {
+        // Si tiene categoria (nombre directo), devolverlo como está (compatibilidad con initialData)
+        return p;
+      }
+      // Si no tiene ninguno, asignar un nombre por defecto
+      return { ...p, categoria_nombre: 'Sin Categoría', categoria: 'Sin Categoría' };
+    });
+  }, [productos, cats]);
 
   // Usa el hook de pago
   const {
@@ -21,14 +43,14 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
 
   const total = carrito.reduce((sum, item) => sum + item.precio, 0);
 
-  const categorias = useMemo(() => {
-    const cats = [...new Set(productos.map(p => p.categoria))];
+  const categoriasFiltro = useMemo(() => {
+    const cats = [...new Set(productosConNombreCategoria.map(p => p.categoria))]; // Usar la categoria mapeada
     return ['Todas', ...cats];
-  }, [productos]);
+  }, [productosConNombreCategoria]);
 
   const productosFiltrados = useMemo(() => {
-    return filtroProductos(productos, filtroTxt, filtroCat);
-  }, [productos, filtroTxt, filtroCat]);
+    return filtroProductos(productosConNombreCategoria, filtroTxt, filtroCat); // Usar productos con categoria mapeada
+  }, [productosConNombreCategoria, filtroTxt, filtroCat]);
 
   const handleQuantityChange = (productoId, precioUnitario) => (e) => {
     const cantidad = parseInt(e.target.value) || 0;
@@ -69,7 +91,7 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
       <div className="row g-2 mb-3">
         <div className="col">
           <select id="filtroCat" className="form-select" value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+            {categoriasFiltro.map(c => <option key={c} value={c}>{c}</option>)} {/* Usar categoriasFiltro */}
           </select>
         </div>
         <div className="col">
@@ -88,7 +110,7 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
             <tr>
               <th>ID</th>
               <th>Nombre</th>
-              <th>Categoria</th>
+              <th>Categoria</th> {/* Mostrar categoria_nombre */}
               <th>Stock</th>
               <th style={{ width: '60px' }}>Cantidad</th>
               <th style={{ width: '120px' }}>Precio Unidad</th>
@@ -102,33 +124,33 @@ const ClientView = ({ productos, carrito, setCarrito, onLogout }) => {
                 const itemCarrito = carrito.find(item => item.id === p.id);
                 const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
 
-// reemplaza este bloque dentro de productosFiltrados.map(...)
-return (
-  <tr key={p.id} className="table-row">
-    <td className="table-cell" data-title="ID">{p.id}</td>
-    <td className="table-cell" data-title="Nombre">{p.nombre}</td>
-    <td className="table-cell" data-title="Categoria">{p.categoria}</td>
-    <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-    <td className="table-cell qty-input-container" data-title="Cantidad">
-      <input
-        type="number"
-        min="0"
-        className="form-control form-control-sm qty-input"
-        id={`qty-${p.id}`}
-        data-id={p.id}
-        data-precio={p.precio}
-        value={cantidadActual > 0 ? cantidadActual : ''}
-        placeholder="0"
-        onChange={handleQuantityChange(p.id, p.precio)}
-        onFocus={handleInputFocus}
-        onInput={handleInputInput}
-      />
-    </td>
-    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-    </td>
-  </tr>
-);
+                // reemplaza este bloque dentro de productosFiltrados.map(...)
+                return (
+                  <tr key={p.id} className="table-row">
+                    <td className="table-cell" data-title="ID">{p.id}</td>
+                    <td className="table-cell" data-title="Nombre">{p.nombre}</td>
+                    <td className="table-cell" data-title="Categoria">{p.categoria_nombre}</td> {/* Mostrar categoria_nombre */}
+                    <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
+                    <td className="table-cell qty-input-container" data-title="Cantidad">
+                      <input
+                        type="number"
+                        min="0"
+                        className="form-control form-control-sm qty-input"
+                        id={`qty-${p.id}`}
+                        data-id={p.id}
+                        data-precio={p.precio}
+                        value={cantidadActual > 0 ? cantidadActual : ''}
+                        placeholder="0"
+                        onChange={handleQuantityChange(p.id, p.precio)}
+                        onFocus={handleInputFocus}
+                        onInput={handleInputInput}
+                      />
+                    </td>
+                    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
+                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
+                    </td>
+                  </tr>
+                );
               })
             )}
           </tbody>
@@ -181,7 +203,7 @@ return (
                 <div className="row g-2 mb-3">
                   <div className="col-6">
                     <label className="form-label">Fecha de vencimiento</label>
-                    <input type="text" className="form-control" placeholder="MM/AA" />
+                    <input type="text" className="form-control" placeholder="MM/AA" /> {/* CORREGIDO: Auto-cierre */}
                   </div>
                   <div className="col-6">
                     <label className="form-label">CVC</label>
