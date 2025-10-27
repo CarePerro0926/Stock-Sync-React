@@ -5,7 +5,7 @@ import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 
-const AdminView = ({ productos, proveedores, categoria, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => {
+const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => {
 
   const [showMenu, setShowMenu] = useState(false);
 
