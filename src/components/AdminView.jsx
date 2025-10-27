@@ -100,6 +100,8 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
         </li>
       </ul>
 
+      {console.log("AdminView: Vista activa:", vistaActiva)} {/* <-- Nuevo log */}
+
       {/* Renderizar la vista activa */}
       {vistaActiva === 'inventory' && (
         (() => {
