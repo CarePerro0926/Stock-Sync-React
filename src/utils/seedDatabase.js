@@ -33,7 +33,7 @@ export async function seedDatabase() {
 
     if (providerError) throw new Error('Error al insertar proveedores: ' + providerError.message);
 
-    console.log('✅ Base de datos inicializada correctamente');
+    console.log(' Base de datos inicializada correctamente');
   } catch (error) {
     console.error('❌ Error al inicializar la base de datos:', error.message);
   }
