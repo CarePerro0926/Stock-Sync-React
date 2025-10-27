@@ -5,6 +5,9 @@ import App from './App.jsx';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+
+console.log("main.jsx: Iniciando la aplicación"); // <-- Nuevo log
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
