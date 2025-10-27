@@ -6,7 +6,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
-  // 👇 DIAGNÓSTICO: Ver qué datos llegan
+  // DIAGNÓSTICO: Ver qué datos llegan
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
     console.log('Productos recibidos:', productos);
@@ -37,7 +37,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
-        const catFromProducto = p.categoria_nombre;
+        const catFromProducto = p.categoria ?? p.categoria_nombre;
         if (catFromProducto) {
           return String(catFromProducto).trim() === filtroCatStr;
         }
