@@ -38,12 +38,6 @@ const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
     setProductosFiltrados(filtered);
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // --- DEPURACIÓN: Comentar o eliminar esta línea después de la depuración ---
-  console.log('Productos recibidos:', productos);
-  console.log('Categorías recibidas:', categorias);
-  console.log('Productos filtrados:', productosFiltrados);
-  // --- FIN DEPURACIÓN ---
-
   // Preparar datos para la tabla, mapeando categoria_id a nombre
   const tableHeaders = [
     { key: 'id', label: 'ID' },
@@ -54,20 +48,30 @@ const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
     { key: 'acciones', label: 'Acciones', align: 'center' } // Columna para botones de acción
   ];
 
-  // --- DEPURACIÓN: Comentar o eliminar esta línea después de la depuración ---
   const tableData = productosFiltrados.map(p => {
     // Buscar el nombre de la categoría
-    const categoriaObj = categorias.find(cat => cat.id === p.categoria_id);
-    const nombreCategoria = categoriaObj ? categoriaObj.nombre : 'Categoría Desconocida'; // Manejar caso no encontrado
-
-    // --- DEPURACIÓN: Comentar o eliminar esta línea después de la depuración ---
-    console.log('Producto:', p, 'categoria_id:', p.categoria_id, 'categoriaObj:', categoriaObj, 'nombreCategoria:', nombreCategoria);
-    // --- FIN DEPURACIÓN ---
+    let nombreCategoria = 'Sin Categoría'; // Valor por defecto
+    if (p.categoria_id) { // Verificar que tenga categoria_id
+      const categoriaObj = categorias.find(cat => cat.id === p.categoria_id);
+      if (categoriaObj) {
+        nombreCategoria = categoriaObj.nombre;
+      } else {
+        // Si no se encuentra, usar el ID como fallback (para depuración)
+        nombreCategoria = `ID: ${p.categoria_id}`;
+      }
+    } else {
+      // Si no tiene categoria_id, intentar usar otra propiedad
+      if (p.categoria_nombre) {
+        nombreCategoria = p.categoria_nombre;
+      } else if (p.categoria) {
+        nombreCategoria = p.categoria;
+      }
+    }
 
     return {
       id: p.id,
       nombre: p.nombre,
-      categoriaNombre: nombreCategoria, // <-- Usar el nombre encontrado
+      categoriaNombre: nombreCategoria, // <-- Usar el nombre encontrado o el valor por defecto
       cantidad: p.cantidad,
       precio: p.precio.toLocaleString('es-CO'),
       acciones: (
@@ -80,7 +84,6 @@ const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
       )
     };
   });
-  // --- FIN DEPURACIÓN ---
 
   const listaCategoriasFiltro = ['Todas', ...categorias.map(c => c.nombre)]; // Lista de NOMBRES para el select
 
