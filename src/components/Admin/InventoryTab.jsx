@@ -1,8 +1,8 @@
-// src/components/Admin/InventoryTab.jsx (Adaptado a Versión 1 con filtro externo)
+// src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { filtroProductos } from '../../utils/helpers'; // Importamos la función externa
+import ResponsiveTable from '../ResponsiveTable'; // Asegúrate que la ruta sea correcta
 
-const InventoryTab = ({ productos = [] }) => { // <-- Quitamos 'categorias' y 'onDeleteProducto'
+const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
@@ -10,137 +10,17 @@ const InventoryTab = ({ productos = [] }) => { // <-- Quitamos 'categorias' y 'o
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
     console.log('Productos recibidos:', productos);
+    console.log('Categorías recibidas:', categorias);
     if (productos.length > 0) {
       console.log('Ejemplo de producto:', productos[0]);
     }
-  }, [productos]);
-
-  // === 1. Lista de categorías para el filtro - Ahora solo usa producto.categoria ===
-  const categorias = useMemo(() => {
-    // Extraer nombres de categorías de los productos, usando solo p.categoria
-    const nombresDesdeProductos = productos
-      .map(p => p.categoria) // <-- Solo usa p.categoria
-      .filter(nombre => nombre && String(nombre).trim() !== ''); // Filtrar valores vacíos o nulos
-
-    const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
-    return ['Todas', ...unicas];
-  }, [productos]); // Solo depende de productos ahora
-
-
-  // === 2. Productos filtrados - Ahora usa la función externa ===
-  const productosFiltrados = useMemo(() => {
-    // Llama a la función externa en lugar de la lógica interna
-    return filtroProductos(productos, filtroTxt, filtroCat); // <-- Usa filtroProductos
-  }, [productos, filtroTxt, filtroCat]); // Dependencias para filtro externo
-
-
-  // DIAGNÓSTICO: Confirmar renderizado
-  console.log("Renderizando InventoryTab con productos:", productos);
-
-  return (
-    <>
-      <h5>Inventario</h5>
-      <div className="row g-2 mb-3">
-        <div className="col">
-          <select
-            id="filtroCatAdmin"
-            className="form-select"
-            value={filtroCat}
-            onChange={(e) => setFiltroCat(e.target.value)}
-          >
-            {categorias.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="col">
-          <input
-            id="filtroTxtAdmin"
-            className="form-control"
-            placeholder="Buscar..."
-            value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
-          />
-        </div>
-      </div>
-      <div
-        className="table-responsive responsive-table"
-        style={{ maxHeight: '250px', overflow: 'auto' }}
-      >
-        <table className="table table-bordered table-sm mb-0">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th style={{ width: '60px', textAlign: 'center' }}>Stock</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
-            </tr>
-          </thead>
-          <tbody id="tblAdminInv">
-            {productosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="text-center">
-                  No se encontraron productos.
-                </td>
-              </tr>
-            ) : (
-              productosFiltrados.map((p) => (
-                <tr key={p.id} className="table-row">
-                  <td className="table-cell" dataTitle="ID">
-                    {p.id}
-                  </td>
-                  <td className="table-cell" dataTitle="Nombre">
-                    {p.nombre}
-                  </td>
-                  <td className="table-cell" dataTitle="Categoria">
-                    {p.categoria} {/* <-- Mostramos p.categoria */}
-                  </td>
-                  <td
-                    className="table-cell"
-                    dataTitle="Stock"
-                    style={{ textAlign: 'center' }}
-                  >
-                    {p.cantidad}
-                  </td>
-                  <td
-                    className="table-cell"
-                    dataTitle="Precio Unidad"
-                    style={{ textAlign: 'right' }}
-                  >
-                    {p.precio.toLocaleString('es-CO')}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-};
-
-export default InventoryTab;// src/components/Admin/InventoryTab.jsx (Adaptado para usar categoria_nombre y filtro externo)
-import React, { useState, useMemo, useEffect } from 'react';
-import { filtroProductos } from '../../utils/helpers'; // Importamos la función externa
-
-const InventoryTab = ({ productos = [] }) => { // <-- Quitamos 'categorias' y 'onDeleteProducto'
-  const [filtroCat, setFiltroCat] = useState('Todas');
-  const [filtroTxt, setFiltroTxt] = useState('');
-
-  // DIAGNÓSTICO: Ver qué datos llegan
-  useEffect(() => {
-    console.log('--- DATOS EN INVENTORYTAB ---');
-    console.log('Productos recibidos:', productos);
-    if (productos.length > 0) {
-      console.log('Ejemplo de producto:', productos[0]);
+    if (categorias.length > 0) {
+      console.log('Ejemplo de categoría:', categorias[0]);
     }
-  }, [productos]);
+  }, [productos, categorias]);
 
-  // === 1. Lista de categorías para el filtro - Ahora usa producto.categoria_nombre ===
-  const categorias = useMemo(() => {
+  // === 1. Lista de categorías para el filtro - CORREGIDO para usar categoria_nombre ===
+  const listaCategoriasFiltro = useMemo(() => {
     // Extraer nombres de categorías de los productos, usando p.categoria_nombre
     const nombresDesdeProductos = productos
       .map(p => p.categoria_nombre) // <-- Usa p.categoria_nombre
@@ -148,33 +28,103 @@ const InventoryTab = ({ productos = [] }) => { // <-- Quitamos 'categorias' y 'o
 
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
     return ['Todas', ...unicas];
-  }, [productos]); // Solo depende de productos ahora
+  }, [productos]); // Asegúrate de incluir 'productos' aquí
 
 
-  // === 2. Productos filtrados - Ahora usa la función externa ===
+  // === 2. Productos filtrados - CORREGIDO PARA USAR categoria_nombre ===
   const productosFiltrados = useMemo(() => {
-    // Llama a la función externa en lugar de la lógica interna
-    return filtroProductos(productos, filtroTxt, filtroCat); // <-- Usa filtroProductos (que ahora usa categoria_nombre)
-  }, [productos, filtroTxt, filtroCat]); // Dependencias para filtro externo
+    let filtered = [...productos];
 
+    if (filtroCat !== 'Todas') {
+      const filtroCatStr = String(filtroCat).trim();
+      // Filtrar usando p.categoria_nombre
+      filtered = filtered.filter(p => {
+        const nombreCategoria = p.categoria_nombre; // <-- Usa p.categoria_nombre
+        return nombreCategoria && String(nombreCategoria).trim() === filtroCatStr;
+      });
+    }
+
+    if (filtroTxt.trim()) {
+      const term = filtroTxt.toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const idStr = String(p.id ?? '');
+        const nombreStr = String(p.nombre ?? '');
+        // Buscar usando p.categoria_nombre
+        const catStr = String(p.categoria_nombre ?? ''); // <-- Usa p.categoria_nombre
+
+        return (
+          idStr.toLowerCase().includes(term) ||
+          nombreStr.toLowerCase().includes(term) ||
+          catStr.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [productos, filtroCat, filtroTxt]); // Incluir productos, filtroCat y filtroTxt
+
+
+  // === 3. Datos para la tabla — SIEMPRE TEXTO PLANO ===
+  const tableData = useMemo(() => {
+    return productosFiltrados.map(p => {
+      // Ahora asume que p.categoria_nombre es directamente el nombre
+      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
+
+      // Garantizar que sea un string válido
+      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
+        nombreCategoria = 'Sin Categoría';
+      }
+
+      return {
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
+        categoriaNombre: nombreCategoria, // ← TEXTO PLANO SIMPLE (ahora usando categoria_nombre)
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number'
+          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+          : p.precio ?? '—',
+        acciones: (
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => onDeleteProducto(p.id)}
+            disabled={!p.id}
+          >
+            Eliminar
+          </button>
+        )
+      };
+    });
+  }, [productosFiltrados, onDeleteProducto]); // Incluir productosFiltrados y onDeleteProducto
+
+
+  // === 4. Cabeceras de la tabla ===
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoriaNombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock', align: 'center' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' },
+    { key: 'acciones', label: 'Acciones', align: 'center' }
+  ];
 
   // DIAGNÓSTICO: Confirmar renderizado
   console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
-    <>
+    <div>
       <h5>Inventario</h5>
+
       <div className="row g-2 mb-3">
         <div className="col">
           <select
             id="filtroCatAdmin"
             className="form-select"
             value={filtroCat}
-            onChange={(e) => setFiltroCat(e.target.value)}
+            onChange={e => setFiltroCat(e.target.value)}
           >
-            {categorias.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {listaCategoriasFiltro.map((cat, index) => (
+              <option key={`${cat}-${index}`} value={cat}>
+                {cat}
               </option>
             ))}
           </select>
@@ -183,66 +133,19 @@ const InventoryTab = ({ productos = [] }) => { // <-- Quitamos 'categorias' y 'o
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
+            onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
-      <div
-        className="table-responsive responsive-table"
-        style={{ maxHeight: '250px', overflow: 'auto' }}
-      >
-        <table className="table table-bordered table-sm mb-0">
-          <thead className="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th style={{ width: '60px', textAlign: 'center' }}>Stock</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
-            </tr>
-          </thead>
-          <tbody id="tblAdminInv">
-            {productosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="text-center">
-                  No se encontraron productos.
-                </td>
-              </tr>
-            ) : (
-              productosFiltrados.map((p) => (
-                <tr key={p.id} className="table-row">
-                  <td className="table-cell" dataTitle="ID">
-                    {p.id}
-                  </td>
-                  <td className="table-cell" dataTitle="Nombre">
-                    {p.nombre}
-                  </td>
-                  <td className="table-cell" dataTitle="Categoria">
-                    {p.categoria_nombre} {/* <-- Mostramos p.categoria_nombre */}
-                  </td>
-                  <td
-                    className="table-cell"
-                    dataTitle="Stock"
-                    style={{ textAlign: 'center' }}
-                  >
-                    {p.cantidad}
-                  </td>
-                  <td
-                    className="table-cell"
-                    dataTitle="Precio Unidad"
-                    style={{ textAlign: 'right' }}
-                  >
-                    {p.precio.toLocaleString('es-CO')}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </>
+
+      <ResponsiveTable
+        headers={tableHeaders}
+        data={tableData}
+        maxHeight="250px"
+      />
+    </div>
   );
 };
 
