@@ -69,6 +69,7 @@ function App() {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
+    console.log("App.jsx: Renderizando vista:", vistaActual); // <-- Nuevo log
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
@@ -81,6 +82,7 @@ function App() {
         // CORREGIDO: pasar categorias a ClientView
         return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
       case 'admin':
+        console.log("App.jsx: Cargando AdminView con props:", { productos, categorias, vistaAdminActiva }); // <-- Nuevo log
         return (
           <AdminView
             productos={productos}
