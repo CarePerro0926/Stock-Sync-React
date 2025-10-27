@@ -1,6 +1,8 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import ResponsiveTable from '../ResponsiveTable';
+// Importamos la función externa de filtrado
+import { filtroProductos } from '../../utils/helpers';
 
 const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -19,91 +21,30 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     }
   }, [productos, categorias]);
 
-  // === 1. Lista de categorías para el filtro - CORREGIDO ===
+  // === 1. Lista de categorías para el filtro - Ahora solo usa producto.categoria ===
   const listaCategoriasFiltro = useMemo(() => {
-    // Extraer nombres de categorías de los productos
+    // Extraer nombres de categorías de los productos, usando solo p.categoria
     const nombresDesdeProductos = productos
-      .map(p => {
-        // Intentar en orden de preferencia
-        return p.categoria_nombre || p.categoria || (p.categoria_id && categorias.find(c => String(c.id) === String(p.categoria_id))?.nombre);
-      })
+      .map(p => p.categoria) // <-- Solo usa p.categoria
       .filter(nombre => nombre && String(nombre).trim() !== ''); // Filtrar valores vacíos o nulos
 
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
     return ['Todas', ...unicas];
-  }, [productos, categorias]); // Asegúrate de incluir 'categorias' aquí si usas el mapeo ID -> Nombre
+  }, [productos]); // Solo depende de productos ahora
 
 
-  // === 2. Productos filtrados - CORREGIDO PARA MANEJAR LAS MISMAS PROPIEDADES ===
+  // === 2. Productos filtrados - Ahora usa la función externa ===
   const productosFiltrados = useMemo(() => {
-    let filtered = [...productos];
-
-    if (filtroCat !== 'Todas') {
-      const filtroCatStr = String(filtroCat).trim();
-      filtered = filtered.filter(p => {
-        // Intentar encontrar la categoría del producto
-        let nombreCategoria = p.categoria_nombre || p.categoria;
-
-        // Si no se encontró directamente y se tiene categoria_id y el array categorias
-        if (!nombreCategoria && p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
-          const catObj = categorias.find(c => String(c.id).trim() === String(p.categoria_id).trim());
-          if (catObj) {
-            nombreCategoria = catObj.nombre; // Usar el nombre de la categoría encontrada
-          }
-        }
-
-        // Comparar el nombre encontrado con el filtro
-        return nombreCategoria && String(nombreCategoria).trim() === filtroCatStr;
-      });
-    }
-
-    if (filtroTxt.trim()) {
-      const term = filtroTxt.toLowerCase().trim();
-      filtered = filtered.filter(p => {
-        const idStr = String(p.id ?? '');
-        const nombreStr = String(p.nombre ?? '');
-        // Intentar obtener la categoría para búsqueda
-        let catStr = String(p.categoria_nombre || p.categoria || '');
-
-        // Si no está directamente, intentar con el ID y el array de categorias
-        if (catStr === 'undefined' || catStr === 'null' || catStr === '') {
-            if (p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
-                const catObj = categorias.find(c => String(c.id).trim() === String(p.categoria_id).trim());
-                if (catObj) {
-                    catStr = String(catObj.nombre);
-                }
-            }
-        }
-
-        return (
-          idStr.toLowerCase().includes(term) ||
-          nombreStr.toLowerCase().includes(term) ||
-          catStr.toLowerCase().includes(term) ||
-          String(p.categoria_id ?? '').toLowerCase().includes(term) // Opcional: buscar también por ID
-        );
-      });
-    }
-
-    return filtered;
-  }, [productos, categorias, filtroCat, filtroTxt]); // Incluir categorias aquí también
+    // Llama a la función externa en lugar de la lógica interna
+    return filtroProductos(productos, filtroTxt, filtroCat); // <-- Usa filtroProductos
+  }, [productos, filtroTxt, filtroCat]); // Dependencias para filtro externo
 
 
   // === 3. Datos para la tabla — SIEMPRE TEXTO PLANO ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
-      let nombreCategoria = 'Sin Categoría';
-
-      // Intentar obtener el nombre de la categoría, priorizando el nombre directo
-      if (p.categoria_nombre != null) {
-        nombreCategoria = String(p.categoria_nombre).trim();
-      } else if (p.categoria != null) {
-         nombreCategoria = String(p.categoria).trim();
-      } else if (p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
-        const cat = categorias.find(c =>
-          String(c.id).trim() === String(p.categoria_id).trim()
-        );
-        nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
-      }
+      // Ahora asume que p.categoria es directamente el nombre
+      const nombreCategoria = p.categoria ? String(p.categoria).trim() : 'Sin Categoría';
 
       // Garantizar que sea un string válido
       if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
