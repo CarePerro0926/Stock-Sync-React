@@ -8,10 +8,11 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
 
   // === 1. Lista de categorías para el filtro ===
   const listaCategoriasFiltro = useMemo(() => {
-    const fromCategorias = categorias.map(c => c.nombre).filter(Boolean);
+    const fromCategorias = categorias.map(c => String(c.nombre)).filter(Boolean);
     const fromProductos = productos
       .map(p => p.categoria ?? p.categoria_nombre)
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(String);
 
     const uniqueCats = [...new Set([...fromCategorias, ...fromProductos])];
     return ['Todas', ...uniqueCats];
@@ -22,16 +23,17 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     let filtered = [...productos];
 
     if (filtroCat !== 'Todas') {
+      const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
         const catFromProducto = p.categoria ?? p.categoria_nombre;
         if (catFromProducto) {
-          return String(catFromProducto).trim() === String(filtroCat).trim();
+          return String(catFromProducto).trim() === filtroCatStr;
         }
         if (p.categoria_id != null) {
           const catObj = categorias.find(c =>
             String(c.id).trim() === String(p.categoria_id).trim()
           );
-          return catObj && String(catObj.nombre).trim() === String(filtroCat).trim();
+          return catObj && String(catObj.nombre).trim() === filtroCatStr;
         }
         return false;
       });
@@ -54,34 +56,27 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // === 3. Datos para la tabla — CORRECCIÓN CLAVE AQUÍ ===
+  // === 3. Datos para la tabla — CORREGIDO PARA MOSTRAR SIEMPRE LA CATEGORÍA ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       let nombreCategoria = 'Sin Categoría';
 
-      // 👇 PRIMERO: intentar usar el nombre directamente
-      if (p.categoria) {
-        nombreCategoria = p.categoria.toString();
-      } else if (p.categoria_nombre) {
-        nombreCategoria = p.categoria_nombre.toString();
+      // Si el producto ya incluye el nombre de la categoría
+      if (p.categoria || p.categoria_nombre) {
+        nombreCategoria = String(p.categoria || p.categoria_nombre);
       }
-      // 👇 SEGUNDO: si solo tiene ID, buscar en categorias
-      else if (p.categoria_id != null) {
+      // Si solo tiene ID, buscar en la lista de categorías (comparando como strings)
+      else if (p.categoria_id != null && categorias.length > 0) {
         const cat = categorias.find(c =>
           String(c.id).trim() === String(p.categoria_id).trim()
         );
-        if (cat) {
-          nombreCategoria = cat.nombre;
-        } else {
-          // 👇 Si no encuentra categoría, mostrar ID para debugging
-          nombreCategoria = `ID: ${p.categoria_id} (no encontrada)`;
-        }
+        nombreCategoria = cat ? String(cat.nombre) : `ID ${p.categoria_id}`;
       }
 
       return {
         id: p.id ?? '—',
         nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria, // ← esto se muestra en la tabla
+        categoriaNombre: nombreCategoria,
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
@@ -99,7 +94,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     });
   }, [productosFiltrados, categorias, onDeleteProducto]);
 
-  // === 4. Cabeceras ===
+  // === 4. Cabeceras de la tabla ===
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Nombre' },
@@ -132,7 +127,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
