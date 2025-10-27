@@ -71,41 +71,40 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
 
   // === 3. Datos para la tabla ===
   const tableData = useMemo(() => {
-    return productosFiltrados.map(p => {
-      let nombreCategoria = 'Sin Categoría';
+  return productosFiltrados.map(p => {
+    let nombreCategoria = 'Sin Categoría';
 
-      if (p.categoria != null) {
-        nombreCategoria = String(p.categoria).trim() || 'Sin Categoría';
-      } else if (p.categoria_nombre != null) {
-        nombreCategoria = String(p.categoria_nombre).trim() || 'Sin Categoría';
-      } else if (p.categoria_id != null && categorias.length > 0) {
-        const cat = categorias.find(c =>
-          String(c.id).trim() === String(p.categoria_id).trim()
-        );
-        nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
-      }
+    if (p.categoria != null) {
+      nombreCategoria = String(p.categoria).trim() || 'Sin Categoría';
+    } else if (p.categoria_nombre != null) {
+      nombreCategoria = String(p.categoria_nombre).trim() || 'Sin Categoría';
+    } else if (p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
+      const cat = categorias.find(c =>
+        String(c.id).trim() === String(p.categoria_id).trim()
+      );
+      nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
+    }
 
-      return {
-        id: p.id ?? '—',
-        nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria,
-        cantidad: p.cantidad ?? 0,
-        precio: typeof p.precio === 'number'
-          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : p.precio ?? '—',
-        acciones: (
-          <button
-            className="btn btn-sm btn-danger"
-            onClick={() => onDeleteProducto(p.id)}
-            disabled={!p.id}
-          >
-            Eliminar
-          </button>
-        )
-      };
-    });
-  }, [productosFiltrados, categorias, onDeleteProducto]);
-
+    return {
+      id: p.id ?? '—',
+      nombre: p.nombre ?? 'Sin nombre',
+      categoriaNombre: nombreCategoria || 'Sin Categoría',
+      cantidad: p.cantidad ?? 0,
+      precio: typeof p.precio === 'number'
+        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+        : p.precio ?? '—',
+      acciones: (
+        <button
+          className="btn btn-sm btn-danger"
+          onClick={() => onDeleteProducto(p.id)}
+          disabled={!p.id}
+        >
+          Eliminar
+        </button>
+      )
+    };
+  });
+}, [productosFiltrados, categorias, onDeleteProducto]);
   // === 4. Cabeceras de la tabla ===
   const tableHeaders = [
     { key: 'id', label: 'ID' },
