@@ -29,9 +29,12 @@ const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
                     data-title={header.label}
                     style={header.align ? { textAlign: header.align } : {}}
                   >
-                    {/* 👇 FORZAR QUE SIEMPRE MUESTRE ALGO */}
-                    {row[header.key] != null && row[header.key] !== '' 
-                      ? row[header.key] 
+                    {/* 👇 SIEMPRE MUESTRA ALGO, INCLUSO SI ES UN OBJETO O NULL */}
+                    {row[header.key] !== undefined && row[header.key] !== null 
+                      ? (typeof row[header.key] === 'object' 
+                          ? 'Elemento React' 
+                          : String(row[header.key])
+                        )
                       : '—'}
                   </td>
                 ))}
