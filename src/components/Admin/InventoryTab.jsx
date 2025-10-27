@@ -1,79 +1,84 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useEffect } from 'react';
-import ResponsiveTable from '../ResponsiveTable'; // Asumiendo componente reutilizable
+import ResponsiveTable from '../ResponsiveTable';
 
-const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
+const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [productosFiltrados, setProductosFiltrados] = useState([]);
 
-  // Actualizar lista de categorías en el filtro si cambian las categorías
-  useEffect(() => {
-    const cats = ['Todas', ...categorias.map(c => c.nombre)];
-    if (!cats.includes(filtroCat)) setFiltroCat('Todas');
-  }, [categorias, filtroCat]);
+  // Lista de nombres de categoría para el select (fallback a nombres únicos en productos)
+  const listaCategoriasFiltro = React.useMemo(() => {
+    const fromCategorias = Array.isArray(categorias) && categorias.length > 0
+      ? categorias.map(c => c.nombre)
+      : [];
+    const fromProductos = Array.isArray(productos)
+      ? [...new Set(productos.map(p => p.categoria ?? p.categoria_nombre).filter(Boolean))]
+      : [];
+    const combined = [...new Set(['Todas', ...fromCategorias, ...fromProductos])];
+    return combined;
+  }, [categorias, productos]);
 
-  // Aplicar filtros cuando cambian productos, filtro de categoría o texto
+  // Aplicar filtros: comparaciones por NOMBRE de categoría (igual que el primer componente)
   useEffect(() => {
-    let filtered = productos;
+    let filtered = Array.isArray(productos) ? [...productos] : [];
 
-    if (filtroCat !== 'Todas') {
-      // Busca el ID de la categoría por nombre
-      const categoriaSeleccionada = categorias.find(cat => cat.nombre === filtroCat);
-      if (categoriaSeleccionada) {
-         filtered = filtered.filter(p => p.categoria_id === categoriaSeleccionada.id);
-      } else {
-         filtered = []; // Si no se encuentra la categoría por nombre, no hay resultados
-      }
+    // Filtrado por categoría por NOMBRE
+    if (filtroCat && filtroCat !== 'Todas') {
+      filtered = filtered.filter(p => {
+        const nombreDesdeProducto = p.categoria ?? p.categoria_nombre ?? null;
+        if (nombreDesdeProducto) {
+          return String(nombreDesdeProducto) === String(filtroCat);
+        }
+        // si producto solo tiene categoria_id, buscar nombre en categorias
+        if (p.categoria_id && Array.isArray(categorias)) {
+          const catObj = categorias.find(c => String(c.id) === String(p.categoria_id));
+          if (catObj) return String(catObj.nombre) === String(filtroCat);
+        }
+        return false;
+      });
     }
 
-    if (filtroTxt) {
+    // Filtrado por texto (id o nombre)
+    if (filtroTxt && filtroTxt.trim() !== '') {
       const txtLower = filtroTxt.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.id.includes(txtLower) ||
-        p.nombre.toLowerCase().includes(txtLower)
-      );
+      filtered = filtered.filter(p => {
+        const idMatch = String(p.id ?? '').toLowerCase().includes(txtLower);
+        const nombreMatch = String(p.nombre ?? '').toLowerCase().includes(txtLower);
+        const categoriaMatch = String(p.categoria ?? p.categoria_nombre ?? '').toLowerCase().includes(txtLower);
+        return idMatch || nombreMatch || categoriaMatch;
+      });
     }
 
     setProductosFiltrados(filtered);
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // Preparar datos para la tabla, mapeando categoria_id a nombre
+  // Preparar datos para ResponsiveTable (mostrar nombre de categoría)
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'categoriaNombre', label: 'Categoria' }, // <-- Mostrar NOMBRE, no ID
+    { key: 'categoriaNombre', label: 'Categoria' },
     { key: 'cantidad', label: 'Stock', align: 'center' },
     { key: 'precio', label: 'Precio Unidad', align: 'right' },
-    { key: 'acciones', label: 'Acciones', align: 'center' } // Columna para botones de acción
+    { key: 'acciones', label: 'Acciones', align: 'center' }
   ];
 
   const tableData = productosFiltrados.map(p => {
-    // Buscar el nombre de la categoría
-    let nombreCategoria = 'Sin Categoría'; // Valor por defecto
-    if (p.categoria_id) { // Verificar que tenga categoria_id
-      const categoriaObj = categorias.find(cat => cat.id === p.categoria_id);
-      if (categoriaObj) {
-        nombreCategoria = categoriaObj.nombre;
-      } else {
-        // Si no se encuentra, usar el ID como fallback (para depuración)
-        nombreCategoria = `ID: ${p.categoria_id}`;
-      }
-    } else {
-      // Si no tiene categoria_id, intentar usar otra propiedad
-      if (p.categoria_nombre) {
-        nombreCategoria = p.categoria_nombre;
-      } else if (p.categoria) {
-        nombreCategoria = p.categoria;
-      }
+    let nombreCategoria = 'Sin Categoría';
+    if (p.categoria ?? p.categoria_nombre) {
+      nombreCategoria = p.categoria ?? p.categoria_nombre;
+    } else if (p.categoria_id && Array.isArray(categorias)) {
+      const catObj = categorias.find(c => String(c.id) === String(p.categoria_id));
+      if (catObj) nombreCategoria = catObj.nombre;
+      else nombreCategoria = `ID: ${p.categoria_id}`;
     }
 
     return {
       id: p.id,
       nombre: p.nombre,
-      categoriaNombre: nombreCategoria, // <-- Usar el nombre encontrado o el valor por defecto
+      categoriaNombre: nombreCategoria,
       cantidad: p.cantidad,
-      precio: p.precio.toLocaleString('es-CO'),
+      precio: (typeof p.precio === 'number') ? p.precio.toLocaleString('es-CO') : p.precio,
       acciones: (
         <button
           className="btn btn-sm btn-danger"
@@ -85,34 +90,35 @@ const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
     };
   });
 
-  const listaCategoriasFiltro = ['Todas', ...categorias.map(c => c.nombre)]; // Lista de NOMBRES para el select
-
   return (
     <div>
       <h5>Inventario</h5>
+
       <div className="row g-2 mb-3">
         <div className="col">
           <select
             id="filtroCatAdmin"
             className="form-select"
             value={filtroCat}
-            onChange={(e) => setFiltroCat(e.target.value)} // <-- Actualiza estado filtro
+            onChange={(e) => setFiltroCat(e.target.value)}
           >
             {listaCategoriasFiltro.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
+
         <div className="col">
           <input
             id="filtroTxtAdmin"
             className="form-control"
             placeholder="Buscar..."
             value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)} // <-- Actualiza estado filtro
+            onChange={(e) => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
+
       <ResponsiveTable
         headers={tableHeaders}
         data={tableData}
