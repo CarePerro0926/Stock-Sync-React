@@ -44,11 +44,11 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       // Ahora asume que p.categoria es directamente el nombre
-      const nombreCategoria = p.categoria ? String(p.categoria).trim() : 'Sin Categoría';
+      let nombreCategoria = p.categoria ? String(p.categoria).trim() : 'Sin Categoría';
 
       // Garantizar que sea un string válido
       if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
-        nombreCategoria = 'Sin Categoría';
+        nombreCategoria = 'Sin Categoría'; // <-- Ahora es 'let', se puede reasignar
       }
 
       return {
