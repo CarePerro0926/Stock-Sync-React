@@ -56,27 +56,30 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // === 3. Datos para la tabla — CORREGIDO PARA MOSTRAR SIEMPRE LA CATEGORÍA ===
+  // === 3. Datos para la tabla — CORREGIDO PARA GARANTIZAR STRING PLANO ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       let nombreCategoria = 'Sin Categoría';
 
       // Si el producto ya incluye el nombre de la categoría
       if (p.categoria || p.categoria_nombre) {
-        nombreCategoria = String(p.categoria || p.categoria_nombre);
+        nombreCategoria = String(p.categoria || p.categoria_nombre).trim() || 'Sin Categoría';
       }
       // Si solo tiene ID, buscar en la lista de categorías (comparando como strings)
       else if (p.categoria_id != null && categorias.length > 0) {
         const cat = categorias.find(c =>
           String(c.id).trim() === String(p.categoria_id).trim()
         );
-        nombreCategoria = cat ? String(cat.nombre) : `ID ${p.categoria_id}`;
+        nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
       }
+
+      // 👇 GARANTIZAR QUE ES UN STRING PLANO (NO UN OBJETO)
+      nombreCategoria = String(nombreCategoria);
 
       return {
         id: p.id ?? '—',
         nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria,
+        categoriaNombre: nombreCategoria, // ← Ahora es 100% un string
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
