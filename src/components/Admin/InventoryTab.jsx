@@ -56,46 +56,47 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // === 3. Datos para la tabla — CORREGIDO PARA GARANTIZAR STRING PLANO ===
-  const tableData = useMemo(() => {
-    return productosFiltrados.map(p => {
-      let nombreCategoria = 'Sin Categoría';
+ 
+  // === Datos para la tabla — GARANTIZAR QUE LA PROPIEDAD EXISTA SIEMPRE ===
+const tableData = useMemo(() => {
+  return productosFiltrados.map(p => {
+    // Determinar nombre de categoría
+    let nombreCategoria = 'Sin Categoría';
 
-      // Si el producto ya incluye el nombre de la categoría
-      if (p.categoria || p.categoria_nombre) {
-        nombreCategoria = String(p.categoria || p.categoria_nombre).trim() || 'Sin Categoría';
-      }
-      // Si solo tiene ID, buscar en la lista de categorías (comparando como strings)
-      else if (p.categoria_id != null && categorias.length > 0) {
-        const cat = categorias.find(c =>
-          String(c.id).trim() === String(p.categoria_id).trim()
-        );
-        nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
-      }
+    if (p.categoria != null) {
+      nombreCategoria = String(p.categoria).trim() || 'Sin Categoría';
+    } else if (p.categoria_nombre != null) {
+      nombreCategoria = String(p.categoria_nombre).trim() || 'Sin Categoría';
+    } else if (p.categoria_id != null && categorias.length > 0) {
+      const cat = categorias.find(c =>
+        String(c.id).trim() === String(p.categoria_id).trim()
+      );
+      nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
+    }
 
-      // 👇 GARANTIZAR QUE ES UN STRING PLANO (NO UN OBJETO)
-      nombreCategoria = String(nombreCategoria);
+    // CREAR EL OBJETO CON LA PROPIEDAD SIEMPRE PRESENTE
+    const row = {
+      id: p.id ?? '—',
+      nombre: p.nombre ?? 'Sin nombre',
+      categoriaNombre: nombreCategoria, // ← SIEMPRE definido
+      cantidad: p.cantidad ?? 0,
+      precio: typeof p.precio === 'number'
+        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+        : p.precio ?? '—',
+      acciones: (
+        <button
+          className="btn btn-sm btn-danger"
+          onClick={() => onDeleteProducto(p.id)}
+          disabled={!p.id}
+        >
+          Eliminar
+        </button>
+      )
+    };
 
-      return {
-        id: p.id ?? '—',
-        nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria, // ← Ahora es 100% un string
-        cantidad: p.cantidad ?? 0,
-        precio: typeof p.precio === 'number'
-          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : p.precio ?? '—',
-        acciones: (
-          <button
-            className="btn btn-sm btn-danger"
-            onClick={() => onDeleteProducto(p.id)}
-            disabled={!p.id}
-          >
-            Eliminar
-          </button>
-        )
-      };
-    });
-  }, [productosFiltrados, categorias, onDeleteProducto]);
+    return row;
+  });
+}, [productosFiltrados, categorias, onDeleteProducto]);
 
   // === 4. Cabeceras de la tabla ===
   const tableHeaders = [
