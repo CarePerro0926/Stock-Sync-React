@@ -9,7 +9,7 @@ const InventoryTab = ({ productos, categorias, onDeleteProducto }) => {
 
   // Actualizar lista de categorías en el filtro si cambian las categorías
   useEffect(() => {
-    const cats = [...new Set(productos.map(p => p.categoria))];
+    const cats = ['Todas', ...categorias.map(c => c.nombre)];
     if (!cats.includes(filtroCat)) setFiltroCat('Todas');
   }, [categorias, filtroCat]);
 
