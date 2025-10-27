@@ -1,28 +1,23 @@
 // src/components/Admin/InventoryTab.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import ResponsiveTable from '../ResponsiveTable';
 
 const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
-  // Estados
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
   // === 1. Lista de categorías para el filtro (combinando fuentes) ===
   const listaCategoriasFiltro = useMemo(() => {
-    // Categorías desde la prop `categorias`
-    const fromCategorias = categorias.map(c => c.nombre);
-
-    // Categorías extraídas directamente de los productos (por si falta sincronía)
+    const fromCategorias = categorias.map(c => c.nombre).filter(Boolean);
     const fromProductos = productos
       .map(p => p.categoria ?? p.categoria_nombre)
       .filter(Boolean);
 
-    // Combinar y eliminar duplicados, manteniendo "Todas" al inicio
     const uniqueCats = [...new Set([...fromCategorias, ...fromProductos])];
     return ['Todas', ...uniqueCats];
   }, [categorias, productos]);
 
-  // === 2. Productos filtrados (aplica ambos filtros) ===
+  // === 2. Productos filtrados ===
   const productosFiltrados = useMemo(() => {
     let filtered = [...productos];
 
@@ -31,51 +26,66 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
       filtered = filtered.filter(p => {
         const catFromProducto = p.categoria ?? p.categoria_nombre;
         if (catFromProducto) {
-          return String(catFromProducto) === String(filtroCat);
+          return String(catFromProducto).trim() === String(filtroCat).trim();
         }
-        if (p.categoria_id) {
-          const catObj = categorias.find(c => String(c.id) === String(p.categoria_id));
-          return catObj && String(catObj.nombre) === String(filtroCat);
+        if (p.categoria_id != null) {
+          const catObj = categorias.find(c =>
+            String(c.id).trim() === String(p.categoria_id).trim()
+          );
+          return catObj && String(catObj.nombre).trim() === String(filtroCat).trim();
         }
         return false;
       });
     }
 
-    // Filtro por texto (ID, nombre o categoría)
+    // Filtro por texto
     if (filtroTxt.trim()) {
-      const term = filtroTxt.toLowerCase();
+      const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p =>
-        String(p.id).toLowerCase().includes(term) ||
-        String(p.nombre).toLowerCase().includes(term) ||
-        String(p.categoria ?? p.categoria_nombre ?? '').toLowerCase().includes(term)
+        String(p.id ?? '').toLowerCase().includes(term) ||
+        String(p.nombre ?? '').toLowerCase().includes(term) ||
+        String(p.categoria ?? p.categoria_nombre ?? '').toLowerCase().includes(term) ||
+        (p.categoria_id != null &&
+          categorias.some(c =>
+            String(c.id) === String(p.categoria_id) &&
+            String(c.nombre).toLowerCase().includes(term)
+          ))
       );
     }
 
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // === 3. Datos para la tabla ===
+  // === 3. Datos para la tabla (con categoría siempre visible) ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
-      // Determinar nombre de categoría para mostrar
       let nombreCategoria = 'Sin Categoría';
+
+      // Si el producto ya tiene el nombre directamente
       if (p.categoria || p.categoria_nombre) {
-        nombreCategoria = p.categoria || p.categoria_nombre;
-      } else if (p.categoria_id) {
-        const cat = categorias.find(c => String(c.id) === String(p.categoria_id));
+        nombreCategoria = (p.categoria || p.categoria_nombre).toString();
+      }
+      // Si solo tiene ID, buscar en la lista de categorías
+      else if (p.categoria_id != null && categorias.length > 0) {
+        const cat = categorias.find(c =>
+          String(c.id).trim() === String(p.categoria_id).trim()
+        );
         nombreCategoria = cat ? cat.nombre : `ID: ${p.categoria_id}`;
       }
 
       return {
-        id: p.id,
-        nombre: p.nombre,
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
         categoriaNombre: nombreCategoria,
-        cantidad: p.cantidad,
-        precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : p.precio,
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number'
+          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+          : p.precio ?? '—',
         acciones: (
           <button
             className="btn btn-sm btn-danger"
             onClick={() => onDeleteProducto(p.id)}
+            disabled={!p.id}
           >
             Eliminar
           </button>
@@ -84,7 +94,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     });
   }, [productosFiltrados, categorias, onDeleteProducto]);
 
-  // === 4. Cabeceras de la tabla ===
+  // === 4. Cabeceras ===
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Nombre' },
@@ -99,7 +109,6 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     <div>
       <h5>Inventario</h5>
 
-      {/* Filtros */}
       <div className="row g-2 mb-3">
         <div className="col">
           <select
@@ -119,14 +128,13 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Tabla */}
       <ResponsiveTable
         headers={tableHeaders}
         data={tableData}
