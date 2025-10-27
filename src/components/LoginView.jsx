@@ -1,6 +1,7 @@
 // src/components/LoginView.jsx
 import React, { useState } from 'react';
-import { supabase } from '../services/supabaseClient';
+// Cambiado: importar como exportación por defecto
+import supabase from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
   const [identifier, setIdentifier] = useState(''); // Puede ser correo o usuario
