@@ -3,7 +3,8 @@ import supabase from './supabaseClient';
 
 export const productService = {
   getAll: async () => {
-    // Versión más segura: Consulta directa con LEFT JOIN
+    // Usar LEFT JOIN explícito para unir productos y categorias
+    // Asumiendo que la FK productos.categoria_id -> categorias.id existe
     const { data, error } = await supabase
       .from('productos')
       .select(`
@@ -12,23 +13,30 @@ export const productService = {
         precio,
         cantidad,
         categoria_id,
-        categorias:categoria_id ( nombre )
+        categorias!inner ( nombre )
       `)
       .order('nombre', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+        console.error("Error en productService.getAll:", error); // Log de error
+        throw error;
+    }
 
     // Mapear los resultados para tener 'categoria_nombre'
+    // La estructura dependerá de cómo Supabase maneje el JOIN
+    // Si el JOIN funciona correctamente, 'categorias' debería ser un objeto
     return (data || []).map(p => ({
       id: p.id,
       nombre: p.nombre,
       precio: p.precio,
       cantidad: p.cantidad,
       categoria_id: p.categoria_id,
-      categoria_nombre: p.categorias && p.categorias.length > 0 ? p.categorias[0].nombre : null
+      // Acceder al nombre dentro del objeto 'categorias'
+      categoria_nombre: p.categorias?.nombre || null
     }));
   },
 
+  // ... (mantén los otros métodos igual: create, update, remove)
   create: async (producto) => {
     const { id, nombre, precio, cantidad, categoria_id, proveedores = [] } = producto;
     const { error } = await supabase
