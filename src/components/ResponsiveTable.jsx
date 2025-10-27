@@ -3,44 +3,27 @@ import React from 'react';
 
 const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
   return (
-    <div className="table-responsive responsive-table" style={{ maxHeight, overflow: 'auto' }}>
-      <table className="table table-bordered table-sm mb-0">
+    <div className="table-responsive" style={{ maxHeight, overflowY: 'auto' }}>
+      <table className="table table-striped">
         <thead className="table-light">
           <tr>
-            {headers.map(header => (
-              <th key={header.key} style={header.align ? { textAlign: header.align } : {}}>
-                {header.label}
+            {headers.map(h => (
+              <th key={h.key} style={{ textAlign: h.align || 'left' }}>
+                {h.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={headers.length} className="text-center">No se encontraron productos.</td>
+          {data.map((row, i) => (
+            <tr key={i}>
+              {headers.map(h => (
+                <td key={h.key} style={{ textAlign: h.align || 'left' }}>
+                  {String(row[h.key] || '—')}
+                </td>
+              ))}
             </tr>
-          ) : (
-            data.map((row, rowIndex) => (
-              <tr key={rowIndex} className="table-row">
-                {headers.map(header => (
-                  <td
-                    key={`${rowIndex}-${header.key}`}
-                    className={`table-cell ${header.key === 'cantidadInput' ? 'qty-input-container' : ''}`}
-                    data-title={header.label}
-                    style={header.align ? { textAlign: header.align } : {}}
-                  >
-                    {/* 👇 SIEMPRE MUESTRA ALGO, INCLUSO SI ES UN OBJETO O NULL */}
-                    {row[header.key] !== undefined && row[header.key] !== null 
-                      ? (typeof row[header.key] === 'object' 
-                          ? 'Elemento React' 
-                          : String(row[header.key])
-                        )
-                      : '—'}
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
+          ))}
         </tbody>
       </table>
     </div>
