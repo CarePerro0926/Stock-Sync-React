@@ -19,65 +19,85 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     }
   }, [productos, categorias]);
 
-  // === 1. Lista de categorías para el filtro ===
+  // === 1. Lista de categorías para el filtro - CORREGIDO ===
   const listaCategoriasFiltro = useMemo(() => {
-  const nombres = productos
-    .map(p => p.categoria_nombre)
-    .filter(Boolean)
-    .map(nombre => String(nombre).trim());
+    // Extraer nombres de categorías de los productos
+    const nombresDesdeProductos = productos
+      .map(p => {
+        // Intentar en orden de preferencia
+        return p.categoria_nombre || p.categoria || (p.categoria_id && categorias.find(c => String(c.id) === String(p.categoria_id))?.nombre);
+      })
+      .filter(nombre => nombre && String(nombre).trim() !== ''); // Filtrar valores vacíos o nulos
 
-  const unicas = [...new Set(nombres)];
-  return ['Todas', ...unicas];
-}, [productos]);
+    const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
+    return ['Todas', ...unicas];
+  }, [productos, categorias]); // Asegúrate de incluir 'categorias' aquí si usas el mapeo ID -> Nombre
 
-  // === 2. Productos filtrados ===
+
+  // === 2. Productos filtrados - CORREGIDO PARA MANEJAR LAS MISMAS PROPIEDADES ===
   const productosFiltrados = useMemo(() => {
     let filtered = [...productos];
 
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
-        const catFromProducto = p.categoria ?? p.categoria_nombre;
-        if (catFromProducto) {
-          return String(catFromProducto).trim() === filtroCatStr;
+        // Intentar encontrar la categoría del producto
+        let nombreCategoria = p.categoria_nombre || p.categoria;
+
+        // Si no se encontró directamente y se tiene categoria_id y el array categorias
+        if (!nombreCategoria && p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
+          const catObj = categorias.find(c => String(c.id).trim() === String(p.categoria_id).trim());
+          if (catObj) {
+            nombreCategoria = catObj.nombre; // Usar el nombre de la categoría encontrada
+          }
         }
-        if (p.categoria_id != null) {
-          const catObj = categorias.find(c =>
-            String(c.id).trim() === String(p.categoria_id).trim()
-          );
-          return catObj && String(catObj.nombre).trim() === filtroCatStr;
-        }
-        return false;
+
+        // Comparar el nombre encontrado con el filtro
+        return nombreCategoria && String(nombreCategoria).trim() === filtroCatStr;
       });
     }
 
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
-      filtered = filtered.filter(p =>
-        String(p.id ?? '').toLowerCase().includes(term) ||
-        String(p.nombre ?? '').toLowerCase().includes(term) ||
-        String(p.categoria ?? p.categoria_nombre ?? '').toLowerCase().includes(term) ||
-        (p.categoria_id != null &&
-          categorias.some(c =>
-            String(c.id) === String(p.categoria_id) &&
-            String(c.nombre).toLowerCase().includes(term)
-          ))
-      );
+      filtered = filtered.filter(p => {
+        const idStr = String(p.id ?? '');
+        const nombreStr = String(p.nombre ?? '');
+        // Intentar obtener la categoría para búsqueda
+        let catStr = String(p.categoria_nombre || p.categoria || '');
+
+        // Si no está directamente, intentar con el ID y el array de categorias
+        if (catStr === 'undefined' || catStr === 'null' || catStr === '') {
+            if (p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
+                const catObj = categorias.find(c => String(c.id).trim() === String(p.categoria_id).trim());
+                if (catObj) {
+                    catStr = String(catObj.nombre);
+                }
+            }
+        }
+
+        return (
+          idStr.toLowerCase().includes(term) ||
+          nombreStr.toLowerCase().includes(term) ||
+          catStr.toLowerCase().includes(term) ||
+          String(p.categoria_id ?? '').toLowerCase().includes(term) // Opcional: buscar también por ID
+        );
+      });
     }
 
     return filtered;
-  }, [productos, categorias, filtroCat, filtroTxt]);
+  }, [productos, categorias, filtroCat, filtroTxt]); // Incluir categorias aquí también
+
 
   // === 3. Datos para la tabla — SIEMPRE TEXTO PLANO ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       let nombreCategoria = 'Sin Categoría';
 
-      // Intentar obtener el nombre de la categoría
-      if (p.categoria != null) {
-        nombreCategoria = String(p.categoria).trim();
-      } else if (p.categoria_nombre != null) {
+      // Intentar obtener el nombre de la categoría, priorizando el nombre directo
+      if (p.categoria_nombre != null) {
         nombreCategoria = String(p.categoria_nombre).trim();
+      } else if (p.categoria != null) {
+         nombreCategoria = String(p.categoria).trim();
       } else if (p.categoria_id != null && Array.isArray(categorias) && categorias.length > 0) {
         const cat = categorias.find(c =>
           String(c.id).trim() === String(p.categoria_id).trim()
@@ -86,7 +106,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
       }
 
       // Garantizar que sea un string válido
-      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined') {
+      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
         nombreCategoria = 'Sin Categoría';
       }
 
@@ -109,7 +129,8 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
         )
       };
     });
-  }, [productosFiltrados, categorias, onDeleteProducto]);
+  }, [productosFiltrados, categorias, onDeleteProducto]); // Incluir categorias aquí también
+
 
   // === 4. Cabeceras de la tabla ===
   const tableHeaders = [
@@ -133,8 +154,8 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
             value={filtroCat}
             onChange={e => setFiltroCat(e.target.value)}
           >
-            {listaCategoriasFiltro.map(cat => (
-              <option key={cat} value={cat}>
+            {listaCategoriasFiltro.map((cat, index) => (
+              <option key={`${cat}-${index}`} value={cat}> {/* Usar índice como fallback para claves duplicadas */}
                 {cat}
               </option>
             ))}
