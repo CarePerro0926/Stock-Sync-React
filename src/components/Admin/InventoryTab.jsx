@@ -21,15 +21,14 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
 
   // === 1. Lista de categorías para el filtro ===
   const listaCategoriasFiltro = useMemo(() => {
-    const fromCategorias = categorias.map(c => String(c.nombre)).filter(Boolean);
-    const fromProductos = productos
-      .map(p => p.categoria ?? p.categoria_nombre)
-      .filter(Boolean)
-      .map(String);
+  const nombres = productos
+    .map(p => p.categoria_nombre)
+    .filter(Boolean)
+    .map(nombre => String(nombre).trim());
 
-    const uniqueCats = [...new Set([...fromCategorias, ...fromProductos])];
-    return ['Todas', ...uniqueCats];
-  }, [categorias, productos]);
+  const unicas = [...new Set(nombres)];
+  return ['Todas', ...unicas];
+}, [productos]);
 
   // === 2. Productos filtrados ===
   const productosFiltrados = useMemo(() => {
@@ -38,7 +37,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
-        const catFromProducto = p.categoria ?? p.categoria_nombre;
+        const catFromProducto = p.categoria_nombre;
         if (catFromProducto) {
           return String(catFromProducto).trim() === filtroCatStr;
         }
