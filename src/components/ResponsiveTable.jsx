@@ -29,7 +29,10 @@ const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
                     data-title={header.label}
                     style={header.align ? { textAlign: header.align } : {}}
                   >
-                    {row[header.key]}
+                    {/* 👇 FORZAR QUE SIEMPRE MUESTRE ALGO */}
+                    {row[header.key] != null && row[header.key] !== '' 
+                      ? row[header.key] 
+                      : '—'}
                   </td>
                 ))}
               </tr>
