@@ -21,11 +21,11 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     }
   }, [productos, categorias]);
 
-  // === 1. Lista de categorías para el filtro - Ahora solo usa producto.categoria ===
+  // === 1. Lista de categorías para el filtro - Ahora usa producto.categoria_nombre ===
   const listaCategoriasFiltro = useMemo(() => {
-    // Extraer nombres de categorías de los productos, usando solo p.categoria
+    // Extraer nombres de categorías de los productos, usando p.categoria_nombre
     const nombresDesdeProductos = productos
-      .map(p => p.categoria) // <-- Solo usa p.categoria
+      .map(p => p.categoria_nombre) // <-- Usa p.categoria_nombre
       .filter(nombre => nombre && String(nombre).trim() !== ''); // Filtrar valores vacíos o nulos
 
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
@@ -36,6 +36,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   // === 2. Productos filtrados - Ahora usa la función externa ===
   const productosFiltrados = useMemo(() => {
     // Llama a la función externa en lugar de la lógica interna
+    // Aseguramos que el filtro funcione con categoria_nombre
     return filtroProductos(productos, filtroTxt, filtroCat); // <-- Usa filtroProductos
   }, [productos, filtroTxt, filtroCat]); // Dependencias para filtro externo
 
@@ -43,8 +44,8 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   // === 3. Datos para la tabla — SIEMPRE TEXTO PLANO ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
-      // Ahora asume que p.categoria es directamente el nombre
-      let nombreCategoria = p.categoria ? String(p.categoria).trim() : 'Sin Categoría';
+      // Ahora usa p.categoria_nombre
+      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
 
       // Garantizar que sea un string válido
       if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
@@ -54,7 +55,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
       return {
         id: p.id ?? '—',
         nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria, // ← TEXTO PLANO SIMPLE
+        categoriaNombre: nombreCategoria, // ← TEXTO PLANO SIMPLE (ahora usando categoria_nombre)
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
