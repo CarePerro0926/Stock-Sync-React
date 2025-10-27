@@ -5,36 +5,6 @@ import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
 
-<<<<<<< HEAD
-// ✅ Define las categorías aquí (o impórtalas desde otro archivo)
-const CATEGORIAS_PERMITIDAS = [
-  'Procesadores',
-  'Tarjetas Gráficas',
-  'Memorias RAM',
-  'Discos Duros',
-  'Boards',
-  'Fuentes de Poder',
-  'Gabinetes',
-  'Periféricos',
-  'Monitores',
-  'Refrigeración',
-  'Redes',
-  'Accesorios',
-  'Mobiliario'
-];
-
-const AdminView = ({ productos, proveedores, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onLogout }) => {
-  const [showMenu, setShowMenu] = useState(false);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      const menu = document.getElementById('adminMenu');
-      const button = document.getElementById('btnMenuHamburguesa');
-      if (showMenu && menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-=======
 const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => {
 
   const [showMenu, setShowMenu] = useState(false);
@@ -47,7 +17,6 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
       setShowMenu(false);
     }
   };
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
 
   React.useEffect(() => {
     document.addEventListener('click', handleClickOutside);
@@ -131,19 +100,6 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
         </li>
       </ul>
 
-<<<<<<< HEAD
-      {/* ✅ Solo una vez, con ambas props */}
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} />}
-      {vistaActiva === 'add' && (
-        <AddTab 
-          onAddProducto={onAddProducto} 
-          proveedores={proveedores} 
-          categorias={CATEGORIAS_PERMITIDAS} 
-        />
-      )}
-      {vistaActiva === 'delete' && <DeleteTab onDeleteProducto={onDeleteProducto} />}
-      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} />}
-=======
       {/* Renderizar la vista activa */}
       {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />}
       {/* CORREGIDO: Pasamos todas las props necesarias */}
@@ -157,7 +113,6 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
       />}
       {vistaActiva === 'delete' && <DeleteTab productos={productos} onDeleteProducto={onDeleteProducto} />}
       {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />}
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
