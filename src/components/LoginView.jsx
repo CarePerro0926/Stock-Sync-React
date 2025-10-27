@@ -3,35 +3,10 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Puede ser correo o usuario
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-<<<<<<< HEAD
-  // ✅ Lógica de validación movida aquí
-  const validarUsuario = async (username, password) => {
-    const u = username.trim().toLowerCase();
-    const p = password.trim();
-
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('username', u)
-      .eq('pass', p);
-
-    if (error) {
-      console.error('Error al consultar usuario:', error);
-      return null;
-    }
-
-    return data?.[0] || null;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const usr = await validarUsuario(user, pass);
-    onLogin(usr); // Envía el resultado a App.jsx
-=======
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -81,13 +56,15 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         return;
       }
 
+      // Crear el objeto de usuario para la aplicación
       const usr = {
         id: authData.user.id,
         email: authData.user.email,
         username: userData?.username || authData.user.email.split('@')[0],
-        role: userData?.role || 'cliente', // usa 'cliente' como fallback
+        role: userData?.role || 'cliente', // Usa 'cliente' como fallback
       };
 
+      // Llamar a la función de login pasada desde App.jsx
       onLogin(usr);
     } catch (err) {
       console.error('Error inesperado:', err);
@@ -95,7 +72,6 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     } finally {
       setLoading(false);
     }
->>>>>>> 3ca678d89a8bf5a3c6912987482849848afec5dd
   };
 
   return (
