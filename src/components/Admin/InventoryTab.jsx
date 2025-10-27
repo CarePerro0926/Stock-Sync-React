@@ -142,6 +142,9 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     { key: 'acciones', label: 'Acciones', align: 'center' }
   ];
 
+  // DIAGNÓSTICO: Confirmar renderizado
+  console.log("Renderizando InventoryTab con productos:", productos);
+
   return (
     <div>
       <h5>Inventario</h5>
