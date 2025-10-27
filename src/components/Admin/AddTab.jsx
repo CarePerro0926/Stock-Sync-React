@@ -260,27 +260,7 @@ const AddTab = ({
         </button>
       </form>
       <hr className="my-4" />
-      {/* -------------------- Agregar Categoría -------------------- */}
-      <h5>Agregar Categoría</h5>
-      <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
-        <div className="row g-2 mb-3">
-          <div className="col-12 col-md">
-            <input
-              className="form-control"
-              placeholder="Nombre de la categoría"
-              value={nuevaCategoria}
-              onChange={(e) => setNuevaCategoria(e.target.value)}
-              required
-            />
-          </div>
-          <div className="col-12 col-md">
-            <button type="submit" className="btn btn-info w-100">
-              Agregar Categoría
-            </button>
-          </div>
-        </div>
-      </form>
-      <hr className="my-4" />
+
       {/* -------------------- Agregar Proveedor -------------------- */}
       <h5>Agregar Proveedor</h5>
       <form onSubmit={handleAddProveedorSubmit}>
