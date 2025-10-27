@@ -1,10 +1,23 @@
 // src/components/Admin/InventoryTab.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ResponsiveTable from '../ResponsiveTable';
 
 const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+
+  // 👇 DIAGNÓSTICO: Ver qué datos llegan
+  useEffect(() => {
+    console.log('--- DATOS EN INVENTORYTAB ---');
+    console.log('Productos recibidos:', productos);
+    console.log('Categorías recibidas:', categorias);
+    if (productos.length > 0) {
+      console.log('Ejemplo de producto:', productos[0]);
+    }
+    if (categorias.length > 0) {
+      console.log('Ejemplo de categoría:', categorias[0]);
+    }
+  }, [productos, categorias]);
 
   // === 1. Lista de categorías para el filtro ===
   const listaCategoriasFiltro = useMemo(() => {
@@ -56,47 +69,42 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
- 
-  // === Datos para la tabla — GARANTIZAR QUE LA PROPIEDAD EXISTA SIEMPRE ===
-const tableData = useMemo(() => {
-  return productosFiltrados.map(p => {
-    // Determinar nombre de categoría
-    let nombreCategoria = 'Sin Categoría';
+  // === 3. Datos para la tabla ===
+  const tableData = useMemo(() => {
+    return productosFiltrados.map(p => {
+      let nombreCategoria = 'Sin Categoría';
 
-    if (p.categoria != null) {
-      nombreCategoria = String(p.categoria).trim() || 'Sin Categoría';
-    } else if (p.categoria_nombre != null) {
-      nombreCategoria = String(p.categoria_nombre).trim() || 'Sin Categoría';
-    } else if (p.categoria_id != null && categorias.length > 0) {
-      const cat = categorias.find(c =>
-        String(c.id).trim() === String(p.categoria_id).trim()
-      );
-      nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
-    }
+      if (p.categoria != null) {
+        nombreCategoria = String(p.categoria).trim() || 'Sin Categoría';
+      } else if (p.categoria_nombre != null) {
+        nombreCategoria = String(p.categoria_nombre).trim() || 'Sin Categoría';
+      } else if (p.categoria_id != null && categorias.length > 0) {
+        const cat = categorias.find(c =>
+          String(c.id).trim() === String(p.categoria_id).trim()
+        );
+        nombreCategoria = cat ? String(cat.nombre).trim() : `ID ${p.categoria_id}`;
+      }
 
-    // CREAR EL OBJETO CON LA PROPIEDAD SIEMPRE PRESENTE
-    const row = {
-      id: p.id ?? '—',
-      nombre: p.nombre ?? 'Sin nombre',
-      categoriaNombre: nombreCategoria, // ← SIEMPRE definido
-      cantidad: p.cantidad ?? 0,
-      precio: typeof p.precio === 'number'
-        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-        : p.precio ?? '—',
-      acciones: (
-        <button
-          className="btn btn-sm btn-danger"
-          onClick={() => onDeleteProducto(p.id)}
-          disabled={!p.id}
-        >
-          Eliminar
-        </button>
-      )
-    };
-
-    return row;
-  });
-}, [productosFiltrados, categorias, onDeleteProducto]);
+      return {
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
+        categoriaNombre: nombreCategoria,
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number'
+          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+          : p.precio ?? '—',
+        acciones: (
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => onDeleteProducto(p.id)}
+            disabled={!p.id}
+          >
+            Eliminar
+          </button>
+        )
+      };
+    });
+  }, [productosFiltrados, categorias, onDeleteProducto]);
 
   // === 4. Cabeceras de la tabla ===
   const tableHeaders = [
