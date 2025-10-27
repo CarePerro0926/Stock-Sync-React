@@ -6,7 +6,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
-  // === 1. Lista de categorías para el filtro (combinando fuentes) ===
+  // === 1. Lista de categorías para el filtro ===
   const listaCategoriasFiltro = useMemo(() => {
     const fromCategorias = categorias.map(c => c.nombre).filter(Boolean);
     const fromProductos = productos
@@ -21,7 +21,6 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   const productosFiltrados = useMemo(() => {
     let filtered = [...productos];
 
-    // Filtro por categoría
     if (filtroCat !== 'Todas') {
       filtered = filtered.filter(p => {
         const catFromProducto = p.categoria ?? p.categoria_nombre;
@@ -38,7 +37,6 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
       });
     }
 
-    // Filtro por texto
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p =>
@@ -56,27 +54,34 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     return filtered;
   }, [productos, categorias, filtroCat, filtroTxt]);
 
-  // === 3. Datos para la tabla (con categoría siempre visible) ===
+  // === 3. Datos para la tabla — CORRECCIÓN CLAVE AQUÍ ===
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       let nombreCategoria = 'Sin Categoría';
 
-      // Si el producto ya tiene el nombre directamente
-      if (p.categoria || p.categoria_nombre) {
-        nombreCategoria = (p.categoria || p.categoria_nombre).toString();
+      // 👇 PRIMERO: intentar usar el nombre directamente
+      if (p.categoria) {
+        nombreCategoria = p.categoria.toString();
+      } else if (p.categoria_nombre) {
+        nombreCategoria = p.categoria_nombre.toString();
       }
-      // Si solo tiene ID, buscar en la lista de categorías
-      else if (p.categoria_id != null && categorias.length > 0) {
+      // 👇 SEGUNDO: si solo tiene ID, buscar en categorias
+      else if (p.categoria_id != null) {
         const cat = categorias.find(c =>
           String(c.id).trim() === String(p.categoria_id).trim()
         );
-        nombreCategoria = cat ? cat.nombre : `ID: ${p.categoria_id}`;
+        if (cat) {
+          nombreCategoria = cat.nombre;
+        } else {
+          // 👇 Si no encuentra categoría, mostrar ID para debugging
+          nombreCategoria = `ID: ${p.categoria_id} (no encontrada)`;
+        }
       }
 
       return {
         id: p.id ?? '—',
         nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria,
+        categoriaNombre: nombreCategoria, // ← esto se muestra en la tabla
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
@@ -104,7 +109,6 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     { key: 'acciones', label: 'Acciones', align: 'center' }
   ];
 
-  // === Render ===
   return (
     <div>
       <h5>Inventario</h5>
@@ -128,7 +132,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar por ID, nombre o categoría..."
+            placeholder="Buscar..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
