@@ -1,5 +1,6 @@
 // src/components/Admin/UpdateTab.jsx
 import React, { useState } from 'react';
+import { supabase } from '../../supabaseClient'; // ajusta la ruta si es distinta
 
 const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
   const [busqueda, setBusqueda] = useState('');
@@ -55,41 +56,47 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!producto) {
-      alert('Primero busca un producto válido.');
-      return;
-    }
+      const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!producto) {
+        alert('Primero busca un producto válido.');
+        return;
+      }
 
-    const precio = parseFloat(formData.precio);
-    const cantidad = parseInt(formData.cantidad, 10);
+      const precio = parseFloat(formData.precio);
+      const cantidad = parseInt(formData.cantidad, 10);
 
-    if (isNaN(precio) || precio < 0) {
-      alert('Precio inválido.');
-      return;
-    }
-    if (isNaN(cantidad) || cantidad < 0) {
-      alert('Cantidad inválida.');
-      return;
-    }
+      if (isNaN(precio) || precio < 0) {
+        alert('Precio inválido.');
+        return;
+      }
+      if (isNaN(cantidad) || cantidad < 0) {
+        alert('Cantidad inválida.');
+        return;
+      }
 
-    const productoActualizado = {
-      id: producto.id,
-      nombre: formData.nombre.trim(),
-      precio,
-      cantidad,
-      categoria: formData.categoria
+      const { error } = await supabase
+        .from('productos') // nombre exacto de tu tabla
+        .update({
+          nombre: formData.nombre.trim(),
+          precio,
+          cantidad,
+          categoria: formData.categoria
+        })
+        .eq('id', producto.id); // ID del producto a actualizar
+
+      if (error) {
+        console.error('Error al actualizar:', error.message);
+        alert('Error al actualizar el producto');
+        return;
+      }
+
+      alert('Producto actualizado con éxito');
+      setBusqueda('');
+      setProductoSeleccionado('');
+      setProducto(null);
+      setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
     };
-
-    onUpdateProducto(productoActualizado);
-    alert('Producto actualizado con éxito');
-    setBusqueda('');
-    setProductoSeleccionado('');
-    setProducto(null);
-    setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
-  };
-
   const listaCategorias = getListaCategorias();
 
   return (
