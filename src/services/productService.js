@@ -3,8 +3,6 @@ import supabase from './supabaseClient';
 
 export const productService = {
   getAll: async () => {
-    // Usar LEFT JOIN explícito para unir productos y categorias
-    // Asumiendo que la FK productos.categoria_id -> categorias.id existe
     const { data, error } = await supabase
       .from('productos')
       .select(`
@@ -18,25 +16,20 @@ export const productService = {
       .order('nombre', { ascending: true });
 
     if (error) {
-        console.error("Error en productService.getAll:", error); // Log de error
-        throw error;
+      console.error("Error en productService.getAll:", error);
+      throw error;
     }
 
-    // Mapear los resultados para tener 'categoria_nombre'
-    // La estructura dependerá de cómo Supabase maneje el JOIN
-    // Si el JOIN funciona correctamente, 'categorias' debería ser un objeto
     return (data || []).map(p => ({
       id: p.id,
       nombre: p.nombre,
       precio: p.precio,
       cantidad: p.cantidad,
       categoria_id: p.categoria_id,
-      // Acceder al nombre dentro del objeto 'categorias'
       categoria_nombre: p.categorias?.nombre || null
     }));
   },
 
-  // ... (mantén los otros métodos igual: create, update, remove)
   create: async (producto) => {
     const { id, nombre, precio, cantidad, categoria_id, proveedores = [] } = producto;
     const { error } = await supabase
@@ -49,7 +42,7 @@ export const productService = {
       const { error: relErr } = await supabase
         .from('producto_proveedor')
         .insert(relaciones)
-        .onConflict(['producto_id','proveedor_id'])
+        .onConflict(['producto_id', 'proveedor_id'])
         .ignore();
       if (relErr) throw relErr;
     }
@@ -57,14 +50,19 @@ export const productService = {
     return true;
   },
 
-  update: async (producto) => {
-    const { id, nombre, precio, cantidad, categoria_id } = producto;
-    const { error } = await supabase
+  update: async (id, cambios) => {
+    const { data, error } = await supabase
       .from('productos')
-      .update({ nombre, precio, cantidad, categoria_id })
-      .eq('id', id);
-    if (error) throw error;
-    return true;
+      .update(cambios)
+      .eq('id', id)
+      .select(); // ← devuelve el registro actualizado
+
+    if (error) {
+      console.error("Error en productService.update:", error);
+      throw error;
+    }
+
+    return { data };
   },
 
   remove: async (id) => {
