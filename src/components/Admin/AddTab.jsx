@@ -36,12 +36,11 @@ const AddTab = ({
     categorias: []
   });
 
-  // Estados para MultiSelectDropdown
   const [selectedProveedores, setSelectedProveedores] = useState([]);
   const [productosQueSurte, setProductosQueSurte] = useState([]);
   const [categoriasQueSurte, setCategoriasQueSurte] = useState([]);
 
-  /* ---------- Producto ---------- */
+  /* ---------- Handlers Producto ---------- */
   const handleProductoChange = (e) => {
     const { name, value } = e.target;
     setNuevoProducto((prev) => ({
@@ -56,20 +55,21 @@ const AddTab = ({
     e.preventDefault();
     const { id, nombre, categoria, cantidad, precio } = nuevoProducto;
 
-    // Mapear nombres seleccionados a IDs reales
     const provs = proveedores
       .filter(p => selectedProveedores.includes(p.nombre))
       .map(p => p.id);
 
-    if (!id || !nombre || !categoria || !cantidad || !precio || provs.length === 0) {
+    if (!id || !nombre || !categoria || cantidad === '' || precio === '' || provs.length === 0) {
       alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
 
-    onAddProducto({
-      ...nuevoProducto,
-      proveedores: provs
-    });
+    if (onAddProducto) {
+      onAddProducto({
+        ...nuevoProducto,
+        proveedores: provs
+      });
+    }
 
     setNuevoProducto({
       id: '',
@@ -82,7 +82,7 @@ const AddTab = ({
     setSelectedProveedores([]);
   };
 
-  /* ---------- Categoría ---------- */
+  /* ---------- Handlers Categoría ---------- */
   const handleAddCategoriaSubmit = (e) => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) {
@@ -95,7 +95,7 @@ const AddTab = ({
     setNuevaCategoria('');
   };
 
-  /* ---------- Proveedor ---------- */
+  /* ---------- Handlers Proveedor ---------- */
   const handleProveedorChange = (e) => {
     const { name, value } = e.target;
     setNuevoProveedor((prev) => ({
@@ -128,13 +128,15 @@ const AddTab = ({
       }
     }
 
-    onAddProveedor({
-      nombre,
-      email,
-      telefono,
-      productos: productosSeleccionados,
-      categorias: categoriasSeleccionadas
-    });
+    if (onAddProveedor) {
+      onAddProveedor({
+        nombre,
+        email,
+        telefono,
+        productos: productosSeleccionados,
+        categorias: categoriasSeleccionadas
+      });
+    }
 
     setNuevoProveedor({
       nombre: '',
@@ -148,7 +150,7 @@ const AddTab = ({
   };
 
   return (
-    <>
+    <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
       {/* -------------------- Agregar Producto -------------------- */}
       <h5>Agregar Producto</h5>
       <form onSubmit={handleAddProductoSubmit} className="mb-4">
@@ -218,9 +220,11 @@ const AddTab = ({
           selected={selectedProveedores}
           onChange={setSelectedProveedores}
         />
-        <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
-          Agregar Producto
-        </button>
+        <div className="mt-3">
+          <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
+            Agregar Producto
+          </button>
+        </div>
       </form>
 
       <hr className="my-4" />
@@ -295,11 +299,13 @@ const AddTab = ({
           selected={categoriasQueSurte}
           onChange={setCategoriasQueSurte}
         />
-        <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
-          Agregar Proveedor
-        </button>
+        <div className="mt-3 mb-2">
+          <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
+            Agregar Proveedor
+          </button>
+        </div>
       </form>
-    </>
+    </div>
   );
 };
 
