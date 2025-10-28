@@ -215,7 +215,7 @@ const DeleteTab = ({
 
       <hr className="my-4" />
 
-      {/* -------------------- Eliminar Categoría -------------------- */}
+            {/* -------------------- Eliminar Categoría -------------------- */}
       <h5>Eliminar Categoría</h5>
       <form onSubmit={handleDeleteCategoria}>
         <div className="mb-2">
@@ -228,17 +228,17 @@ const DeleteTab = ({
             <option value="">—</option>
             {categorias.map(c => (
               <option key={c.id} value={c.nombre}>
-                {c.id} - {c.nombre}
+                {c.nombre}
               </option>
             ))}
           </select>
-          <small className="text-muted">Puedes seleccionar o escribir el nombre o ID.</small>
+          <small className="text-muted">Puedes seleccionar o escribir el nombre directamente.</small>
         </div>
         <div className="mb-2">
-          <label className="form-label">O escribe el nombre o ID</label>
+          <label className="form-label">O escribe el nombre</label>
           <input
             className="form-control"
-            placeholder="Nombre o ID de la categoría"
+            placeholder="Nombre de la categoría"
             value={inputCategoria}
             onChange={(e) => setInputCategoria(e.target.value)}
           />
