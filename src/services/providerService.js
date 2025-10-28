@@ -1,5 +1,5 @@
 // src/services/providerService.js
-import supabase from './supabaseClient';
+import { supabase } from './supabaseClient';
 
 export const providerService = {
   // Obtener proveedores y devolver también lista de categoria_ids asociados

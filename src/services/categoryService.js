@@ -1,5 +1,5 @@
 // src/services/categoryService.js
-import supabase from './supabaseClient';
+import { supabase } from './supabaseClient';
 
 export const categoryService = {
   getAll: async () => {

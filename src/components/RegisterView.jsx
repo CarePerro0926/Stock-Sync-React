@@ -1,6 +1,6 @@
 // src/components/RegisterView.jsx
 import React, { useState } from 'react';
-import supabase from '../services/supabaseClient';
+import { supabase } from '../services/supabaseClient';
 
 const RegisterView = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
