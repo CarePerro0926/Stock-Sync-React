@@ -17,7 +17,7 @@ export const providerService = {
     const proveedoresConCategorias = await Promise.all(
       proveedores.map(async (prov) => {
         const { data: cats, error: catsErr } = await supabase
-          .from('proveedor_categoria')
+          .from('proveedor_categorias') // ← corregido: plural
           .select('categoria_id')
           .eq('proveedor_id', prov.id);
 
@@ -47,16 +47,16 @@ export const providerService = {
     if (error) throw error;
     const provId = data.id;
 
-    // 2) Insertar relaciones proveedor_categoria
+    // 2) Insertar relaciones proveedor_categorias
     if (Array.isArray(categorias) && categorias.length > 0) {
       const relacionesCats = categorias.map(catId => ({
         proveedor_id: provId,
         categoria_id: catId
       }));
       const { error: relCatsErr } = await supabase
-        .from('proveedor_categoria')
+        .from('proveedor_categorias') // ← corregido: plural
         .insert(relacionesCats)
-        .onConflict(['proveedor_id','categoria_id'])
+        .onConflict(['proveedor_id', 'categoria_id'])
         .ignore();
       if (relCatsErr) throw relCatsErr;
     }
@@ -70,7 +70,7 @@ export const providerService = {
       const { error: relProdsErr } = await supabase
         .from('producto_proveedor')
         .insert(relacionesProds)
-        .onConflict(['producto_id','proveedor_id'])
+        .onConflict(['producto_id', 'proveedor_id'])
         .ignore();
       if (relProdsErr) throw relProdsErr;
     }
@@ -79,7 +79,10 @@ export const providerService = {
   },
 
   remove: async (id) => {
-    const { error } = await supabase.from('proveedores').delete().eq('id', id);
+    const { error } = await supabase
+      .from('proveedores')
+      .delete()
+      .eq('id', id);
     if (error) throw error;
     return true;
   }
