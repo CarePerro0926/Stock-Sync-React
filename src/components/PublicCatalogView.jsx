@@ -11,18 +11,21 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
 
   // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
-    return prods.map(p => {
-      if (p.categoria_nombre) {
-        return p;
-      } else if (p.categoria_id) {
-        const categoria = cats.find(c => c.id === p.categoria_id);
-        return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida' };
-      } else if (p.categoria) {
-        return { ...p, categoria_nombre: p.categoria };
-      }
-      return { ...p, categoria_nombre: 'Sin Categoría' };
-    });
-  }, [prods, cats]);
+  return prods.map(p => {
+    if (p.categoria_nombre) {
+      return p;
+    } else if (p.categoria_id) {
+      const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
+      return {
+        ...p,
+        categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida'
+      };
+    } else if (p.categoria) {
+      return { ...p, categoria_nombre: p.categoria };
+    }
+    return { ...p, categoria_nombre: 'Sin Categoría' };
+  });
+}, [prods, cats]);
 
   // Filtrado por categoría y texto
   const productosFiltrados = useMemo(() => {
