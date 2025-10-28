@@ -12,7 +12,6 @@ import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
 import { filtroProductos } from './utils/helpers';
 
-
 function App() {
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
@@ -97,6 +96,7 @@ function App() {
             onAddCategoria={handleAddCategoria}
             onDeleteCategoria={handleDeleteCategoria}
             onDeleteProveedor={handleDeleteProveedor}
+            onUpdateProducto={handleUpdateProducto}
             onLogout={handleLogout}
           />
         );
@@ -154,7 +154,7 @@ function App() {
       // Validación de teléfono colombiano (opcional pero recomendada)
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
-        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
             !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
@@ -203,29 +203,27 @@ function App() {
   };
 
   const handleUpdateProducto = async (id, cambios) => {
-  try {
-    if (!id || !cambios || Object.keys(cambios).length === 0) {
-      alert('No se proporcionaron cambios válidos.');
-      return;
+    try {
+      if (!id || !cambios || Object.keys(cambios).length === 0) {
+        alert('No se proporcionaron cambios válidos.');
+        return;
+      }
+
+      const { data } = await productService.update(id, cambios);
+
+      if (!data || data.length === 0) {
+        alert('No se pudo actualizar el producto.');
+        return;
+      }
+
+      const updated = await productService.getAll();
+      setProductos(updated);
+      return true;
+    } catch (err) {
+      console.error('Excepción en handleUpdateProducto:', err);
+      alert('Error inesperado al actualizar el producto');
     }
-
-    const { error } = await productService.update(id, cambios); // o supabase.from('productos')...
-
-    if (error) {
-      console.error('Error al actualizar producto:', error);
-      alert('Error al actualizar el producto');
-      return;
-    }
-
-    // Opcional: actualizar estado local si no confías en realtime
-    const updated = await productService.getAll();
-    setProductos(updated);
-
-  } catch (err) {
-    console.error('Excepción en handleUpdateProducto:', err);
-    alert('Error inesperado al actualizar el producto');
-  }
-};
+  };
 
   return (
     <div className="container-fluid p-4">
@@ -233,8 +231,6 @@ function App() {
       <ForgotPasswordModal show={showForgotModal} onClose={() => setShowForgotModal(false)} />
     </div>
   );
-
-  
 }
 
 export default App;
