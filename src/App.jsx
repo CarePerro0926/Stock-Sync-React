@@ -11,7 +11,7 @@ import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
 import { filtroProductos } from './utils/helpers';
-import useRealtimeSync from './hooks/useRealtimeSync';
+
 
 function App() {
   const [productos, setProductos] = useState([]);
@@ -23,7 +23,7 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Cargar datos iniciales (fetch una vez) y usar fallback si está vacío
+  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -33,11 +33,13 @@ function App() {
           categoryService.getAll()
         ]);
 
+        // Si los servicios devuelven vacío, usar datos iniciales
         setProductos(productosDB.length > 0 ? productosDB : initialProductos);
         setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
         setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
       } catch (error) {
         console.error('Error al cargar datos:', error);
+        // En caso de error, usar datos iniciales
         setProductos(initialProductos);
         setProveedores(initialProveedores);
         setCategorias(initialCategorias);
@@ -46,17 +48,13 @@ function App() {
     cargarDatos();
   }, []);
 
-  // Sincronización realtime desde el padre para productos, proveedores y categorías
-  useRealtimeSync('productos', setProductos);
-  useRealtimeSync('proveedores', setProveedores);
-  useRealtimeSync('categorias', setCategorias);
-
   const handleLogin = (usr) => {
     if (!usr) {
       alert('Usuario/clave inválidos');
       return;
     }
     setUsuarioActual(usr);
+    // CORREGIDO: usa 'administrador' (tu preferencia)
     setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
     if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
@@ -72,18 +70,20 @@ function App() {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
-    console.log("App.jsx: Renderizando vista:", vistaActual);
+    console.log("App.jsx: Renderizando vista:", vistaActual); // <-- Nuevo log
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
       case 'register':
         return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
+        // CORREGIDO: pasar categorias a PublicCatalogView
         return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />;
       case 'client':
+        // CORREGIDO: pasar categorias a ClientView
         return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
       case 'admin':
-        console.log("App.jsx: Cargando AdminView con props:", { productos, categorias, vistaAdminActiva });
+        console.log("App.jsx: Cargando AdminView con props:", { productos, categorias, vistaAdminActiva }); // <-- Nuevo log
         return (
           <AdminView
             productos={productos}
@@ -105,27 +105,33 @@ function App() {
     }
   };
 
-  // Crear producto: convierte nombre de categoría a categoria_id y usa service
+  // CORREGIDO: ahora convierte 'categoria' (nombre) a 'categoria_id' (UUID) antes de insertar
   const handleAddProducto = async (nuevoProducto) => {
     try {
+      // 1. Buscar el objeto de categoría correspondiente al nombre recibido
       const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
 
+      // 2. Validar que la categoría exista
       if (!categoriaSeleccionada) {
         alert('Categoría no encontrada en la base de datos. Por favor, agréguela primero o seleccione una existente.');
         console.error("Categoría no encontrada para el nombre:", nuevoProducto.categoria);
-        return;
+        return; // Detener la ejecución si no se encuentra la categoría
       }
 
+      // 3. Crear un objeto para insertar con el ID de la categoría en lugar del nombre
       const productoParaInsertar = {
-        ...nuevoProducto,
-        categoria_id: categoriaSeleccionada.id
+        ...nuevoProducto, // Copia todas las propiedades de nuevoProducto
+        categoria_id: categoriaSeleccionada.id // Asigna el ID encontrado
+        // delete productoParaInsertar.categoria; // Opcional pero recomendado si la columna 'categoria' no existe en Supabase
       };
 
+      // 4. Llamar al servicio con el objeto corregido
       await productService.create(productoParaInsertar);
 
-      // Si confías en realtime no es obligatorio refrescar manualmente; de todas formas actualizar localmente por precaución
+      // 5. Actualizar el estado local después de la inserción exitosa
       const updated = await productService.getAll();
       setProductos(updated);
+
     } catch (error) {
       console.error('Error al crear producto:', error);
       alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
@@ -142,11 +148,13 @@ function App() {
     }
   };
 
+  // CORREGIDO: ahora recibe los datos del nuevo proveedor
   const handleAddProveedor = async (nuevoProveedor) => {
     try {
+      // Validación de teléfono colombiano (opcional pero recomendada)
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
-        if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
             !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
@@ -168,10 +176,11 @@ function App() {
       setProveedores(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       console.error('Error al eliminar proveedor:', error);
-      alert('Error al eliminar proveedor');
+      alert('Error al eliminar el proveedor');
     }
   };
 
+  // CORREGIDO: ahora recibe el nombre de la categoría
   const handleAddCategoria = async (nombreCategoria) => {
     try {
       await categoryService.create({ nombre: nombreCategoria });
