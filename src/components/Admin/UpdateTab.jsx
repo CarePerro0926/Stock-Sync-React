@@ -57,7 +57,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!producto) {
+    if (!producto || !producto.id) {
       alert('Primero busca un producto válido.');
       return;
     }
@@ -82,7 +82,12 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     };
 
     try {
-      await onUpdateProducto(producto.id, cambios);
+      const resultado = await onUpdateProducto(producto.id, cambios);
+
+      if (!resultado || resultado.error || !resultado.data || resultado.data.length === 0) {
+        throw new Error('No se pudo actualizar en la base de datos.');
+      }
+
       alert('Producto actualizado con éxito');
       setBusqueda('');
       setProductoSeleccionado('');
