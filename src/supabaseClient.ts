@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 // ✅ Exportación nombrada
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
