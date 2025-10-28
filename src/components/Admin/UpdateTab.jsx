@@ -82,7 +82,12 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
       categoria: formData.categoria
     };
 
-    onUpdateProducto(productoActualizado);
+      onUpdateProducto(productoActualizado.id, {
+      nombre: productoActualizado.nombre,
+      precio: productoActualizado.precio,
+      cantidad: productoActualizado.cantidad,
+      categoria: productoActualizado.categoria
+    });
     alert('Producto actualizado con éxito');
     setBusqueda('');
     setProductoSeleccionado('');
