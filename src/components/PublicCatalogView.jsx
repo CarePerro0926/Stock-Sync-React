@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 
 export default function PublicCatalogView({ productos = [], categorias = [], onBack }) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
+  const [textoBusqueda, setTextoBusqueda] = useState('');
 
   // Normaliza inputs por si vienen undefined
   const cats = Array.isArray(categorias) ? categorias : [];
@@ -12,29 +13,27 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   const productosConNombreCategoria = useMemo(() => {
     return prods.map(p => {
       if (p.categoria_nombre) {
-        // Si ya tiene categoria_nombre, devolverlo como está
         return p;
       } else if (p.categoria_id) {
-        // Si tiene categoria_id, buscar el nombre
         const categoria = cats.find(c => c.id === p.categoria_id);
         return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida' };
       } else if (p.categoria) {
-        // Si tiene categoria (nombre directo), devolverlo como está (compatibilidad con initialData)
         return { ...p, categoria_nombre: p.categoria };
       }
-      // Si no tiene ninguno, asignar un nombre por defecto
       return { ...p, categoria_nombre: 'Sin Categoría' };
     });
   }, [prods, cats]);
 
+  // Filtrado por categoría y texto
   const productosFiltrados = useMemo(() => {
-    if (!categoriaSeleccionada) return productosConNombreCategoria;
     return productosConNombreCategoria.filter(p => {
-      // Ahora siempre usamos p.categoria_nombre
-      const catNombreProd = p.categoria_nombre;
-      return String(catNombreProd) === String(categoriaSeleccionada);
+      const coincideCategoria =
+        !categoriaSeleccionada || String(p.categoria_nombre) === String(categoriaSeleccionada);
+      const coincideTexto =
+        textoBusqueda === '' || p.nombre.toLowerCase().includes(textoBusqueda.toLowerCase());
+      return coincideCategoria && coincideTexto;
     });
-  }, [productosConNombreCategoria, categoriaSeleccionada]);
+  }, [productosConNombreCategoria, categoriaSeleccionada, textoBusqueda]);
 
   return (
     <div className="w-100">
@@ -48,7 +47,6 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
           >
             <option value="">Todas</option>
             {cats.map(cat => (
-              // usamos cat.nombre como value para empatar con productos.categoria_nombre
               <option key={cat.id ?? cat.nombre} value={cat.nombre}>
                 {cat.nombre}
               </option>
@@ -56,8 +54,26 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
           </select>
         </div>
 
+        <div style={{ flex: 1 }}>
+          <label className="form-label">Buscar por nombre</label>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar producto..."
+            value={textoBusqueda}
+            onChange={e => setTextoBusqueda(e.target.value)}
+          />
+        </div>
+
         <div>
-          <button className="btn btn-secondary" onClick={() => { setCategoriaSeleccionada(''); if (onBack) onBack(); }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setCategoriaSeleccionada('');
+              setTextoBusqueda('');
+              if (onBack) onBack();
+            }}
+          >
             Volver
           </button>
         </div>
