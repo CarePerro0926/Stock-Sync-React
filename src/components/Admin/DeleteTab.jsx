@@ -1,22 +1,51 @@
 // src/components/Admin/DeleteTab.jsx
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient'; // Ajusta la ruta según tu estructura
 
 const DeleteTab = ({
   onDeleteProducto,
   onDeleteProveedor,
   onDeleteCategoria,
   productos = [],
-  proveedores = [],
-  categorias = []
+  proveedores: proveedoresProp = [],
+  categorias: categoriasProp = []
 }) => {
   const [inputProducto, setInputProducto] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
 
   const [inputProveedor, setInputProveedor] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
+  const [proveedores, setProveedores] = useState(proveedoresProp);
 
   const [inputCategoria, setInputCategoria] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
+  const [categorias, setCategorias] = useState(categoriasProp);
+
+  // Cargar proveedores si no vienen como props
+  useEffect(() => {
+    if (proveedoresProp.length === 0) {
+      supabase.from('proveedores').select('*').then(({ data, error }) => {
+        if (error) {
+          console.error('Error al cargar proveedores:', error);
+        } else {
+          setProveedores(data || []);
+        }
+      });
+    }
+  }, [proveedoresProp]);
+
+  // Cargar categorías si no vienen como props
+  useEffect(() => {
+    if (categoriasProp.length === 0) {
+      supabase.from('categorias').select('*').then(({ data, error }) => {
+        if (error) {
+          console.error('Error al cargar categorías:', error);
+        } else {
+          setCategorias(data || []);
+        }
+      });
+    }
+  }, [categoriasProp]);
 
   const handleDeleteProducto = (e) => {
     e.preventDefault();
