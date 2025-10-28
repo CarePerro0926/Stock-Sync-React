@@ -54,7 +54,7 @@ const AdminView = ({
   };
 
   return (
-    <div className="card p-4">
+    <div className="card p-4" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
       <h4 className="mb-3">Panel Administrador</h4>
 
       {/* Encabezado móvil */}
