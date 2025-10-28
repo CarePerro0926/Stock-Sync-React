@@ -1,7 +1,7 @@
 // src/components/AdminView.jsx
 import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
-import ProvidersTab from './Admin/ProvidersTab'; // ✅ MOVIDO
+import ProvidersTab from './Admin/ProvidersTab'; 
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
@@ -45,7 +45,7 @@ const AdminView = ({
   const getTitle = () => {
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
-      case 'providers': return 'Proveedores'; // ✅ MOVIDO
+      case 'providers': return 'Proveedores'; 
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
