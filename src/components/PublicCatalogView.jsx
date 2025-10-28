@@ -101,30 +101,28 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
         </div>
       </div>
 
-      {tableData.length === 0 ? (
-        <p className="text-muted">No hay productos disponibles.</p>
-      ) : isMobile ? (
-        <div className="row g-3">
-          {productosFiltrados.map(p => (
-            <div key={p.id} className="col-12">
-              <div className="card h-100">
-                <div className="card-body">
-                  <h6 className="card-title mb-1">{p.nombre}</h6>
-                  <p className="mb-1"><strong>Categoría:</strong> {p.categoria_nombre}</p>
-                  <p className="mb-1"><strong>Stock:</strong> {p.cantidad}</p>
-                  <p className="mb-0"><strong>Precio:</strong> {p.precio}</p>
+      <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        {tableData.length === 0 ? (
+          <p className="text-muted">No hay productos disponibles.</p>
+        ) : isMobile ? (
+          <div className="row g-3">
+            {productosFiltrados.map(p => (
+              <div key={p.id} className="col-12">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <h6 className="card-title mb-1">{p.nombre}</h6>
+                    <p className="mb-1"><strong>Categoría:</strong> {p.categoria_nombre}</p>
+                    <p className="mb-1"><strong>Stock:</strong> {p.cantidad}</p>
+                    <p className="mb-0"><strong>Precio:</strong> {p.precio}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ResponsiveTable
-          headers={tableHeaders}
-          data={tableData}
-          maxHeight="400px"
-        />
-      )}
+            ))}
+          </div>
+        ) : (
+          <ResponsiveTable headers={tableHeaders} data={tableData} />
+        )}
+      </div>
     </div>
   );
 }
