@@ -20,12 +20,31 @@ const DeleteTab = ({
 
   const handleDeleteProducto = (e) => {
     e.preventDefault();
-    const valor = inputProducto.trim() || productoSeleccionado;
-    if (!valor) {
+    const entrada = inputProducto.trim();
+    const seleccion = productoSeleccionado;
+    let idFinal = '';
+
+    if (entrada) {
+      const porId = productos.find(p => p.id === entrada);
+      if (porId) {
+        idFinal = porId.id;
+      } else {
+        const porNombre = productos.find(p => p.nombre.toLowerCase() === entrada.toLowerCase());
+        if (porNombre) {
+          idFinal = porNombre.id;
+        } else {
+          alert('No se encontró ningún producto con ese ID o nombre.');
+          return;
+        }
+      }
+    } else if (seleccion) {
+      idFinal = seleccion;
+    } else {
       alert('Debes escribir o seleccionar un producto.');
       return;
     }
-    onDeleteProducto(valor);
+
+    onDeleteProducto(idFinal);
     setInputProducto('');
     setProductoSeleccionado('');
     alert('Producto eliminado');
@@ -33,12 +52,31 @@ const DeleteTab = ({
 
   const handleDeleteProveedor = (e) => {
     e.preventDefault();
-    const valor = inputProveedor.trim() || proveedorSeleccionado;
-    if (!valor) {
+    const entrada = inputProveedor.trim();
+    const seleccion = proveedorSeleccionado;
+    let idFinal = '';
+
+    if (entrada) {
+      const porId = proveedores.find(p => p.id === entrada);
+      if (porId) {
+        idFinal = porId.id;
+      } else {
+        const porNombre = proveedores.find(p => p.nombre.toLowerCase() === entrada.toLowerCase());
+        if (porNombre) {
+          idFinal = porNombre.id;
+        } else {
+          alert('No se encontró ningún proveedor con ese ID o nombre.');
+          return;
+        }
+      }
+    } else if (seleccion) {
+      idFinal = seleccion;
+    } else {
       alert('Debes escribir o seleccionar un proveedor.');
       return;
     }
-    onDeleteProveedor(valor);
+
+    onDeleteProveedor(idFinal);
     setInputProveedor('');
     setProveedorSeleccionado('');
     alert('Proveedor eliminado');
@@ -46,12 +84,31 @@ const DeleteTab = ({
 
   const handleDeleteCategoria = (e) => {
     e.preventDefault();
-    const valor = inputCategoria.trim() || categoriaSeleccionada;
-    if (!valor) {
+    const entrada = inputCategoria.trim();
+    const seleccion = categoriaSeleccionada;
+    let nombreFinal = '';
+
+    if (entrada) {
+      const porId = categorias.find(c => c.id === entrada);
+      if (porId) {
+        nombreFinal = porId.nombre;
+      } else {
+        const porNombre = categorias.find(c => c.nombre.toLowerCase() === entrada.toLowerCase());
+        if (porNombre) {
+          nombreFinal = porNombre.nombre;
+        } else {
+          alert('No se encontró ninguna categoría con ese ID o nombre.');
+          return;
+        }
+      }
+    } else if (seleccion) {
+      nombreFinal = seleccion;
+    } else {
       alert('Debes escribir o seleccionar una categoría.');
       return;
     }
-    onDeleteCategoria(valor);
+
+    onDeleteCategoria(nombreFinal);
     setInputCategoria('');
     setCategoriaSeleccionada('');
     alert('Categoría eliminada');
@@ -146,13 +203,13 @@ const DeleteTab = ({
               </option>
             ))}
           </select>
-          <small className="text-muted">Puedes seleccionar o escribir el nombre directamente.</small>
+          <small className="text-muted">Puedes seleccionar o escribir el nombre o ID.</small>
         </div>
         <div className="mb-2">
-          <label className="form-label">O escribe el nombre</label>
+          <label className="form-label">O escribe el nombre o ID</label>
           <input
             className="form-control"
-            placeholder="Nombre de la categoría"
+            placeholder="Nombre o ID de la categoría"
             value={inputCategoria}
             onChange={(e) => setInputCategoria(e.target.value)}
           />
