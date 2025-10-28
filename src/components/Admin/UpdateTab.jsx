@@ -42,11 +42,12 @@ const UpdateTab = ({ productos, categorias }) => {
       return;
     }
 
+    console.log('Resultado de búsqueda:', encontrado); // ← Diagnóstico clave
     setProducto(encontrado);
     setFormData({
       nombre: encontrado.nombre || '',
       precio: encontrado.precio || '',
-      cantidad: encontrado.cantidad || '', // ← usa el campo correcto
+      cantidad: encontrado.cantidad || '',
       categoria: encontrado.categoria || ''
     });
   };
@@ -89,7 +90,7 @@ const UpdateTab = ({ productos, categorias }) => {
       .update({
         nombre: formData.nombre.trim(),
         precio,
-        cantidad, // ← campo correcto en Supabase
+        cantidad,
         categoria: formData.categoria
       })
       .eq('id', producto.id);
