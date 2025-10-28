@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 
 const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
-  const [idProducto, setIdProducto] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [producto, setProducto] = useState(null);
   const [formData, setFormData] = useState({
     nombre: '',
@@ -11,38 +12,41 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     categoria: ''
   });
 
-  // Normalizar categorías: siempre devuelve un array de strings
   const getListaCategorias = () => {
     if (!categorias || !Array.isArray(categorias)) return [];
-    
     return categorias.map(cat => {
       if (typeof cat === 'string') return cat;
       if (typeof cat === 'object' && cat.nombre) return cat.nombre;
-      return String(cat); // fallback
+      return String(cat);
     });
   };
 
   const handleBuscar = (e) => {
     e.preventDefault();
-    if (!idProducto.trim()) {
-      alert('Ingresa un ID de producto.');
-      return;
+    const entrada = busqueda.trim().toLowerCase();
+    let encontrado = productos.find(p => p.id === entrada);
+
+    if (!encontrado) {
+      encontrado = productos.find(p => p.nombre.toLowerCase() === entrada);
     }
 
-    const prod = productos.find(p => p.id === idProducto.trim());
-    if (!prod) {
+    if (!encontrado && productoSeleccionado) {
+      encontrado = productos.find(p => p.id === productoSeleccionado);
+    }
+
+    if (!encontrado) {
       alert('Producto no encontrado.');
       setProducto(null);
       setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
       return;
     }
 
-    setProducto(prod);
+    setProducto(encontrado);
     setFormData({
-      nombre: prod.nombre,
-      precio: prod.precio,
-      cantidad: prod.cantidad,
-      categoria: prod.categoria
+      nombre: encontrado.nombre || '',
+      precio: encontrado.precio || '',
+      cantidad: encontrado.cantidad || '',
+      categoria: encontrado.categoria || ''
     });
   };
 
@@ -73,38 +77,56 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     const productoActualizado = {
       id: producto.id,
       nombre: formData.nombre.trim(),
-      precio: precio,
-      cantidad: cantidad,
+      precio,
+      cantidad,
       categoria: formData.categoria
     };
 
     onUpdateProducto(productoActualizado);
     alert('Producto actualizado con éxito');
-    setIdProducto('');
+    setBusqueda('');
+    setProductoSeleccionado('');
     setProducto(null);
     setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
   };
 
-  // Usa la función segura
   const listaCategorias = getListaCategorias();
 
   return (
     <>
       <h5>Actualizar Producto</h5>
+
       <form onSubmit={handleBuscar} className="mb-4">
-        <div className="row g-2">
+        <div className="row g-2 mb-2">
           <div className="col-12 col-md-8">
             <input
-              id="updId"
               className="form-control"
-              placeholder="ID del producto"
-              value={idProducto}
-              onChange={(e) => setIdProducto(e.target.value)}
+              placeholder="Buscar por ID o nombre"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
             />
           </div>
           <div className="col-12 col-md-4">
-            <button type="submit" id="btnBuscarProd" className="btn btn-outline-primary w-100">Buscar</button>
+            <button type="submit" className="btn btn-outline-primary w-100">
+              Buscar
+            </button>
           </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">O selecciona un producto</label>
+          <select
+            className="form-select"
+            value={productoSeleccionado}
+            onChange={(e) => setProductoSeleccionado(e.target.value)}
+          >
+            <option value="">—</option>
+            {productos.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.id} - {p.nombre}
+              </option>
+            ))}
+          </select>
         </div>
       </form>
 
@@ -160,7 +182,9 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
               </select>
             </div>
           </div>
-          <button type="submit" id="btnUpdateProd" className="btn btn-success w-100">Actualizar Producto</button>
+          <button type="submit" className="btn btn-primary w-100">
+            Actualizar Producto
+          </button>
         </form>
       )}
     </>
