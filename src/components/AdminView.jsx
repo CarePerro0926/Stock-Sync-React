@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
+import UpdateTab from './Admin/UpdateTab'; // ✅ Reordenado
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
-import UpdateTab from './Admin/UpdateTab'; // ✅ NUEVO
 
 const AdminView = ({
   productos,
@@ -18,7 +18,7 @@ const AdminView = ({
   onAddCategoria,
   onDeleteCategoria,
   onDeleteProveedor,
-  onUpdateProducto, // ✅ NUEVO
+  onUpdateProducto,
   onLogout
 }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -36,10 +36,7 @@ const AdminView = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showMenu]);
 
-  const toggleMenu = () => {
-    setShowMenu(!showMenu);
-  };
-
+  const toggleMenu = () => setShowMenu(!showMenu);
   const selectTab = (tabId) => {
     setVistaActiva(tabId);
     setShowMenu(false);
@@ -49,9 +46,9 @@ const AdminView = ({
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
       case 'add': return 'Agregar';
+      case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
       case 'providers': return 'Proveedores';
-      case 'update': return 'Actualizar'; // ✅ NUEVO
       default: return 'Panel Administrador';
     }
   };
@@ -79,9 +76,9 @@ const AdminView = ({
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button> {/* ✅ Reordenado */}
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button> {/* ✅ NUEVO */}
         </div>
       )}
 
@@ -98,6 +95,11 @@ const AdminView = ({
           </button>
         </li>
         <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>
+            Actualizar
+          </button>
+        </li>
+        <li className="nav-item">
           <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>
             Eliminar
           </button>
@@ -105,11 +107,6 @@ const AdminView = ({
         <li className="nav-item">
           <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
             Proveedores
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>
-            Actualizar
           </button>
         </li>
       </ul>
@@ -128,6 +125,13 @@ const AdminView = ({
           proveedores={proveedores}
         />
       )}
+      {vistaActiva === 'update' && (
+        <UpdateTab
+          productos={productos}
+          categorias={categorias}
+          onUpdateProducto={onUpdateProducto}
+        />
+      )}
       {vistaActiva === 'delete' && (
         <DeleteTab
           productos={productos}
@@ -143,13 +147,6 @@ const AdminView = ({
           proveedores={proveedores}
           onAddProveedor={onAddProveedor}
           onDeleteProveedor={onDeleteProveedor}
-        />
-      )}
-      {vistaActiva === 'update' && (
-        <UpdateTab
-          productos={productos}
-          categorias={categorias}
-          onUpdateProducto={onUpdateProducto}
         />
       )}
 
