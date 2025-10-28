@@ -1,8 +1,5 @@
 // src/components/AdminView.jsx
-// src/components/AdminView.jsx
-import React, { useState, useEffect } from 'react';
-import useRealtimeSync from '../hooks/useRealtimeSync';
-
+import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab'; 
 import AddTab from './Admin/AddTab';
@@ -10,6 +7,9 @@ import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
 
 const AdminView = ({
+  productos,
+  proveedores,
+  categorias,
   vistaActiva,
   setVistaActiva,
   onAddProducto,
@@ -21,15 +21,7 @@ const AdminView = ({
   onUpdateProducto,
   onLogout
 }) => {
-  const [productos, setProductos] = useState([]);
-  const [proveedores, setProveedores] = useState([]);
-  const [categorias, setCategorias] = useState([]);
   const [showMenu, setShowMenu] = useState(false);
-
-  // 🔁 Sincronización en tiempo real con Supabase
-  useRealtimeSync('productos', setProductos);
-  useRealtimeSync('proveedores', setProveedores);
-  useRealtimeSync('categorias', setCategorias);
 
   const handleClickOutside = (event) => {
     const menu = document.getElementById('adminMenu');
@@ -39,7 +31,7 @@ const AdminView = ({
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showMenu]);
