@@ -5,33 +5,26 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [textoBusqueda, setTextoBusqueda] = useState('');
 
-  // Normaliza inputs por si vienen undefined
   const cats = Array.isArray(categorias) ? categorias : [];
   const prods = Array.isArray(productos) ? productos : [];
 
-  // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
-  return prods.map(p => {
-    // Si ya tiene el nombre de categoría, mantenerlo
-    if (p.categoria_nombre) return p;
+    return prods.map(p => {
+      if (p.categoria_nombre) return p;
 
-    // 1) Si el producto trae directamente la propiedad `categoria` (nombre), usarla
-    if (p.categoria) {
-      return { ...p, categoria_nombre: p.categoria };
-    }
+      if (p.categoria) {
+        return { ...p, categoria_nombre: p.categoria };
+      }
 
-    // 2) Si el producto trae `categoria_id`, buscar el objeto en `cats`
-    const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
+      const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
 
-    // 3) Fallback a "Categoría Desconocida" si no se encuentra
-    return {
-      ...p,
-      categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
-    };
-  });
-}, [prods, cats]);
+      return {
+        ...p,
+        categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
+      };
+    });
+  }, [prods, cats]);
 
-  // Filtrado por categoría y texto
   const productosFiltrados = useMemo(() => {
     return productosConNombreCategoria.filter(p => {
       const coincideCategoria =
@@ -43,16 +36,17 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   }, [productosConNombreCategoria, categoriaSeleccionada, textoBusqueda]);
 
   return (
-    <div className="w-100">
-      <div className="mb-3 d-flex align-items-end gap-2">
-        <div style={{ flex: 1 }}>
-          <label className="form-label">Filtrar por categoría</label>
+    <div className="card p-4">
+      <h4 className="text-stock">Inventario Disponible</h4>
+      <div className="row g-2 mb-3">
+        <div className="col">
           <select
-            className="form-control"
+            id="filtroCatPublic"
+            className="form-select"
             value={categoriaSeleccionada}
             onChange={e => setCategoriaSeleccionada(e.target.value)}
           >
-            <option value="">Todas</option>
+            <option value="Todas">Todas</option>
             {cats.map(cat => (
               <option key={cat.id ?? cat.nombre} value={cat.nombre}>
                 {cat.nombre}
@@ -60,51 +54,48 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
             ))}
           </select>
         </div>
-
-        <div style={{ flex: 1 }}>
-          <label className="form-label">Buscar por nombre</label>
+        <div className="col">
           <input
-            type="text"
+            id="filtroTxtPublic"
             className="form-control"
-            placeholder="Buscar producto..."
+            placeholder="Buscar..."
             value={textoBusqueda}
             onChange={e => setTextoBusqueda(e.target.value)}
           />
         </div>
-
-        <div>
-          <button
-            className="btn btn-secondary"
-            onClick={() => {
-              setCategoriaSeleccionada('');
-              setTextoBusqueda('');
-              if (onBack) onBack();
-            }}
-          >
-            Volver
-          </button>
-        </div>
       </div>
-
-      <div>
-        {productosFiltrados.length === 0 ? (
-          <p className="text-muted">No hay productos disponibles.</p>
-        ) : (
-          <div className="row g-3">
-            {productosFiltrados.map(p => (
-              <div key={p.id} className="col-12 col-md-6 col-lg-4">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">{p.nombre}</h5>
-                    <p className="card-text">Precio: {p.precio}</p>
-                    <p className="card-text">Cantidad: {p.cantidad}</p>
-                    <p className="card-text text-muted">{p.categoria_nombre}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="table-responsive responsive-table" style={{ maxHeight: '300px', overflow: 'auto' }}>
+        <table className="table table-bordered table-sm mb-0">
+          <thead className="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Categoria</th>
+              <th style={{ width: '60px', textAlign: 'center' }}>Stock</th>
+              <th style={{ width: '120px' }}>Precio Unidad</th>
+            </tr>
+          </thead>
+          <tbody id="tblCatalogPublic">
+            {productosFiltrados.length === 0 ? (
+              <tr><td colSpan="5" className="text-center">No se encontraron productos.</td></tr>
+            ) : (
+              productosFiltrados.map(p => (
+                <tr key={p.id} className="table-row">
+                  <td className="table-cell" dataTitle="ID">{p.id}</td>
+                  <td className="table-cell" dataTitle="Nombre">{p.nombre}</td>
+                  <td className="table-cell" dataTitle="Categoria">{p.categoria_nombre}</td>
+                  <td className="table-cell" dataTitle="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
+                  <td className="table-cell" dataTitle="Precio Unidad" style={{ textAlign: 'right' }}>
+                    {p.precio != null ? p.precio.toLocaleString('es-CO') : p.precio}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-end mt-3">
+        <button onClick={onBack} id="btnBackToLogin" className="btn btn-outline-secondary">Regresar</button>
       </div>
     </div>
   );
