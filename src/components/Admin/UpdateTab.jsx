@@ -1,8 +1,8 @@
 // src/components/Admin/UpdateTab.jsx
 import React, { useState } from 'react';
-import { supabase } from '../../supabaseClient'; // ajusta la ruta si es distinta
+import { supabase } from '../../supabaseClient';
 
-const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
+const UpdateTab = ({ productos, categorias }) => {
   const [busqueda, setBusqueda] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [producto, setProducto] = useState(null);
@@ -25,14 +25,14 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
   const handleBuscar = (e) => {
     e.preventDefault();
     const entrada = busqueda.trim().toLowerCase();
-    let encontrado = productos.find(p => p.id === entrada);
+    let encontrado = productos.find(p => String(p.id).toLowerCase() === entrada);
 
     if (!encontrado) {
       encontrado = productos.find(p => p.nombre.toLowerCase() === entrada);
     }
 
     if (!encontrado && productoSeleccionado) {
-      encontrado = productos.find(p => p.id === productoSeleccionado);
+      encontrado = productos.find(p => String(p.id) === productoSeleccionado);
     }
 
     if (!encontrado) {
@@ -46,7 +46,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     setFormData({
       nombre: encontrado.nombre || '',
       precio: encontrado.precio || '',
-      cantidad: encontrado.cantidad || '',
+      cantidad: encontrado.stock || '', // ← usa stock como fuente
       categoria: encontrado.categoria || ''
     });
   };
@@ -56,47 +56,48 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-      const handleSubmit = async (e) => {
-      e.preventDefault();
-      if (!producto) {
-        alert('Primero busca un producto válido.');
-        return;
-      }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-      const precio = parseFloat(formData.precio);
-      const cantidad = parseInt(formData.cantidad, 10);
+    if (!producto || !producto.id) {
+      alert('Producto no válido. Primero búscalo correctamente.');
+      return;
+    }
 
-      if (isNaN(precio) || precio < 0) {
-        alert('Precio inválido.');
-        return;
-      }
-      if (isNaN(cantidad) || cantidad < 0) {
-        alert('Cantidad inválida.');
-        return;
-      }
+    const precio = parseFloat(formData.precio);
+    const cantidad = parseInt(formData.cantidad, 10);
 
-      const { error } = await supabase
-        .from('productos') // nombre exacto de tu tabla
-        .update({
-          nombre: formData.nombre.trim(),
-          precio,
-          cantidad,
-          categoria: formData.categoria
-        })
-        .eq('id', producto.id); // ID del producto a actualizar
+    if (isNaN(precio) || precio < 0) {
+      alert('Precio inválido.');
+      return;
+    }
+    if (isNaN(cantidad) || cantidad < 0) {
+      alert('Cantidad inválida.');
+      return;
+    }
 
-      if (error) {
-        console.error('Error al actualizar:', error.message);
-        alert('Error al actualizar el producto');
-        return;
-      }
+    const { error } = await supabase
+      .from('productos') // ← nombre exacto de la tabla
+      .update({
+        nombre: formData.nombre.trim(),
+        precio,
+        stock: cantidad, // ← actualiza como "stock"
+        categoria: formData.categoria
+      })
+      .eq('id', producto.id); // ← campo identificador
 
-      alert('Producto actualizado con éxito');
-      setBusqueda('');
-      setProductoSeleccionado('');
-      setProducto(null);
-      setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
-    };
+    if (error) {
+      alert('Error al actualizar el producto: ' + error.message);
+      return;
+    }
+
+    alert('Producto actualizado correctamente.');
+    setBusqueda('');
+    setProductoSeleccionado('');
+    setProducto(null);
+    setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
+  };
+
   const listaCategorias = getListaCategorias();
 
   return (
