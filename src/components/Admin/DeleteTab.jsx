@@ -208,7 +208,7 @@ const DeleteTab = ({
             onChange={(e) => setInputProveedor(e.target.value)}
           />
         </div>
-        <button type="submit" className="btn btn-warning w-100">
+        <button type="submit" className="btn btn-danger w-100">
           Eliminar Proveedor
         </button>
       </form>
@@ -243,7 +243,7 @@ const DeleteTab = ({
             onChange={(e) => setInputCategoria(e.target.value)}
           />
         </div>
-        <button type="submit" className="btn btn-secondary w-100">
+        <button type="submit" className="btn btn-danger w-100">
           Eliminar Categoría
         </button>
       </form>
