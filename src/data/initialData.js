@@ -64,10 +64,11 @@ initialCategorias.forEach(cat => {
   categoriaMap[cat.nombre] = cat.id;
 });
 
-// Agregar categoria_id a cada producto
+// Agregar categoria_id y categoria_nombre a cada producto
 export const initialProductos = productosOriginales.map(p => ({
   ...p,
-  categoria_id: categoriaMap[p.categoria] || null
+  categoria_id: categoriaMap[p.categoria] || null,
+  categoria_nombre: p.categoria || 'Sin Categoría'
 }));
 
 // Filtro auxiliar
