@@ -129,7 +129,7 @@ const DeleteTab = ({
             <option value="">—</option>
             {productos.map(p => (
               <option key={p.id} value={p.id}>
-                {p.nombre} (ID: {p.id})
+                {p.id} - {p.nombre}
               </option>
             ))}
           </select>
@@ -164,7 +164,7 @@ const DeleteTab = ({
             <option value="">—</option>
             {proveedores.map(p => (
               <option key={p.id} value={p.id}>
-                {p.nombre} (ID: {p.id})
+                {p.id} - {p.nombre}
               </option>
             ))}
           </select>
@@ -199,7 +199,7 @@ const DeleteTab = ({
             <option value="">—</option>
             {categorias.map(c => (
               <option key={c.id} value={c.nombre}>
-                {c.nombre} (ID: {c.id})
+                {c.id} - {c.nombre}
               </option>
             ))}
           </select>
