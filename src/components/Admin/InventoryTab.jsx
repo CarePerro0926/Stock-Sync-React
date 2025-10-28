@@ -113,12 +113,11 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
         </div>
       </div>
 
-      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <ResponsiveTable
-          headers={tableHeaders}
-          data={tableData}
-        />
-      </div>
+      <ResponsiveTable
+        headers={tableHeaders}
+        data={tableData}
+        maxHeight="250px"
+      />
     </div>
   );
 };
