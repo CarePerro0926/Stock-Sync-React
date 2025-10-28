@@ -1,35 +1,25 @@
 // src/components/PublicCatalogView.jsx
 import React, { useState, useMemo } from 'react';
+import ResponsiveTable from './ResponsiveTable'; // Ajusta la ruta si es diferente
 
 export default function PublicCatalogView({ productos = [], categorias = [], onBack }) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [textoBusqueda, setTextoBusqueda] = useState('');
 
-  // Normaliza inputs por si vienen undefined
   const cats = Array.isArray(categorias) ? categorias : [];
   const prods = Array.isArray(productos) ? productos : [];
 
-  // LOGS DE VERIFICACIÓN
-  console.log("CATEGORIAS RECIBIDAS:", cats);
-  console.log("PRODUCTOS ORIGINALES:", prods);
-
-  // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
-    const resultado = prods.map(p => {
+    return prods.map(p => {
       if (p.categoria_nombre) return p;
-
       const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
       return {
         ...p,
         categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
       };
     });
-
-    console.log("PRODUCTOS CON NOMBRE DE CATEGORÍA:", resultado);
-    return resultado;
   }, [prods, cats]);
 
-  // Filtrar por categoría y texto
   const productosFiltrados = useMemo(() => {
     return productosConNombreCategoria.filter(p => {
       const coincideCategoria =
@@ -39,6 +29,26 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
       return coincideCategoria && coincideTexto;
     });
   }, [productosConNombreCategoria, categoriaSeleccionada, textoBusqueda]);
+
+  // Cabeceras para la tabla
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoria_nombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock', align: 'center' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' }
+  ];
+
+  // Datos para la tabla
+  const tableData = productosFiltrados.map(p => ({
+    id: p.id ?? '—',
+    nombre: p.nombre ?? 'Sin nombre',
+    categoria_nombre: p.categoria_nombre ?? 'Sin Categoría',
+    cantidad: p.cantidad ?? 0,
+    precio: typeof p.precio === 'number'
+      ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+      : p.precio ?? '—'
+  }));
 
   return (
     <div className="w-100">
@@ -85,23 +95,14 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
       </div>
 
       <div>
-        {productosFiltrados.length === 0 ? (
+        {tableData.length === 0 ? (
           <p className="text-muted">No hay productos disponibles.</p>
         ) : (
-          <div className="row g-3">
-            {productosFiltrados.map(p => (
-              <div key={p.id} className="col-12 col-md-6 col-lg-4">
-                <div className="card h-100">
-                  <div className="card-body">
-                    <h5 className="card-title">{p.nombre}</h5>
-                    <p className="card-text">Precio: {p.precio}</p>
-                    <p className="card-text">Cantidad: {p.cantidad}</p>
-                    <p className="card-text text-muted">{p.categoria_nombre}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ResponsiveTable
+            headers={tableHeaders}
+            data={tableData}
+            maxHeight="400px"
+          />
         )}
       </div>
     </div>
