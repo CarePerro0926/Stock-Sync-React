@@ -23,42 +23,50 @@ const DeleteTab = ({
 
   // Cargar proveedores si no vienen como props
   useEffect(() => {
-    if (proveedoresProp.length === 0) {
+    let mounted = true;
+    if (!proveedoresProp || proveedoresProp.length === 0) {
       supabase.from('proveedores').select('*').then(({ data, error }) => {
         if (error) {
           console.error('Error al cargar proveedores:', error);
-        } else {
+        } else if (mounted) {
           setProveedores(data || []);
         }
       });
+    } else {
+      setProveedores(proveedoresProp);
     }
+    return () => { mounted = false; };
   }, [proveedoresProp]);
 
   // Cargar categorías si no vienen como props
   useEffect(() => {
-    if (categoriasProp.length === 0) {
+    let mounted = true;
+    if (!categoriasProp || categoriasProp.length === 0) {
       supabase.from('categorias').select('*').then(({ data, error }) => {
         if (error) {
           console.error('Error al cargar categorías:', error);
-        } else {
+        } else if (mounted) {
           setCategorias(data || []);
         }
       });
+    } else {
+      setCategorias(categoriasProp);
     }
+    return () => { mounted = false; };
   }, [categoriasProp]);
 
   const handleDeleteProducto = (e) => {
     e.preventDefault();
-    const entrada = inputProducto.trim();
+    const entrada = String(inputProducto || '').trim();
     const seleccion = productoSeleccionado;
     let idFinal = '';
 
     if (entrada) {
-      const porId = productos.find(p => p.id === entrada);
+      const porId = productos.find(p => String(p.id) === entrada);
       if (porId) {
         idFinal = porId.id;
       } else {
-        const porNombre = productos.find(p => p.nombre.toLowerCase() === entrada.toLowerCase());
+        const porNombre = productos.find(p => String(p.nombre).toLowerCase() === entrada.toLowerCase());
         if (porNombre) {
           idFinal = porNombre.id;
         } else {
@@ -73,7 +81,7 @@ const DeleteTab = ({
       return;
     }
 
-    onDeleteProducto(idFinal);
+    if (onDeleteProducto) onDeleteProducto(idFinal);
     setInputProducto('');
     setProductoSeleccionado('');
     alert('Producto eliminado');
@@ -81,16 +89,16 @@ const DeleteTab = ({
 
   const handleDeleteProveedor = (e) => {
     e.preventDefault();
-    const entrada = inputProveedor.trim();
+    const entrada = String(inputProveedor || '').trim();
     const seleccion = proveedorSeleccionado;
     let idFinal = '';
 
     if (entrada) {
-      const porId = proveedores.find(p => p.id === entrada);
+      const porId = proveedores.find(p => String(p.id) === entrada);
       if (porId) {
         idFinal = porId.id;
       } else {
-        const porNombre = proveedores.find(p => p.nombre.toLowerCase() === entrada.toLowerCase());
+        const porNombre = proveedores.find(p => String(p.nombre).toLowerCase() === entrada.toLowerCase());
         if (porNombre) {
           idFinal = porNombre.id;
         } else {
@@ -105,7 +113,7 @@ const DeleteTab = ({
       return;
     }
 
-    onDeleteProveedor(idFinal);
+    if (onDeleteProveedor) onDeleteProveedor(idFinal);
     setInputProveedor('');
     setProveedorSeleccionado('');
     alert('Proveedor eliminado');
@@ -113,16 +121,16 @@ const DeleteTab = ({
 
   const handleDeleteCategoria = (e) => {
     e.preventDefault();
-    const entrada = inputCategoria.trim();
+    const entrada = String(inputCategoria || '').trim();
     const seleccion = categoriaSeleccionada;
     let nombreFinal = '';
 
     if (entrada) {
-      const porId = categorias.find(c => c.id === entrada);
+      const porId = categorias.find(c => String(c.id) === entrada);
       if (porId) {
         nombreFinal = porId.nombre;
       } else {
-        const porNombre = categorias.find(c => c.nombre.toLowerCase() === entrada.toLowerCase());
+        const porNombre = categorias.find(c => String(c.nombre).toLowerCase() === entrada.toLowerCase());
         if (porNombre) {
           nombreFinal = porNombre.nombre;
         } else {
@@ -137,14 +145,14 @@ const DeleteTab = ({
       return;
     }
 
-    onDeleteCategoria(nombreFinal);
+    if (onDeleteCategoria) onDeleteCategoria(nombreFinal);
     setInputCategoria('');
     setCategoriaSeleccionada('');
     alert('Categoría eliminada');
   };
 
   return (
-    <>
+    <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
       {/* -------------------- Eliminar Producto -------------------- */}
       <h5>Eliminar Producto</h5>
       <form onSubmit={handleDeleteProducto}>
@@ -215,7 +223,7 @@ const DeleteTab = ({
 
       <hr className="my-4" />
 
-            {/* -------------------- Eliminar Categoría -------------------- */}
+      {/* -------------------- Eliminar Categoría -------------------- */}
       <h5>Eliminar Categoría</h5>
       <form onSubmit={handleDeleteCategoria}>
         <div className="mb-2">
@@ -247,7 +255,7 @@ const DeleteTab = ({
           Eliminar Categoría
         </button>
       </form>
-    </>
+    </div>
   );
 };
 
