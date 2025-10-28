@@ -1,10 +1,10 @@
 // src/components/AdminView.jsx
 import React, { useState } from 'react';
 import InventoryTab from './Admin/InventoryTab';
+import ProvidersTab from './Admin/ProvidersTab'; // ✅ MOVIDO
 import AddTab from './Admin/AddTab';
-import UpdateTab from './Admin/UpdateTab'; // ✅ Reordenado
+import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
-import ProvidersTab from './Admin/ProvidersTab';
 
 const AdminView = ({
   productos,
@@ -45,10 +45,10 @@ const AdminView = ({
   const getTitle = () => {
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
+      case 'providers': return 'Proveedores'; // ✅ MOVIDO
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
-      case 'providers': return 'Proveedores';
       default: return 'Panel Administrador';
     }
   };
@@ -75,10 +75,10 @@ const AdminView = ({
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button> {/* ✅ MOVIDO */}
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button> {/* ✅ Reordenado */}
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
         </div>
       )}
 
@@ -87,6 +87,11 @@ const AdminView = ({
         <li className="nav-item">
           <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>
             Inventario
+          </button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
+            Proveedores
           </button>
         </li>
         <li className="nav-item">
@@ -104,16 +109,14 @@ const AdminView = ({
             Eliminar
           </button>
         </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
-            Proveedores
-          </button>
-        </li>
       </ul>
 
       {/* Renderizado de pestañas */}
       {vistaActiva === 'inventory' && (
         <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />
+      )}
+      {vistaActiva === 'providers' && (
+        <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />
       )}
       {vistaActiva === 'add' && (
         <AddTab
@@ -140,13 +143,6 @@ const AdminView = ({
           onDeleteProducto={onDeleteProducto}
           onDeleteProveedor={onDeleteProveedor}
           onDeleteCategoria={onDeleteCategoria}
-        />
-      )}
-      {vistaActiva === 'providers' && (
-        <ProvidersTab
-          proveedores={proveedores}
-          onAddProveedor={onAddProveedor}
-          onDeleteProveedor={onDeleteProveedor}
         />
       )}
 
