@@ -55,7 +55,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!producto) {
       alert('Primero busca un producto válido.');
@@ -74,25 +74,24 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
       return;
     }
 
-    const productoActualizado = {
-      id: producto.id,
+    const cambios = {
       nombre: formData.nombre.trim(),
       precio,
       cantidad,
       categoria: formData.categoria
     };
 
-      onUpdateProducto(productoActualizado.id, {
-      nombre: productoActualizado.nombre,
-      precio: productoActualizado.precio,
-      cantidad: productoActualizado.cantidad,
-      categoria: productoActualizado.categoria
-    });
-    alert('Producto actualizado con éxito');
-    setBusqueda('');
-    setProductoSeleccionado('');
-    setProducto(null);
-    setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
+    try {
+      await onUpdateProducto(producto.id, cambios);
+      alert('Producto actualizado con éxito');
+      setBusqueda('');
+      setProductoSeleccionado('');
+      setProducto(null);
+      setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
+    } catch (err) {
+      console.error('Error al actualizar producto desde UpdateTab:', err);
+      alert('No se pudo actualizar el producto.');
+    }
   };
 
   const listaCategorias = getListaCategorias();
