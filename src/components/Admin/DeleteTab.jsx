@@ -76,6 +76,7 @@ const DeleteTab = ({
               </option>
             ))}
           </select>
+          <small className="text-muted">Puedes seleccionar o escribir el ID o nombre.</small>
         </div>
         <div className="mb-2">
           <label className="form-label">O escribe el ID o nombre</label>
@@ -110,6 +111,7 @@ const DeleteTab = ({
               </option>
             ))}
           </select>
+          <small className="text-muted">Puedes seleccionar o escribir el ID o nombre.</small>
         </div>
         <div className="mb-2">
           <label className="form-label">O escribe el ID o nombre</label>
@@ -144,6 +146,7 @@ const DeleteTab = ({
               </option>
             ))}
           </select>
+          <small className="text-muted">Puedes seleccionar o escribir el nombre directamente.</small>
         </div>
         <div className="mb-2">
           <label className="form-label">O escribe el nombre</label>
