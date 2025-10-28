@@ -12,10 +12,18 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
   return prods.map(p => {
+    // Si ya tiene el nombre de categoría, mantenerlo
     if (p.categoria_nombre) return p;
 
+    // 1) Si el producto trae directamente la propiedad `categoria` (nombre), usarla
+    if (p.categoria) {
+      return { ...p, categoria_nombre: p.categoria };
+    }
+
+    // 2) Si el producto trae `categoria_id`, buscar el objeto en `cats`
     const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
 
+    // 3) Fallback a "Categoría Desconocida" si no se encuentra
     return {
       ...p,
       categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
