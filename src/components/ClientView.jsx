@@ -1,12 +1,12 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
-import { usePayment } from '../hooks/usePayment'; // ✅ Importa el hook
+import { usePayment } from '../hooks/usePayment'; //  Importa el hook
 import { filtroProductos } from '../utils/helpers';
 
 const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => { // Recibe categorias
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
+  const [showPaymentModal, setShowPaymentModal] = useState(false); //  Estado para el modal de pago
 
   // Normaliza categorias por si viene undefined
   const cats = Array.isArray(categorias) ? categorias : [];
