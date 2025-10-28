@@ -202,12 +202,39 @@ function App() {
     }
   };
 
+  const handleUpdateProducto = async (id, cambios) => {
+  try {
+    if (!id || !cambios || Object.keys(cambios).length === 0) {
+      alert('No se proporcionaron cambios válidos.');
+      return;
+    }
+
+    const { error } = await productService.update(id, cambios); // o supabase.from('productos')...
+
+    if (error) {
+      console.error('Error al actualizar producto:', error);
+      alert('Error al actualizar el producto');
+      return;
+    }
+
+    // Opcional: actualizar estado local si no confías en realtime
+    const updated = await productService.getAll();
+    setProductos(updated);
+
+  } catch (err) {
+    console.error('Excepción en handleUpdateProducto:', err);
+    alert('Error inesperado al actualizar el producto');
+  }
+};
+
   return (
     <div className="container-fluid p-4">
       <div className="d-flex justify-content-center">{renderView()}</div>
       <ForgotPasswordModal show={showForgotModal} onClose={() => setShowForgotModal(false)} />
     </div>
   );
+
+  
 }
 
 export default App;
