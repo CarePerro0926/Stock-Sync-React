@@ -1,13 +1,10 @@
 // src/components/Admin/AddTab.jsx
 import React, { useState } from 'react';
+import MultiSelectDropdown from '../MultiSelectDropdown';
 
-// Función para validar número de teléfono colombiano
 const validarTelefonoColombiano = (telefono) => {
-  if (!telefono || telefono.trim() === '') return true; // Permitir teléfono vacío
-  // Expresión regular para números colombianos (10 dígitos, empiezan con 3)
-  // Acepta formatos como 3123456789, 312 345 6789, 312.345.6789, +57 312 345 6789, etc.
+  if (!telefono || telefono.trim() === '') return true;
   const regex = /^(\+?57)?\s?[3]\d{9}$/;
-  // Remover espacios, guiones y paréntesis para la validación
   const numeroLimpio = telefono.replace(/\s|-|\(|\)/g, '');
   return regex.test(numeroLimpio);
 };
@@ -23,10 +20,10 @@ const AddTab = ({
   const [nuevoProducto, setNuevoProducto] = useState({
     id: '',
     nombre: '',
-    categoria: '', // ← ahora usamos 'categoria' (nombre), no 'categoria_id'
+    categoria: '',
     cantidad: '',
     precio: '',
-    proveedores: [] // Array para almacenar IDs de proveedores seleccionados
+    proveedores: []
   });
 
   const [nuevaCategoria, setNuevaCategoria] = useState('');
@@ -34,10 +31,15 @@ const AddTab = ({
   const [nuevoProveedor, setNuevoProveedor] = useState({
     nombre: '',
     email: '',
-    telefono: '', // Campo de teléfono
+    telefono: '',
     productos: [],
-    categorias: [] // ← guarda nombres de categorías, ej: ["Procesadores", "Boards"]
+    categorias: []
   });
+
+  // Estados para MultiSelectDropdown
+  const [selectedProveedores, setSelectedProveedores] = useState([]);
+  const [productosQueSurte, setProductosQueSurte] = useState([]);
+  const [categoriasQueSurte, setCategoriasQueSurte] = useState([]);
 
   /* ---------- Producto ---------- */
   const handleProductoChange = (e) => {
@@ -50,26 +52,25 @@ const AddTab = ({
     }));
   };
 
-  const toggleProveedorProducto = (proveedorId) => {
-    setNuevoProducto((prev) => {
-      const isSelected = prev.proveedores.includes(proveedorId);
-      return {
-        ...prev,
-        proveedores: isSelected
-          ? prev.proveedores.filter((id) => id !== proveedorId)
-          : [...prev.proveedores, proveedorId]
-      };
-    });
-  };
-
   const handleAddProductoSubmit = (e) => {
     e.preventDefault();
-    const { id, nombre, categoria, cantidad, precio, proveedores: provs } = nuevoProducto;
+    const { id, nombre, categoria, cantidad, precio } = nuevoProducto;
+
+    // Mapear nombres seleccionados a IDs reales
+    const provs = proveedores
+      .filter(p => selectedProveedores.includes(p.nombre))
+      .map(p => p.id);
+
     if (!id || !nombre || !categoria || !cantidad || !precio || provs.length === 0) {
       alert('Por favor completa todos los campos e incluye al menos un proveedor.');
       return;
     }
-    onAddProducto(nuevoProducto);
+
+    onAddProducto({
+      ...nuevoProducto,
+      proveedores: provs
+    });
+
     setNuevoProducto({
       id: '',
       nombre: '',
@@ -78,6 +79,7 @@ const AddTab = ({
       precio: '',
       proveedores: []
     });
+    setSelectedProveedores([]);
   };
 
   /* ---------- Categoría ---------- */
@@ -87,11 +89,8 @@ const AddTab = ({
       alert('Ingresa el nombre de la categoría.');
       return;
     }
-    // CORRECCIÓN: Llamar a onAddCategoria
     if (onAddCategoria) {
       onAddCategoria(nuevaCategoria.trim());
-    } else {
-      console.error("onAddCategoria no está definida");
     }
     setNuevaCategoria('');
   };
@@ -105,62 +104,47 @@ const AddTab = ({
     }));
   };
 
-  const toggleProductoProveedor = (productoId) => {
-    setNuevoProveedor((prev) => {
-      const isSelected = prev.productos.includes(productoId);
-      return {
-        ...prev,
-        productos: isSelected
-          ? prev.productos.filter((id) => id !== productoId)
-          : [...prev.productos, productoId]
-      };
-    });
-  };
-
-  const toggleCategoriaProveedor = (categoriaNombre) => {
-    setNuevoProveedor((prev) => {
-      const isSelected = prev.categorias.includes(categoriaNombre);
-      return {
-        ...prev,
-        categorias: isSelected
-          ? prev.categorias.filter((nombre) => nombre !== categoriaNombre)
-          : [...prev.categorias, categoriaNombre]
-      };
-    });
-  };
-
   const handleAddProveedorSubmit = (e) => {
     e.preventDefault();
-    const { nombre, email, telefono, productos: prods, categorias: cats } = nuevoProveedor;
+    const { nombre, email, telefono } = nuevoProveedor;
 
-    // Validación de campos requeridos
-    if (!nombre || !email || prods.length === 0 || cats.length === 0) {
+    const productosSeleccionados = productos
+      .filter(p => productosQueSurte.includes(p.nombre))
+      .map(p => p.id);
+
+    const categoriasSeleccionadas = categorias
+      .filter(c => categoriasQueSurte.includes(c.nombre))
+      .map(c => c.nombre);
+
+    if (!nombre || !email || productosSeleccionados.length === 0 || categoriasSeleccionadas.length === 0) {
       alert('Completa nombre, correo, al menos un producto y al menos una categoría.');
       return;
     }
 
-    // Validación del teléfono si se ha ingresado
     if (telefono && telefono.trim() !== '') {
-        if (!validarTelefonoColombiano(telefono)) {
-            alert('Por favor ingresa un número de teléfono colombiano válido (10 dígitos, empieza con 3).');
-            return;
-        }
+      if (!validarTelefonoColombiano(telefono)) {
+        alert('Por favor ingresa un número de teléfono colombiano válido.');
+        return;
+      }
     }
 
     onAddProveedor({
       nombre,
       email,
-      telefono, // Incluye el teléfono validado
-      productos: prods,
-      categorias: cats
+      telefono,
+      productos: productosSeleccionados,
+      categorias: categoriasSeleccionadas
     });
+
     setNuevoProveedor({
       nombre: '',
       email: '',
-      telefono: '', // Limpia teléfono también
+      telefono: '',
       productos: [],
       categorias: []
     });
+    setProductosQueSurte([]);
+    setCategoriasQueSurte([]);
   };
 
   return (
@@ -199,15 +183,11 @@ const AddTab = ({
             required
           >
             <option value="">Seleccionar categoría</option>
-            {categorias.length > 0 ? (
-              categorias.map((cat) => (
-                <option key={cat.nombre} value={cat.nombre}>
-                  {cat.nombre}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No hay categorías disponibles</option>
-            )}
+            {categorias.map((cat) => (
+              <option key={cat.nombre} value={cat.nombre}>
+                {cat.nombre}
+              </option>
+            ))}
           </select>
         </div>
         <div className="mb-2">
@@ -232,34 +212,19 @@ const AddTab = ({
             required
           />
         </div>
-        <div className="mb-3">
-          <label className="form-label">Proveedores (selecciona uno o más)</label>
-          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '240px', overflowY: 'auto' }}>
-            {proveedores.length > 0 ? (
-              proveedores.map((prov) => (
-                <div key={prov.id} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`prov-${prov.id}`}
-                    checked={nuevoProducto.proveedores.includes(prov.id)}
-                    onChange={() => toggleProveedorProducto(prov.id)}
-                  />
-                  <label className="form-check-label" htmlFor={`prov-${prov.id}`}>
-                    {prov.nombre}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <small className="text-muted">No hay proveedores disponibles.</small>
-            )}
-          </div>
-        </div>
+        <MultiSelectDropdown
+          label="Proveedores (selecciona uno o más)"
+          options={proveedores.map(p => p.nombre)}
+          selected={selectedProveedores}
+          onChange={setSelectedProveedores}
+        />
         <button type="submit" className="btn btn-success w-100">
           Agregar Producto
         </button>
       </form>
+
       <hr className="my-4" />
+
       {/* -------------------- Agregar Categoría -------------------- */}
       <h5>Agregar Categoría</h5>
       <form onSubmit={handleAddCategoriaSubmit} className="mb-4">
@@ -280,7 +245,9 @@ const AddTab = ({
           </div>
         </div>
       </form>
+
       <hr className="my-4" />
+
       {/* -------------------- Agregar Proveedor -------------------- */}
       <h5>Agregar Proveedor</h5>
       <form onSubmit={handleAddProveedorSubmit}>
@@ -316,52 +283,18 @@ const AddTab = ({
             onChange={handleProveedorChange}
           />
         </div>
-        <div className="mb-3">
-          <label className="form-label">Productos que surte (selecciona uno o más)</label>
-          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {productos.length > 0 ? (
-              productos.map((prod) => (
-                <div key={prod.id} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`prov-prod-${prod.id}`}
-                    checked={nuevoProveedor.productos.includes(prod.id)}
-                    onChange={() => toggleProductoProveedor(prod.id)}
-                  />
-                  <label className="form-check-label" htmlFor={`prov-prod-${prod.id}`}>
-                    {prod.nombre}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <small className="text-muted">No hay productos disponibles.</small>
-            )}
-          </div>
-        </div>
-        <div className="mb-3">
-          <label className="form-label">Categorías que surte (selecciona una o más)</label>
-          <div className="d-flex flex-column gap-2 mt-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {categorias.length > 0 ? (
-              categorias.map((cat) => (
-                <div key={cat.nombre} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`prov-cat-${cat.nombre}`}
-                    checked={nuevoProveedor.categorias.includes(cat.nombre)}
-                    onChange={() => toggleCategoriaProveedor(cat.nombre)}
-                  />
-                  <label className="form-check-label" htmlFor={`prov-cat-${cat.nombre}`}>
-                    {cat.nombre}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <small className="text-muted">No hay categorías disponibles.</small>
-            )}
-          </div>
-        </div>
+        <MultiSelectDropdown
+          label="Productos que surte (selecciona uno o más)"
+          options={productos.map(p => p.nombre)}
+          selected={productosQueSurte}
+          onChange={setProductosQueSurte}
+        />
+        <MultiSelectDropdown
+          label="Categorías que surte (selecciona una o más)"
+          options={categorias.map(c => c.nombre)}
+          selected={categoriasQueSurte}
+          onChange={setCategoriasQueSurte}
+        />
         <button type="submit" className="btn btn-primary w-100">
           Agregar Proveedor
         </button>
