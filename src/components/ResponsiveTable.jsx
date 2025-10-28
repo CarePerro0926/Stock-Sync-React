@@ -19,7 +19,7 @@ const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
             <tr key={i}>
               {headers.map(h => (
                 <td key={h.key} style={{ textAlign: h.align || 'left' }}>
-                  {String(row[h.key] || '—')}
+                  {row[h.key] ?? '—'}
                 </td>
               ))}
             </tr>
