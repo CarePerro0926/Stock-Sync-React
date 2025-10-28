@@ -12,6 +12,7 @@ import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
 import { filtroProductos } from './utils/helpers';
 
+
 function App() {
   const [productos, setProductos] = useState([]);
   const [proveedores, setProveedores] = useState([]);
