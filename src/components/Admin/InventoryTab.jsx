@@ -6,6 +6,18 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
+  useEffect(() => {
+    console.log('--- DATOS EN INVENTORYTAB ---');
+    console.log('Productos recibidos:', productos);
+    console.log('Categorías recibidas:', categorias);
+    if (productos.length > 0) {
+      console.log('Ejemplo de producto:', productos[0]);
+    }
+    if (categorias.length > 0) {
+      console.log('Ejemplo de categoría:', categorias[0]);
+    }
+  }, [productos, categorias]);
+
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = productos
       .map(p => p.categoria_nombre)
@@ -68,6 +80,8 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
     { key: 'cantidad', label: 'Stock', align: 'center' },
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
+
+  console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
     <div>
