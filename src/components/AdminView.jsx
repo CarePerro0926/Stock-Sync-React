@@ -45,7 +45,7 @@ const AdminView = ({
   const getTitle = () => {
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
-      case 'providers': return 'Proveedores'; // ✅ MOVIDO
+      case 'providers': return 'Proveedores'; //  MOVIDO
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
