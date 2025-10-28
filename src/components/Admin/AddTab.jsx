@@ -239,7 +239,7 @@ const AddTab = ({
             />
           </div>
           <div className="col-12 col-md">
-            <button type="submit" className="btn btn-primary w-100">
+            <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
               Agregar Categoría
             </button>
           </div>
