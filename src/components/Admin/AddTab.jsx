@@ -218,7 +218,7 @@ const AddTab = ({
           selected={selectedProveedores}
           onChange={setSelectedProveedores}
         />
-        <button type="submit" className="btn btn-success w-100">
+        <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
           Agregar Producto
         </button>
       </form>
@@ -295,7 +295,7 @@ const AddTab = ({
           selected={categoriasQueSurte}
           onChange={setCategoriasQueSurte}
         />
-        <button type="submit" className="btn btn-primary w-100">
+        <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
           Agregar Proveedor
         </button>
       </form>
