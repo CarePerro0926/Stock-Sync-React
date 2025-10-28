@@ -9,50 +9,50 @@ const DeleteTab = ({
   proveedores = [],
   categorias = []
 }) => {
-  const [idProductoManual, setIdProductoManual] = useState('');
+  const [inputProducto, setInputProducto] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
 
-  const [idProveedorManual, setIdProveedorManual] = useState('');
+  const [inputProveedor, setInputProveedor] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
 
-  const [nombreCategoriaManual, setNombreCategoriaManual] = useState('');
+  const [inputCategoria, setInputCategoria] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
 
   const handleDeleteProducto = (e) => {
     e.preventDefault();
-    const idFinal = idProductoManual.trim() || productoSeleccionado;
-    if (!idFinal) {
-      alert('Selecciona o escribe un ID de producto.');
+    const valor = inputProducto.trim() || productoSeleccionado;
+    if (!valor) {
+      alert('Debes escribir o seleccionar un producto.');
       return;
     }
-    onDeleteProducto(idFinal);
-    setIdProductoManual('');
+    onDeleteProducto(valor);
+    setInputProducto('');
     setProductoSeleccionado('');
     alert('Producto eliminado');
   };
 
   const handleDeleteProveedor = (e) => {
     e.preventDefault();
-    const idFinal = idProveedorManual.trim() || proveedorSeleccionado;
-    if (!idFinal) {
-      alert('Selecciona o escribe un ID de proveedor.');
+    const valor = inputProveedor.trim() || proveedorSeleccionado;
+    if (!valor) {
+      alert('Debes escribir o seleccionar un proveedor.');
       return;
     }
-    onDeleteProveedor(idFinal);
-    setIdProveedorManual('');
+    onDeleteProveedor(valor);
+    setInputProveedor('');
     setProveedorSeleccionado('');
     alert('Proveedor eliminado');
   };
 
   const handleDeleteCategoria = (e) => {
     e.preventDefault();
-    const nombreFinal = nombreCategoriaManual.trim() || categoriaSeleccionada;
-    if (!nombreFinal) {
-      alert('Selecciona o escribe el nombre de la categoría.');
+    const valor = inputCategoria.trim() || categoriaSeleccionada;
+    if (!valor) {
+      alert('Debes escribir o seleccionar una categoría.');
       return;
     }
-    onDeleteCategoria(nombreFinal);
-    setNombreCategoriaManual('');
+    onDeleteCategoria(valor);
+    setInputCategoria('');
     setCategoriaSeleccionada('');
     alert('Categoría eliminada');
   };
@@ -78,12 +78,12 @@ const DeleteTab = ({
           </select>
         </div>
         <div className="mb-2">
-          <label className="form-label">O escribe el ID directamente</label>
+          <label className="form-label">O escribe el ID o nombre</label>
           <input
             className="form-control"
-            placeholder="ID del producto"
-            value={idProductoManual}
-            onChange={(e) => setIdProductoManual(e.target.value)}
+            placeholder="ID o nombre del producto"
+            value={inputProducto}
+            onChange={(e) => setInputProducto(e.target.value)}
           />
         </div>
         <button type="submit" className="btn btn-danger w-100">
@@ -112,12 +112,12 @@ const DeleteTab = ({
           </select>
         </div>
         <div className="mb-2">
-          <label className="form-label">O escribe el ID directamente</label>
+          <label className="form-label">O escribe el ID o nombre</label>
           <input
             className="form-control"
-            placeholder="ID del proveedor"
-            value={idProveedorManual}
-            onChange={(e) => setIdProveedorManual(e.target.value)}
+            placeholder="ID o nombre del proveedor"
+            value={inputProveedor}
+            onChange={(e) => setInputProveedor(e.target.value)}
           />
         </div>
         <button type="submit" className="btn btn-warning w-100">
@@ -146,12 +146,12 @@ const DeleteTab = ({
           </select>
         </div>
         <div className="mb-2">
-          <label className="form-label">O escribe el nombre directamente</label>
+          <label className="form-label">O escribe el nombre</label>
           <input
             className="form-control"
             placeholder="Nombre de la categoría"
-            value={nombreCategoriaManual}
-            onChange={(e) => setNombreCategoriaManual(e.target.value)}
+            value={inputCategoria}
+            onChange={(e) => setInputCategoria(e.target.value)}
           />
         </div>
         <button type="submit" className="btn btn-secondary w-100">
