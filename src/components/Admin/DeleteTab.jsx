@@ -199,7 +199,7 @@ const DeleteTab = ({
             <option value="">—</option>
             {categorias.map(c => (
               <option key={c.id} value={c.nombre}>
-                {c.nombre}
+                {c.nombre} (ID: {c.id})
               </option>
             ))}
           </select>
