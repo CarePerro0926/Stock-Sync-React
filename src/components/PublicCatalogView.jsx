@@ -9,9 +9,13 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   const cats = Array.isArray(categorias) ? categorias : [];
   const prods = Array.isArray(productos) ? productos : [];
 
+  // LOGS DE VERIFICACIÓN
+  console.log("CATEGORIAS RECIBIDAS:", cats);
+  console.log("PRODUCTOS ORIGINALES:", prods);
+
   // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
-    return prods.map(p => {
+    const resultado = prods.map(p => {
       if (p.categoria_nombre) return p;
 
       const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
@@ -20,6 +24,9 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
         categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
       };
     });
+
+    console.log("PRODUCTOS CON NOMBRE DE CATEGORÍA:", resultado);
+    return resultado;
   }, [prods, cats]);
 
   // Filtrar por categoría y texto
