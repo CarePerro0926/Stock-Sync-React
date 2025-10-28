@@ -44,9 +44,9 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   const total = carrito.reduce((sum, item) => sum + item.precio, 0);
 
   const categoriasFiltro = useMemo(() => {
-    const cats = [...new Set(productosConNombreCategoria.map(p => p.categoria))]; // Usar la categoria mapeada
-    return ['Todas', ...cats];
-  }, [productosConNombreCategoria]);
+  const nombres = cats.map(c => c.nombre).filter(Boolean);
+  return ['Todas', ...nombres];
+}, [cats]);
 
   const productosFiltrados = useMemo(() => {
     return filtroProductos(productosConNombreCategoria, filtroTxt, filtroCat); // Usar productos con categoria mapeada
