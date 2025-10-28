@@ -239,7 +239,7 @@ const AddTab = ({
             />
           </div>
           <div className="col-12 col-md">
-            <button type="submit" className="btn btn-info w-100">
+            <button type="submit" className="btn btn-primary w-100">
               Agregar Categoría
             </button>
           </div>
