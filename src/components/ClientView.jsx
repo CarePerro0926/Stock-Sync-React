@@ -223,7 +223,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
                     <option>Diners Club</option>
                   </select>
                 </div>
-                <button onClick={handlePayCardConfirm} className="btn btn-primary w-100">Pagar con tarjeta</button>
+                <button onClick={handlePayCardConfirm} className="btn btn-success me-2">Pagar con tarjeta</button>
               </div>
             </div>
           </div>
