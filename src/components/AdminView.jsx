@@ -4,12 +4,25 @@ import InventoryTab from './Admin/InventoryTab';
 import AddTab from './Admin/AddTab';
 import DeleteTab from './Admin/DeleteTab';
 import ProvidersTab from './Admin/ProvidersTab';
+import UpdateTab from './Admin/UpdateTab'; // ✅ NUEVO
 
-const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaActiva, onAddProducto, onDeleteProducto, onAddProveedor, onAddCategoria, onDeleteCategoria, onDeleteProveedor, onLogout }) => { // <-- Agregamos 'categorias'
-
+const AdminView = ({
+  productos,
+  proveedores,
+  categorias,
+  vistaActiva,
+  setVistaActiva,
+  onAddProducto,
+  onDeleteProducto,
+  onAddProveedor,
+  onAddCategoria,
+  onDeleteCategoria,
+  onDeleteProveedor,
+  onUpdateProducto, // ✅ NUEVO
+  onLogout
+}) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Cerrar menú si se hace click fuera (en móvil)
   const handleClickOutside = (event) => {
     const menu = document.getElementById('adminMenu');
     const button = document.getElementById('btnMenuHamburguesa');
@@ -38,6 +51,7 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
       case 'add': return 'Agregar';
       case 'delete': return 'Eliminar';
       case 'providers': return 'Proveedores';
+      case 'update': return 'Actualizar'; // ✅ NUEVO
       default: return 'Panel Administrador';
     }
   };
@@ -45,6 +59,8 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
   return (
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
+
+      {/* Encabezado móvil */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button
           id="btnMenuHamburguesa"
@@ -57,71 +73,91 @@ const AdminView = ({ productos, proveedores, categorias, vistaActiva, setVistaAc
         </button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
+
+      {/* Menú móvil */}
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button> {/* ✅ NUEVO */}
         </div>
       )}
+
+      {/* Pestañas escritorio */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
         <li className="nav-item">
-          <button
-            className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`}
-            onClick={() => selectTab('inventory')}
-          >
+          <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>
             Inventario
           </button>
         </li>
         <li className="nav-item">
-          <button
-            className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`}
-            onClick={() => selectTab('add')}
-          >
+          <button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>
             Agregar
           </button>
         </li>
         <li className="nav-item">
-          <button
-            className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`}
-            onClick={() => selectTab('delete')}
-          >
+          <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>
             Eliminar
           </button>
         </li>
         <li className="nav-item">
-          <button
-            className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`}
-            onClick={() => selectTab('providers')}
-          >
+          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
             Proveedores
+          </button>
+        </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>
+            Actualizar
           </button>
         </li>
       </ul>
 
-      {/* Renderizar la vista activa */}
-      {console.log("AdminView: Vista activa:", vistaActiva)} {/* <-- Nuevo log */}
+      {/* Renderizado de pestañas */}
       {vistaActiva === 'inventory' && (
-        (() => {
-          console.log("AdminView: Renderizando InventoryTab con props:", { productos, categorias, onDeleteProducto }); // <-- Nuevo log
-          return <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />; // <-- Pasamos 'categorias'
-        })()
+        <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />
       )}
-      {/* Pasamos todas las props necesarias */}
-      {vistaActiva === 'add' && <AddTab
-        onAddProducto={onAddProducto}
-        onAddCategoria={onAddCategoria}
-        onAddProveedor={onAddProveedor}
-        categorias={categorias}
-        productos={productos}
-        proveedores={proveedores}
-      />}
-      {vistaActiva === 'delete' && <DeleteTab productos={productos} onDeleteProducto={onDeleteProducto} />}
-      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />}
+      {vistaActiva === 'add' && (
+        <AddTab
+          onAddProducto={onAddProducto}
+          onAddCategoria={onAddCategoria}
+          onAddProveedor={onAddProveedor}
+          categorias={categorias}
+          productos={productos}
+          proveedores={proveedores}
+        />
+      )}
+      {vistaActiva === 'delete' && (
+        <DeleteTab
+          productos={productos}
+          proveedores={proveedores}
+          categorias={categorias}
+          onDeleteProducto={onDeleteProducto}
+          onDeleteProveedor={onDeleteProveedor}
+          onDeleteCategoria={onDeleteCategoria}
+        />
+      )}
+      {vistaActiva === 'providers' && (
+        <ProvidersTab
+          proveedores={proveedores}
+          onAddProveedor={onAddProveedor}
+          onDeleteProveedor={onDeleteProveedor}
+        />
+      )}
+      {vistaActiva === 'update' && (
+        <UpdateTab
+          productos={productos}
+          categorias={categorias}
+          onUpdateProducto={onUpdateProducto}
+        />
+      )}
 
+      {/* Botón cerrar sesión */}
       <div className="text-end mt-3">
-        <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
+        <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">
+          Cerrar Sesión
+        </button>
       </div>
     </div>
   );
