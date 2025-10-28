@@ -182,7 +182,7 @@ const UpdateTab = ({ productos, onUpdateProducto, categorias }) => {
               </select>
             </div>
           </div>
-          <button type="submit" className="btn btn-primary w-100">
+          <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
             Actualizar Producto
           </button>
         </form>
