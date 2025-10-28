@@ -1,6 +1,6 @@
 // src/components/PublicCatalogView.jsx
 import React, { useState, useMemo } from 'react';
-import ResponsiveTable from './ResponsiveTable'; // Ajusta la ruta si es diferente
+import ResponsiveTable from './ResponsiveTable'; // Asegúrate que la ruta sea correcta
 
 export default function PublicCatalogView({ productos = [], categorias = [], onBack }) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
@@ -15,7 +15,7 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
       const categoria = cats.find(c => String(c.id) === String(p.categoria_id));
       return {
         ...p,
-        categoria_nombre: categoria?.nombre || 'Categoría Desconocida'
+        categoria_nombre: categoria?.nombre || 'Sin Categoría'
       };
     });
   }, [prods, cats]);
@@ -30,7 +30,6 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
     });
   }, [productosConNombreCategoria, categoriaSeleccionada, textoBusqueda]);
 
-  // Cabeceras para la tabla
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Nombre' },
@@ -39,7 +38,6 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  // Datos para la tabla
   const tableData = productosFiltrados.map(p => ({
     id: p.id ?? '—',
     nombre: p.nombre ?? 'Sin nombre',
@@ -51,12 +49,14 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   }));
 
   return (
-    <div className="w-100">
-      <div className="mb-3 d-flex align-items-end gap-2">
-        <div style={{ flex: 1 }}>
+    <div className="card p-4">
+      <h5 className="mb-3">Catálogo Público</h5>
+
+      <div className="row g-2 mb-3">
+        <div className="col-md-4">
           <label className="form-label">Filtrar por categoría</label>
           <select
-            className="form-control"
+            className="form-select"
             value={categoriaSeleccionada}
             onChange={e => setCategoriaSeleccionada(e.target.value)}
           >
@@ -69,7 +69,7 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
           </select>
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div className="col-md-4">
           <label className="form-label">Buscar por nombre</label>
           <input
             type="text"
@@ -80,9 +80,9 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
           />
         </div>
 
-        <div>
+        <div className="col-md-4 d-flex align-items-end">
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary w-100"
             onClick={() => {
               setCategoriaSeleccionada('');
               setTextoBusqueda('');
@@ -94,17 +94,15 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
         </div>
       </div>
 
-      <div>
-        {tableData.length === 0 ? (
-          <p className="text-muted">No hay productos disponibles.</p>
-        ) : (
-          <ResponsiveTable
-            headers={tableHeaders}
-            data={tableData}
-            maxHeight="400px"
-          />
-        )}
-      </div>
+      {tableData.length === 0 ? (
+        <p className="text-muted">No hay productos disponibles.</p>
+      ) : (
+        <ResponsiveTable
+          headers={tableHeaders}
+          data={tableData}
+          maxHeight="400px"
+        />
+      )}
     </div>
   );
 }
