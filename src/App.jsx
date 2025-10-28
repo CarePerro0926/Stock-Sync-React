@@ -215,9 +215,18 @@ function App() {
         console.log('tipo cantidad antes de enviar:', typeof cambios.cantidad, cambios.cantidad);
       }
 
-      const { data } = await productService.update(id, cambios);
+      const result = await productService.update(id, cambios);
 
-      console.log('productService.update result -> data:', data);
+      console.log('productService.update result ->', result);
+
+      if (result?.error) {
+        console.error('productService.update returned error:', result.error);
+        alert('Error al actualizar el producto: ' + (result.error.message || JSON.stringify(result.error)));
+        return;
+      }
+
+      const { data } = result;
+
       if (!data || data.length === 0) {
         console.warn('Update no afectó filas. Verificar id, RLS y nombres de columna.');
         alert('No se pudo actualizar el producto.');
@@ -229,7 +238,7 @@ function App() {
       return true;
     } catch (err) {
       console.error('Excepción en handleUpdateProducto:', err);
-      alert('Error inesperado al actualizar el producto');
+      alert('Error inesperado al actualizar el producto: ' + (err.message || String(err)));
     }
   };
 
