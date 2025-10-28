@@ -40,7 +40,7 @@ const RegisterView = ({ onShowLogin }) => {
       const { error } = await supabase.from('usuarios').insert({
         username: user,
         pass: pass,
-        role: role === 'admin' ? 'admin' : 'client', // ajustar según tu esquema
+        role: role === 'admin' ? 'admin' : 'client', 
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         cedula: formData.cedula,
