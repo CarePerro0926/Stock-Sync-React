@@ -1,3 +1,4 @@
+// src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import ResponsiveTable from '../ResponsiveTable'; // Asegúrate que la ruta sea correcta
 
@@ -112,11 +113,12 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
         </div>
       </div>
 
-      <ResponsiveTable
-        headers={tableHeaders}
-        data={tableData}
-        maxHeight="250px"
-      />
+      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <ResponsiveTable
+          headers={tableHeaders}
+          data={tableData}
+        />
+      </div>
     </div>
   );
 };
