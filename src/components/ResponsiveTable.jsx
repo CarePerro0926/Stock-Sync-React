@@ -1,26 +1,14 @@
+// src/components/ResponsiveTable.jsx
 import React from 'react';
 
-const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
+const ResponsiveTable = ({ headers, data }) => {
   return (
-    <div
-      className="table-responsive"
-      style={{
-        maxHeight,
-        overflowY: 'auto',
-        overflowX: 'auto' // ← permite scroll horizontal solo si es necesario
-      }}
-    >
+    <div className="table-responsive">
       <table className="table table-striped table-sm table-bordered">
         <thead className="table-light">
           <tr>
             {headers.map(h => (
-              <th
-                key={h.key}
-                style={{
-                  textAlign: h.align || 'left',
-                  whiteSpace: 'nowrap' // ← evita que el texto se rompa en móviles
-                }}
-              >
+              <th key={h.key} style={{ textAlign: h.align || 'left', whiteSpace: 'nowrap' }}>
                 {h.label}
               </th>
             ))}
@@ -34,7 +22,7 @@ const ResponsiveTable = ({ headers, data, maxHeight = 'auto' }) => {
                   key={h.key}
                   style={{
                     textAlign: h.align || 'left',
-                    whiteSpace: 'nowrap', // ← mantiene la celda compacta
+                    whiteSpace: 'nowrap',
                     verticalAlign: 'middle'
                   }}
                 >
