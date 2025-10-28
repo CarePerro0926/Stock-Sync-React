@@ -46,7 +46,7 @@ const UpdateTab = ({ productos, categorias }) => {
     setFormData({
       nombre: encontrado.nombre || '',
       precio: encontrado.precio || '',
-      cantidad: encontrado.stock || '', // ← usa stock como fuente
+      cantidad: encontrado.stock || '',
       categoria: encontrado.categoria || ''
     });
   };
@@ -76,15 +76,25 @@ const UpdateTab = ({ productos, categorias }) => {
       return;
     }
 
+    console.log('Actualizando producto con:', {
+      id: producto.id,
+      nombre: formData.nombre.trim(),
+      precio,
+      stock: cantidad,
+      categoria: formData.categoria
+    });
+
     const { error } = await supabase
-      .from('productos') // ← nombre exacto de la tabla
+      .from('productos')
       .update({
         nombre: formData.nombre.trim(),
         precio,
-        stock: cantidad, // ← actualiza como "stock"
+        stock: cantidad,
         categoria: formData.categoria
       })
-      .eq('id', producto.id); // ← campo identificador
+      .eq('id', producto.id);
+
+    console.log('Respuesta de Supabase:', error);
 
     if (error) {
       alert('Error al actualizar el producto: ' + error.message);
