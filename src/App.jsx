@@ -209,9 +209,17 @@ function App() {
         return;
       }
 
+      // Logs para depuración: confirma id, payload y tipos
+      console.log('handleUpdateProducto -> id:', id, 'cambios:', cambios);
+      if (typeof cambios.cantidad !== 'undefined') {
+        console.log('tipo cantidad antes de enviar:', typeof cambios.cantidad, cambios.cantidad);
+      }
+
       const { data } = await productService.update(id, cambios);
 
+      console.log('productService.update result -> data:', data);
       if (!data || data.length === 0) {
+        console.warn('Update no afectó filas. Verificar id, RLS y nombres de columna.');
         alert('No se pudo actualizar el producto.');
         return;
       }
