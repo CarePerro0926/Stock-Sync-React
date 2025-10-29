@@ -85,15 +85,16 @@ const UpdateTab = ({ productos, categorias }) => {
       categoria: formData.categoria
     });
 
-    const { error } = await supabase
-      .from('productos')
-      .update({
-        nombre: formData.nombre.trim(),
-        precio,
-        cantidad,
-        categoria: formData.categoria
-      })
-      .eq('id', producto.id);
+      const { error } = await supabase
+    .from('productos')
+    .update({
+      nombre: formData.nombre.trim(),
+      precio,
+      cantidad,
+      categoria_id: formData.categoria // ✅ campo válido
+    })
+    .eq('id', producto.id);
+    
 
     console.log('Respuesta de Supabase:', error);
 
