@@ -18,8 +18,8 @@ const AdminView = ({
   onAddCategoria,
   onDeleteCategoria,
   onDeleteProveedor,
-  onUpdateProducto,
-  onLogout
+  onLogout,
+  onUpdateSuccess
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -57,7 +57,6 @@ const AdminView = ({
     <div className="card p-4">
       <h4 className="mb-3">Panel Administrador</h4>
 
-      {/* Encabezado móvil */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button
           id="btnMenuHamburguesa"
@@ -71,18 +70,16 @@ const AdminView = ({
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
 
-      {/* Menú móvil */}
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button> {/* ✅ MOVIDO */}
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
         </div>
       )}
 
-      {/* Pestañas escritorio */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
         <li className="nav-item">
           <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>
@@ -111,7 +108,6 @@ const AdminView = ({
         </li>
       </ul>
 
-      {/* Renderizado de pestañas */}
       {vistaActiva === 'inventory' && (
         <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />
       )}
@@ -132,7 +128,7 @@ const AdminView = ({
         <UpdateTab
           productos={productos}
           categorias={categorias}
-          onUpdateProducto={onUpdateProducto}
+          onUpdateSuccess={onUpdateSuccess}
         />
       )}
       {vistaActiva === 'delete' && (
@@ -146,7 +142,6 @@ const AdminView = ({
         />
       )}
 
-      {/* Botón cerrar sesión */}
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">
           Cerrar Sesión

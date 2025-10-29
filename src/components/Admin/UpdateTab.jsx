@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
-
-const UpdateTab = ({ productos, categorias }) => {
+const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
   const [busqueda, setBusqueda] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [producto, setProducto] = useState(null);
@@ -42,7 +41,6 @@ const UpdateTab = ({ productos, categorias }) => {
       return;
     }
 
-    console.log('Resultado de búsqueda:', encontrado);
     setProducto(encontrado);
     setFormData({
       nombre: encontrado.nombre || '',
@@ -77,14 +75,6 @@ const UpdateTab = ({ productos, categorias }) => {
       return;
     }
 
-    console.log('Actualizando producto con:', {
-      id: producto.id,
-      nombre: formData.nombre.trim(),
-      precio,
-      cantidad,
-      categoria_id: formData.categoria
-    });
-
     const { error } = await supabase
       .from('productos')
       .update({
@@ -95,14 +85,17 @@ const UpdateTab = ({ productos, categorias }) => {
       })
       .eq('id', producto.id);
 
-    console.log('Respuesta de Supabase:', error);
-
     if (error) {
       alert('Error al actualizar el producto: ' + error.message);
       return;
     }
 
     alert('Producto actualizado correctamente.');
+
+    if (onUpdateSuccess && typeof onUpdateSuccess === 'function') {
+      onUpdateSuccess();
+    }
+
     setBusqueda('');
     setProductoSeleccionado('');
     setProducto(null);
