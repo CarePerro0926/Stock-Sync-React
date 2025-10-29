@@ -51,6 +51,31 @@ function App() {
     cargarDatos();
   }, []);
 
+
+  // -------------------------
+// Sincronización en tiempo real de productos (INSERT / UPDATE / DELETE)
+// -------------------------
+useEffect(() => {
+  if (!supabase) return;
+
+  const canal = supabase
+    .channel('realtime-productos')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'productos' }, payload => {
+      setProductos(prev => [payload.new, ...prev.filter(p => p.id !== payload.new.id)]);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'productos' }, payload => {
+      setProductos(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'productos' }, payload => {
+      setProductos(prev => prev.filter(p => p.id !== payload.old.id));
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(canal);
+  };
+}, []);
+
   const handleLogin = (usr) => {
     if (!usr) {
       alert('Usuario/clave inválidos');
