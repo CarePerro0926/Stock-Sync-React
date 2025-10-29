@@ -22,6 +22,7 @@ const RegisterView = ({ onShowLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { role, email, user, pass, fecha, ...rest } = formData;
+    
 
     // Validación de correo para admin
     if (role === 'admin' && !email.toLowerCase().endsWith('@stocksync.com')) {
