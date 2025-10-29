@@ -1,7 +1,6 @@
 // src/components/Admin/UpdateTab.jsx
 import React, { useState } from 'react';
-import { supabase } from "../../../supabaseClient";
-
+import { supabase } from '../../services/supabaseClient';
 
 
 const UpdateTab = ({ productos, categorias }) => {
