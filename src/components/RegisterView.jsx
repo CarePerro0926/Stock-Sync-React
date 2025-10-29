@@ -21,7 +21,7 @@ const RegisterView = ({ onShowLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { role, email, user, pass, ...rest } = formData;
+    const { role, email, user, pass, fecha, ...rest } = formData;
 
     // Validación de correo para admin
     if (role === 'admin' && !email.toLowerCase().endsWith('@stocksync.com')) {
@@ -30,28 +30,41 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     // Validar campos obligatorios
-    if (Object.values(rest).some(v => !v) || !user || !pass || !email) {
+    if (Object.values(rest).some(v => !v) || !user || !pass || !email || !fecha) {
       alert('Completa todos los campos');
       return;
     }
 
+    // Validar formato de fecha
+    const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+    if (!fechaValida) {
+      alert('Formato de fecha inválido. Usa el selector de fecha.');
+      return;
+    }
+
+    // Validar que la fecha no sea futura
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fecha > hoy) {
+      alert('La fecha de nacimiento no puede ser futura.');
+      return;
+    }
+
     try {
-      // Guardar directamente en Supabase
       const { error } = await supabase.from('usuarios').insert({
         username: user,
         pass: pass,
-        role: role === 'admin' ? 'admin' : 'client', // ajustar según tu esquema
+        role: role === 'admin' ? 'admin' : 'client',
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         cedula: formData.cedula,
-        fecha_nacimiento: formData.fecha,
+        fecha_nacimiento: fecha,
         email: formData.email
       });
 
       if (error) throw error;
 
       alert('Usuario registrado con éxito');
-      onShowLogin(); // Volver al login
+      onShowLogin();
     } catch (error) {
       console.error('Error al registrar:', error);
       alert('Error al crear el usuario. Inténtalo de nuevo.');
