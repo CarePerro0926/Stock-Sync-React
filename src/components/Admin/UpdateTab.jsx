@@ -90,12 +90,11 @@ const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
       return;
     }
 
-    alert('Producto actualizado correctamente.');
-
-    if (onUpdateSuccess && typeof onUpdateSuccess === 'function') {
-      onUpdateSuccess();
+    if (onUpdateSuccess) {
+      onUpdateSuccess(); // 🔁 sincroniza el estado global
     }
 
+    alert('Producto actualizado correctamente.');
     setBusqueda('');
     setProductoSeleccionado('');
     setProducto(null);
