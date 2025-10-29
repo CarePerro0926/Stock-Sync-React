@@ -1,12 +1,5 @@
 // src/utils/seedDatabase.js
-import { createClient } from '@supabase/supabase-js';
-
-// Reemplaza con tus credenciales de Supabase
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
-
+import { supabase } from '../services/supabaseClient'; // ✅ Importa la instancia ya creada
 // Tus datos iniciales (puedes importarlos desde initialData.js)
 import { initialUsuarios, initialProductos, initialProveedores } from '../data/initialData';
 
