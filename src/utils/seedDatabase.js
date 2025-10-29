@@ -1,5 +1,5 @@
 // src/utils/seedDatabase.js
-import { supabase } from '../services/supabaseClient'; // ✅ Importa la instancia ya creada
+import { supabase } from '@/services/supabaseClient'; // ✅ Importa la instancia ya creada
 // Tus datos iniciales (puedes importarlos desde initialData.js)
 import { initialUsuarios, initialProductos, initialProveedores } from '../data/initialData';
 

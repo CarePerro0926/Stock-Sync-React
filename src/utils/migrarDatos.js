@@ -1,5 +1,5 @@
 // src/utils/migrarDatos.js
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 import { initialProveedores, initialProductos, initialUsuarios } from '../data/initialData';
 
 export async function migrarDatos() {

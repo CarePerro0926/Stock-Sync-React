@@ -1,6 +1,6 @@
 // src/components/Admin/DeleteTab.jsx
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../services/supabaseClient';  // Ajusta la ruta según tu estructura
+import { supabase } from '@/services/supabaseClient';  // Ajusta la ruta según tu estructura
 
 const DeleteTab = ({
   onDeleteProducto,

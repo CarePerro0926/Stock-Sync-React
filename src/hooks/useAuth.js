@@ -1,5 +1,5 @@
 // src/hooks/useAuth.js
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 export const useAuth = () => {
   const validarUsuario = async (user, pass) => {

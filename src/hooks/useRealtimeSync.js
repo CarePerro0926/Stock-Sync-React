@@ -1,6 +1,6 @@
 // src/hooks/useRealtimeSync.js
 import { useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '@/services/supabaseClient';
 
 const useRealtimeSync = (table, setState) => {
   useEffect(() => {
