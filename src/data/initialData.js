@@ -64,9 +64,12 @@ initialCategorias.forEach(cat => {
   categoriaMap[cat.nombre] = cat.id;
 });
 
-// Agregar categoria_id y categoria_nombre a cada producto
+// Crear productos con campos válidos
 export const initialProductos = productosOriginales.map(p => ({
-  ...p,
+  id: p.id,
+  nombre: p.nombre,
+  cantidad: p.cantidad,
+  precio: p.precio,
   categoria_id: categoriaMap[p.categoria] || null,
   categoria_nombre: p.categoria || 'Sin Categoría'
 }));
@@ -76,5 +79,5 @@ export const filtrarProductosPorCategoria = (categoria) => {
   if (!categoria || categoria === 'Todas') {
     return initialProductos;
   }
-  return initialProductos.filter(producto => producto.categoria === categoria);
+  return initialProductos.filter(producto => producto.categoria_nombre === categoria);
 };
