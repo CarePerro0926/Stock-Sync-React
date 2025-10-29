@@ -15,11 +15,10 @@ const UpdateTab = ({ productos, categorias }) => {
 
   const getListaCategorias = () => {
     if (!categorias || !Array.isArray(categorias)) return [];
-    return categorias.map(cat => {
-      if (typeof cat === 'string') return cat;
-      if (typeof cat === 'object' && cat.nombre) return cat.nombre;
-      return String(cat);
-    });
+    return categorias.map(cat => ({
+      id: cat.id,
+      nombre: cat.nombre
+    }));
   };
 
   const handleBuscar = (e) => {
@@ -42,13 +41,13 @@ const UpdateTab = ({ productos, categorias }) => {
       return;
     }
 
-    console.log('Resultado de búsqueda:', encontrado); // ← Diagnóstico clave
+    console.log('Resultado de búsqueda:', encontrado);
     setProducto(encontrado);
     setFormData({
       nombre: encontrado.nombre || '',
       precio: encontrado.precio || '',
       cantidad: encontrado.cantidad || '',
-      categoria: encontrado.categoria || ''
+      categoria: encontrado.categoria_id || ''
     });
   };
 
@@ -82,19 +81,18 @@ const UpdateTab = ({ productos, categorias }) => {
       nombre: formData.nombre.trim(),
       precio,
       cantidad,
-      categoria: formData.categoria
+      categoria_id: formData.categoria
     });
 
-      const { error } = await supabase
-    .from('productos')
-    .update({
-      nombre: formData.nombre.trim(),
-      precio,
-      cantidad,
-      categoria_id: formData.categoria // ✅ campo válido
-    })
-    .eq('id', producto.id);
-    
+    const { error } = await supabase
+      .from('productos')
+      .update({
+        nombre: formData.nombre.trim(),
+        precio,
+        cantidad,
+        categoria_id: formData.categoria
+      })
+      .eq('id', producto.id);
 
     console.log('Respuesta de Supabase:', error);
 
@@ -197,7 +195,7 @@ const UpdateTab = ({ productos, categorias }) => {
               >
                 <option value="">Selecciona una categoría</option>
                 {listaCategorias.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                 ))}
               </select>
             </div>
