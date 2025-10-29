@@ -11,6 +11,7 @@ import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
 import { filtroProductos } from './utils/helpers';
+import { supabase } from './services/supabaseClient';
 
 function App() {
   const [productos, setProductos] = useState([]);
@@ -22,7 +23,6 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // 👇 NUEVA FUNCIÓN: recargar productos desde la base de datos
   const recargarProductos = async () => {
     const data = await productService.getAll();
     setProductos(data);
@@ -51,30 +51,45 @@ function App() {
     cargarDatos();
   }, []);
 
+  // 🔁 Canal realtime: productos
+  useEffect(() => {
+    const canalProductos = supabase
+      .channel('realtime-productos')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => [payload.new, ...prev.filter(p => p.id !== payload.new.id)]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => prev.filter(p => p.id !== payload.old.id));
+      })
+      .subscribe();
 
-  // -------------------------
-// Sincronización en tiempo real de productos (INSERT / UPDATE / DELETE)
-// -------------------------
-useEffect(() => {
-  if (!supabase) return;
+    return () => {
+      supabase.removeChannel(canalProductos);
+    };
+  }, []);
 
-  const canal = supabase
-    .channel('realtime-productos')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'productos' }, payload => {
-      setProductos(prev => [payload.new, ...prev.filter(p => p.id !== payload.new.id)]);
-    })
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'productos' }, payload => {
-      setProductos(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
-    })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'productos' }, payload => {
-      setProductos(prev => prev.filter(p => p.id !== payload.old.id));
-    })
-    .subscribe();
+  // 🔁 Canal realtime: proveedores
+  useEffect(() => {
+    const canalProveedores = supabase
+      .channel('realtime-proveedores')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => [payload.new, ...prev]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => prev.filter(p => p.id !== payload.old.id));
+      })
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(canal);
-  };
-}, []);
+    return () => {
+      supabase.removeChannel(canalProveedores);
+    };
+  }, []);
 
   const handleLogin = (usr) => {
     if (!usr) {
@@ -97,7 +112,6 @@ useEffect(() => {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
-    console.log("App.jsx: Renderizando vista:", vistaActual);
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
@@ -108,7 +122,6 @@ useEffect(() => {
       case 'client':
         return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
       case 'admin':
-        console.log("App.jsx: Cargando AdminView con props:", { productos, categorias, vistaAdminActiva });
         return (
           <AdminView
             productos={productos}
@@ -123,7 +136,7 @@ useEffect(() => {
             onDeleteCategoria={handleDeleteCategoria}
             onDeleteProveedor={handleDeleteProveedor}
             onLogout={handleLogout}
-            onUpdateSuccess={recargarProductos} // 👈 ESTA ES LA LÍNEA CLAVE
+            onUpdateSuccess={recargarProductos}
           />
         );
       default:
@@ -135,8 +148,7 @@ useEffect(() => {
     try {
       const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
       if (!categoriaSeleccionada) {
-        alert('Categoría no encontrada en la base de datos. Por favor, agréguela primero o seleccione una existente.');
-        console.error("Categoría no encontrada para el nombre:", nuevoProducto.categoria);
+        alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
         return;
       }
 
@@ -146,8 +158,6 @@ useEffect(() => {
       };
 
       await productService.create(productoParaInsertar);
-      const updated = await productService.getAll();
-      setProductos(updated);
     } catch (error) {
       console.error('Error al crear producto:', error);
       alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
@@ -157,7 +167,6 @@ useEffect(() => {
   const handleDeleteProducto = async (id) => {
     try {
       await productService.remove(id);
-      setProductos(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       console.error('Error al eliminar producto:', error);
       alert('Error al eliminar el producto');
@@ -168,7 +177,7 @@ useEffect(() => {
     try {
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
-        if (!(cleaned.length === 10 && cleaned.startsWith('3')) && 
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
             !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
@@ -176,8 +185,6 @@ useEffect(() => {
       }
 
       await providerService.create(nuevoProveedor);
-      const updated = await providerService.getAll();
-      setProveedores(updated);
     } catch (error) {
       console.error('Error al crear proveedor:', error);
       alert('Error al crear el proveedor: ' + (error.message || 'Desconocido'));
@@ -187,7 +194,6 @@ useEffect(() => {
   const handleDeleteProveedor = async (id) => {
     try {
       await providerService.remove(id);
-      setProveedores(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       console.error('Error al eliminar proveedor:', error);
       alert('Error al eliminar el proveedor');
