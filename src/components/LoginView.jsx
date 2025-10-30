@@ -14,7 +14,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     try {
       let emailToUse = identifier.trim();
 
-      // Si el identificador no es un correo, buscar por username en tabla usuarios
+      // Si no es un correo, buscar el correo asociado al username
       if (!identifier.includes('@')) {
         const { data, error } = await supabase
           .from('usuarios')
@@ -22,9 +22,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           .eq('username', identifier.trim())
           .single();
 
-        if (error || !data) {
-          console.warn('Usuario no encontrado en tabla usuarios');
-        } else {
+        if (data?.email) {
           emailToUse = data.email;
         }
       }
@@ -36,8 +34,8 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       });
 
       if (authData?.user) {
-        // Buscar perfil en tabla usuarios
-        const { data: userData, error: userError } = await supabase
+        // Login con Auth exitoso → buscar perfil en tabla usuarios
+        const { data: userData } = await supabase
           .from('usuarios')
           .select('username, role')
           .eq('id', authData.user.id)
@@ -54,7 +52,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         return;
       }
 
-      // Si falla Auth, intentar login local con tabla usuarios
+      // Si Auth falla, intentar login local con tabla usuarios
       const { data: localUser, error: localError } = await supabase
         .from('usuarios')
         .select('*')
