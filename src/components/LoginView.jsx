@@ -1,6 +1,5 @@
 // src/components/LoginView.jsx
 import React, { useState } from 'react';
-// Cambiado: importar como exportación por defecto
 import { supabase } from '@/services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
@@ -15,7 +14,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     try {
       let emailToUse = identifier.trim();
 
-      // Si el identificador no es un correo, buscar por username
+      // Si el identificador no es un correo, buscar por username en tabla usuarios
       if (!identifier.includes('@')) {
         const { data, error } = await supabase
           .from('usuarios')
@@ -24,48 +23,57 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           .single();
 
         if (error || !data) {
-          alert('Usuario no encontrado');
-          setLoading(false);
-          return;
+          console.warn('Usuario no encontrado en tabla usuarios');
+        } else {
+          emailToUse = data.email;
         }
-        emailToUse = data.email;
       }
 
-      // Intentar iniciar sesión con Supabase Auth
+      // Intentar login con Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailToUse,
         password: password.trim(),
       });
 
-      if (authError) {
-        alert('Credenciales incorrectas');
-        setLoading(false);
+      if (authData?.user) {
+        // Buscar perfil en tabla usuarios
+        const { data: userData, error: userError } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', authData.user.id)
+          .single();
+
+        const usr = {
+          id: authData.user.id,
+          email: authData.user.email,
+          username: userData?.username || authData.user.email.split('@')[0],
+          role: userData?.role || 'cliente',
+        };
+
+        onLogin(usr);
         return;
       }
 
-      // Obtener datos adicionales del usuario desde tu tabla 'usuarios'
-      const { data: userData, error: userError } = await supabase
+      // Si falla Auth, intentar login local con tabla usuarios
+      const { data: localUser, error: localError } = await supabase
         .from('usuarios')
-        .select('username, role')
-        .eq('id', authData.user.id)
+        .select('*')
+        .or(`email.eq.${identifier.trim()},username.eq.${identifier.trim()}`)
+        .eq('pass', password.trim())
         .single();
 
-      if (userError) {
-        console.error('Error al cargar perfil:', userError);
-        alert('No se pudo cargar tu perfil. Contacta al administrador.');
-        setLoading(false);
+      if (localError || !localUser) {
+        alert('Credenciales incorrectas');
         return;
       }
 
-      // Crear el objeto de usuario para la aplicación
       const usr = {
-        id: authData.user.id,
-        email: authData.user.email,
-        username: userData?.username || authData.user.email.split('@')[0],
-        role: userData?.role || 'cliente', // Usa 'cliente' como fallback
+        id: localUser.id,
+        email: localUser.email,
+        username: localUser.username,
+        role: localUser.role || 'cliente',
       };
 
-      // Llamar a la función de login pasada desde App.jsx
       onLogin(usr);
     } catch (err) {
       console.error('Error inesperado:', err);
