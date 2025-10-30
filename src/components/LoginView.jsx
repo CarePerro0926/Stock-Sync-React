@@ -28,10 +28,17 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       }
 
       // Intentar login con Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password: password.trim(),
-      });
+        let authData = null;
+        let authError = null;
+
+        if (emailToUse.includes('@')) {
+          const result = await supabase.auth.signInWithPassword({
+            email: emailToUse,
+            password: password.trim(),
+          });
+          authData = result.data;
+          authError = result.error;
+        }
 
       if (authData?.user) {
         // Login con Auth exitoso → buscar perfil en tabla usuarios
