@@ -22,7 +22,6 @@ const RegisterView = ({ onShowLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { role, email, user, pass, fecha, ...rest } = formData;
-    
 
     // Validación de correo para admin
     if (role === 'admin' && !email.toLowerCase().endsWith('@stocksync.com')) {
@@ -51,24 +50,48 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     try {
-      const { error } = await supabase.from('usuarios').insert({
-        username: user,
-        pass: pass,
-        role: role === 'admin' ? 'admin' : 'client',
+      // 1. Registrar en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.pass.trim()
+      });
+
+      if (authError) {
+        console.error('Error Auth:', authError.message);
+        alert(`Error al registrar: ${authError.message}`);
+        return;
+      }
+
+      const userId = authData?.user?.id;
+      if (!userId) {
+        alert('No se pudo obtener el ID del usuario registrado.');
+        return;
+      }
+
+      // 2. Insertar perfil en tabla usuarios
+      const { error: insertError } = await supabase.from('usuarios').insert({
+        id: userId, // ← vincula con auth.users
+        email: formData.email,
+        username: formData.user,
+        pass: formData.pass, // opcional
+        role: role === 'admin' ? 'administrador' : 'cliente',
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         cedula: formData.cedula,
-        fecha_nacimiento: fecha,
-        email: formData.email
+        fecha_nacimiento: formData.fecha
       });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Error al insertar perfil:', insertError.message);
+        alert(`Error al guardar perfil: ${insertError.message}`);
+        return;
+      }
 
       alert('Usuario registrado con éxito');
       onShowLogin();
     } catch (error) {
-      console.error('Error al registrar:', error);
-      alert('Error al crear el usuario. Inténtalo de nuevo.');
+      console.error('Error inesperado:', error);
+      alert('Error inesperado. Revisa la consola.');
     }
   };
 
@@ -76,21 +99,21 @@ const RegisterView = ({ onShowLogin }) => {
     <div className="card mx-auto p-4" style={{ maxWidth: '400px' }}>
       <h4 className="mb-3">Registro de Usuario</h4>
       <form onSubmit={handleSubmit}>
-        <input name="nombres" id="regNombres" className="form-control mb-2" placeholder="Nombres" value={formData.nombres} onChange={handleChange} />
-        <input name="apellidos" id="regApellidos" className="form-control mb-2" placeholder="Apellidos" value={formData.apellidos} onChange={handleChange} />
-        <input name="cedula" id="regCedula" className="form-control mb-2" placeholder="Cédula" value={formData.cedula} onChange={handleChange} />
-        <label htmlFor="regFecha" className="form-label">Fecha de Nacimiento</label>
-        <input name="fecha" id="regFecha" type="date" className="form-control mb-2" value={formData.fecha} onChange={handleChange} />
-        <input name="email" id="regEmail" type="email" className="form-control mb-2" placeholder="Correo Electrónico" value={formData.email} onChange={handleChange} />
-        <input name="user" id="regUser" className="form-control mb-2" placeholder="Nombre de Usuario" value={formData.user} onChange={handleChange} />
-        <input name="pass" id="regPass" type="password" className="form-control mb-2" placeholder="Contraseña" value={formData.pass} onChange={handleChange} />
-        <select name="role" id="regRole" className="form-select mb-3" value={formData.role} onChange={handleChange}>
+        <input name="nombres" className="form-control mb-2" placeholder="Nombres" value={formData.nombres} onChange={handleChange} />
+        <input name="apellidos" className="form-control mb-2" placeholder="Apellidos" value={formData.apellidos} onChange={handleChange} />
+        <input name="cedula" className="form-control mb-2" placeholder="Cédula" value={formData.cedula} onChange={handleChange} />
+        <label className="form-label">Fecha de Nacimiento</label>
+        <input name="fecha" type="date" className="form-control mb-2" value={formData.fecha} onChange={handleChange} />
+        <input name="email" type="email" className="form-control mb-2" placeholder="Correo Electrónico" value={formData.email} onChange={handleChange} />
+        <input name="user" className="form-control mb-2" placeholder="Nombre de Usuario" value={formData.user} onChange={handleChange} />
+        <input name="pass" type="password" className="form-control mb-2" placeholder="Contraseña" value={formData.pass} onChange={handleChange} />
+        <select name="role" className="form-select mb-3" value={formData.role} onChange={handleChange}>
           <option value="cliente">Cliente</option>
           <option value="admin">Administrador</option>
         </select>
         <div className="d-flex justify-content-between">
-          <button type="submit" id="btnRegister" className="btn btn-success">Registrar</button>
-          <button type="button" onClick={onShowLogin} id="btnRegBack" className="btn btn-outline-secondary">Cancelar</button>
+          <button type="submit" className="btn btn-success">Registrar</button>
+          <button type="button" onClick={onShowLogin} className="btn btn-outline-secondary">Cancelar</button>
         </div>
       </form>
     </div>
