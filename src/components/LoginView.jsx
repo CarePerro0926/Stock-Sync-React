@@ -20,15 +20,14 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       if (input.includes('@')) {
         emailToUse = input;
       } else {
-        // Buscar el correo asociado al username
-        const { data: lookup } = await supabase
-          .from('usuarios')
-          .select('email')
-          .eq('username', input)
-          .single();
+        // Buscar el correo asociado al username en Supabase Auth
+        const { data: authUsers, error: authLookupError } = await supabase
+          .from('users') // tabla interna de Supabase Auth
+          .select('email, user_metadata')
+          .eq('user_metadata->>nickname', input);
 
-        if (lookup?.email) {
-          emailToUse = lookup.email;
+        if (authUsers?.length > 0 && authUsers[0]?.email) {
+          emailToUse = authUsers[0].email;
         }
       }
 

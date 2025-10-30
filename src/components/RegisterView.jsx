@@ -50,10 +50,16 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     try {
-      // 1. Registrar en Supabase Auth
+      // 1. Registrar en Supabase Auth con nickname y role
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.pass.trim()
+        password: formData.pass.trim(),
+        options: {
+          data: {
+            nickname: formData.user,
+            role: role === 'admin' ? 'administrador' : 'cliente'
+          }
+        }
       });
 
       if (authError) {
@@ -70,15 +76,16 @@ const RegisterView = ({ onShowLogin }) => {
 
       // 2. Insertar perfil en tabla usuarios
       const { error: insertError } = await supabase.from('usuarios').insert({
-        id: userId, // ← vincula con auth.users
+        id: userId,
         email: formData.email,
         username: formData.user,
-        pass: formData.pass, // opcional
+        pass: formData.pass,
         role: role === 'admin' ? 'administrador' : 'cliente',
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         cedula: formData.cedula,
-        fecha_nacimiento: formData.fecha
+        fecha_nacimiento: formData.fecha,
+        telefono: null // ← campo presente en la tabla pero no capturado en el formulario
       });
 
       if (insertError) {
