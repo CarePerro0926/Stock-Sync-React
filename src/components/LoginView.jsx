@@ -12,33 +12,35 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     setLoading(true);
 
     try {
-      let emailToUse = identifier.trim();
+      const input = identifier.trim();
+      const pass = password.trim();
+      let emailToUse = null;
 
-      // Si no es un correo, buscar el correo asociado al username
-      if (!identifier.includes('@')) {
-        const { data, error } = await supabase
+      // Si el input es un correo, lo usamos directamente
+      if (input.includes('@')) {
+        emailToUse = input;
+      } else {
+        // Buscar el correo asociado al username
+        const { data: lookup } = await supabase
           .from('usuarios')
           .select('email')
-          .eq('username', identifier.trim())
+          .eq('username', input)
           .single();
 
-        if (data?.email) {
-          emailToUse = data.email;
+        if (lookup?.email) {
+          emailToUse = lookup.email;
         }
       }
 
-      // Intentar login con Supabase Auth
-        let authData = null;
-        let authError = null;
-
-        if (emailToUse.includes('@')) {
-          const result = await supabase.auth.signInWithPassword({
-            email: emailToUse,
-            password: password.trim(),
-          });
-          authData = result.data;
-          authError = result.error;
-        }
+      // Intentar login con Supabase Auth solo si tenemos un correo válido
+      let authData = null;
+      if (emailToUse?.includes('@')) {
+        const result = await supabase.auth.signInWithPassword({
+          email: emailToUse,
+          password: pass,
+        });
+        authData = result.data;
+      }
 
       if (authData?.user) {
         // Login con Auth exitoso → buscar perfil en tabla usuarios
@@ -59,27 +61,27 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         return;
       }
 
-      // Si Auth falla, intentar login local con tabla usuarios
+      // Si Auth falla o no hay correo, intentar login local con email o username
       const { data: localUser, error: localError } = await supabase
         .from('usuarios')
         .select('*')
-        .or(`email.eq.${identifier.trim()},username.eq.${identifier.trim()}`)
-        .eq('pass', password.trim())
+        .or(`email.eq.${input},username.eq.${input}`)
+        .eq('pass', pass)
         .single();
 
-      if (localError || !localUser) {
-        alert('Credenciales incorrectas');
+      if (localUser) {
+        const usr = {
+          id: localUser.id,
+          email: localUser.email,
+          username: localUser.username,
+          role: localUser.role || 'cliente',
+        };
+
+        onLogin(usr);
         return;
       }
 
-      const usr = {
-        id: localUser.id,
-        email: localUser.email,
-        username: localUser.username,
-        role: localUser.role || 'cliente',
-      };
-
-      onLogin(usr);
+      alert('Credenciales incorrectas');
     } catch (err) {
       console.error('Error inesperado:', err);
       alert('Error interno. Revisa la consola.');
