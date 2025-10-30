@@ -51,7 +51,7 @@ const RegisterView = ({ onShowLogin }) => {
 
     try {
       // Validar que el username no esté repetido
-      const { data: existingUser, error: lookupError } = await supabase
+      const { data: existingUser } = await supabase
         .from('usuarios')
         .select('id')
         .eq('username', user)
@@ -59,6 +59,18 @@ const RegisterView = ({ onShowLogin }) => {
 
       if (existingUser) {
         alert('Ese nombre de usuario ya está en uso. Elige otro.');
+        return;
+      }
+
+      // Validar que el email no esté registrado en Auth
+      const { data: existingEmail } = await supabase
+        .from('auth.users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingEmail) {
+        alert('Ese correo ya está registrado. Intenta iniciar sesión o recuperar tu contraseña.');
         return;
       }
 
