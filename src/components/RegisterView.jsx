@@ -50,13 +50,25 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     try {
+      // Validar que el username no esté repetido
+      const { data: existingUser, error: lookupError } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('username', user)
+        .single();
+
+      if (existingUser) {
+        alert('Ese nombre de usuario ya está en uso. Elige otro.');
+        return;
+      }
+
       // 1. Registrar en Supabase Auth con nickname y role
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.pass.trim(),
+        email: email,
+        password: pass.trim(),
         options: {
           data: {
-            nickname: formData.user,
+            nickname: user,
             role: role === 'admin' ? 'administrador' : 'cliente'
           }
         }
@@ -77,15 +89,15 @@ const RegisterView = ({ onShowLogin }) => {
       // 2. Insertar perfil en tabla usuarios
       const { error: insertError } = await supabase.from('usuarios').insert({
         id: userId,
-        email: formData.email,
-        username: formData.user,
-        pass: formData.pass,
+        email: email,
+        username: user,
+        pass: pass,
         role: role === 'admin' ? 'administrador' : 'cliente',
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         cedula: formData.cedula,
         fecha_nacimiento: formData.fecha,
-        telefono: null // ← campo presente en la tabla pero no capturado en el formulario
+        telefono: null
       });
 
       if (insertError) {
