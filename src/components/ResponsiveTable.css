@@ -19,11 +19,20 @@
 
 /* --- MODO TARJETA EN MÓVILES (< 768px) --- */
 @media (max-width: 767.98px) {
+  .responsive-table {
+    display: block;
+    width: 100%;
+  }
+
   .responsive-table thead {
     display: none !important;
   }
 
-  .responsive-table .table-row {
+  .responsive-table tbody {
+    display: block;
+  }
+
+  .responsive-table tr {
     display: block;
     margin-bottom: 1rem;
     padding: 0.75rem;
@@ -32,7 +41,7 @@
     background-color: #f8f9fa;
   }
 
-  .responsive-table .table-cell {
+  .responsive-table td {
     display: flex;
     justify-content: space-between;
     padding: 0.25rem 0;
@@ -40,11 +49,11 @@
     word-break: break-word;
   }
 
-  .responsive-table .table-cell:last-child {
+  .responsive-table td:last-child {
     border-bottom: none;
   }
 
-  .responsive-table .table-cell::before {
+  .responsive-table td::before {
     content: attr(data-label) ": ";
     font-weight: bold;
     margin-right: 0.5rem;
