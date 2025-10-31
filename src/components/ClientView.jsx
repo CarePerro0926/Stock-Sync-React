@@ -1,6 +1,7 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
 import { usePayment } from '../hooks/usePayment';
+import './ResponsiveTable.css'; // 👈 Importamos el mismo CSS
 
 const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -60,23 +61,42 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
     });
   };
 
-  const handleInputFocus = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
-    }
-  };
+  // 👇 Preparar datos para ResponsiveTable
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoria_nombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock' },
+    { key: 'cantidadInput', label: 'Cantidad' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' }
+  ];
 
-  const handleInputInput = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
-    }
-  };
+  const tableData = productosFiltrados.map(p => {
+    const itemCarrito = carrito.find(item => item.id === p.id);
+    const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      categoria_nombre: p.categoria_nombre,
+      cantidad: p.cantidad,
+      cantidadInput: (
+        <input
+          type="number"
+          min="0"
+          className="form-control form-control-sm qty-input"
+          value={cantidadActual > 0 ? cantidadActual : ''}
+          placeholder="0"
+          onChange={handleQuantityChange(p.id, p.precio)}
+          style={{ width: '80px' }}
+        />
+      ),
+      precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'
+    };
+  });
 
   return (
     <div className="card p-4 w-100">
       <h4 className="text-dark">Catálogo de Productos</h4>
-
-      {/* Filtros: siempre visibles */}
       <div className="row g-2 mb-3">
         <div className="col">
           <select className="form-select" value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
@@ -93,57 +113,39 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
         </div>
       </div>
 
-      {/* Tabla con scroll vertical */}
-      <div style={{ maxHeight: '45vh', overflowY: 'auto', marginBottom: '1rem' }}>
-        <table className="table table-bordered table-sm w-100">
-          <thead className="table-light">
+      {/* 👇 Usamos el mismo sistema responsive */}
+      <div className="responsive-table-container">
+        <table className="responsive-table w-100">
+          <thead>
             <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Stock</th>
-              <th>Cantidad</th>
-              <th>Precio</th>
+              {tableHeaders.map(h => (
+                <th key={h.key} style={{ textAlign: h.align || 'left' }}>{h.label}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {productosFiltrados.length === 0 ? (
+            {tableData.length === 0 ? (
               <tr><td colSpan="6" className="text-center">No se encontraron productos.</td></tr>
             ) : (
-              productosFiltrados.map(p => {
-                const itemCarrito = carrito.find(item => item.id === p.id);
-                const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
-                return (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{p.nombre}</td>
-                    <td>{p.categoria_nombre}</td>
-                    <td className="text-center">{p.cantidad}</td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-control form-control-sm"
-                        style={{ width: '80px' }}
-                        value={cantidadActual > 0 ? cantidadActual : ''}
-                        placeholder="0"
-                        onChange={handleQuantityChange(p.id, p.precio)}
-                        onFocus={handleInputFocus}
-                        onInput={handleInputInput}
-                      />
+              tableData.map((row, i) => (
+                <tr key={i} className="table-row">
+                  {tableHeaders.map(h => (
+                    <td
+                      key={h.key}
+                      data-label={h.label}
+                      className="table-cell"
+                      style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
+                    >
+                      {row[h.key]}
                     </td>
-                    <td className="text-end">
-                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-                    </td>
-                  </tr>
-                );
-              })
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Botones: siempre visibles */}
       <div className="d-flex flex-wrap align-items-center mt-3">
         <strong style={{ fontSize: '1.3em' }} className="me-auto">
           <span style={{ color: '#FF4500' }}>Total: $</span>
