@@ -24,10 +24,14 @@
     width: 100%;
   }
 
-  /* ✅ CORRECCIÓN: Esta regla asegura que el encabezado (thead) sea visible 
-     en lugar de estar oculto, como estaba en la versión anterior. */
+  /* 1. CORRECCIÓN PRINCIPAL: Muestra el encabezado (thead) */
   .responsive-table thead {
     display: table-header-group !important; /* Muestra el encabezado */
+  }
+  
+  /* 2. ✅ CORRECCIÓN FINAL: Asegura que las celdas (th) dentro del thead también se muestren */
+  .responsive-table th {
+    display: table-cell !important;
   }
 
   .responsive-table tbody {
@@ -42,7 +46,8 @@
     border-radius: 0.375rem;
     background-color: #f8f9fa;
   }
-
+  
+  /* ... El resto de tus reglas para el modo tarjeta se mantienen ... */
   .responsive-table td {
     display: flex;
     justify-content: space-between;
