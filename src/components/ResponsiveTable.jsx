@@ -25,7 +25,7 @@ const ResponsiveTable = ({ headers, data }) => {
                   className="table-cell"
                   style={{ textAlign: h.align || 'left' }}
                 >
-                  {row[h.key] ?? '—'}
+                  <span>{row[h.key] ?? '—'}</span>
                 </td>
               ))}
             </tr>
