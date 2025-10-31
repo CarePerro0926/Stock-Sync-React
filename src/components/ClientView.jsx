@@ -1,7 +1,7 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
 import { usePayment } from '../hooks/usePayment';
-import './ResponsiveTable.css'; // 👈 Importamos el mismo CSS
+import './ResponsiveTable.css'; // 👈 Mantiene el modo tarjeta
 
 const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -97,6 +97,8 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   return (
     <div className="card p-4 w-100">
       <h4 className="text-dark">Catálogo de Productos</h4>
+
+      {/* Filtros: siempre visibles */}
       <div className="row g-2 mb-3">
         <div className="col">
           <select className="form-select" value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
@@ -113,39 +115,42 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
         </div>
       </div>
 
-      {/* 👇 Usamos el mismo sistema responsive */}
-      <div className="responsive-table-container">
-        <table className="responsive-table w-100">
-          <thead>
-            <tr>
-              {tableHeaders.map(h => (
-                <th key={h.key} style={{ textAlign: h.align || 'left' }}>{h.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.length === 0 ? (
-              <tr><td colSpan="6" className="text-center">No se encontraron productos.</td></tr>
-            ) : (
-              tableData.map((row, i) => (
-                <tr key={i} className="table-row">
-                  {tableHeaders.map(h => (
-                    <td
-                      key={h.key}
-                      data-label={h.label}
-                      className="table-cell"
-                      style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
-                    >
-                      {row[h.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* 👇 Contenedor con scroll VERTICAL solo para la tabla/tarjetas */}
+      <div style={{ maxHeight: '45vh', overflowY: 'auto', marginBottom: '1rem' }}>
+        <div className="responsive-table-container">
+          <table className="responsive-table w-100">
+            <thead>
+              <tr>
+                {tableHeaders.map(h => (
+                  <th key={h.key} style={{ textAlign: h.align || 'left' }}>{h.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableData.length === 0 ? (
+                <tr><td colSpan="6" className="text-center">No se encontraron productos.</td></tr>
+              ) : (
+                tableData.map((row, i) => (
+                  <tr key={i} className="table-row">
+                    {tableHeaders.map(h => (
+                      <td
+                        key={h.key}
+                        data-label={h.label}
+                        className="table-cell"
+                        style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
+                      >
+                        {row[h.key]}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* Botones: siempre visibles */}
       <div className="d-flex flex-wrap align-items-center mt-3">
         <strong style={{ fontSize: '1.3em' }} className="me-auto">
           <span style={{ color: '#FF4500' }}>Total: $</span>
