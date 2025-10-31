@@ -5,6 +5,7 @@ import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
+import '../../ResponsiveTable.css';
 
 const AdminView = ({
   productos,
