@@ -1,5 +1,6 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
+import '../ResponsiveTable.css';
 import ResponsiveTable from '../ResponsiveTable';
 
 const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
