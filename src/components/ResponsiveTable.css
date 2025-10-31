@@ -17,6 +17,16 @@
   border: 1px solid #dee2e6;
 }
 
+/* SOLUCIÓN STICKY: Fija los encabezados al tope del contenedor de scroll */
+.responsive-table thead th {
+    position: sticky; 
+    top: 0;           /* Se pega al borde superior */
+    background-color: #f8f9fa; /* Fondo para que no se vea el contenido debajo */
+    z-index: 10;      /* Asegura que esté por encima del cuerpo (tbody) */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.2);
+}
+
+
 /* --- MODO TARJETA EN MÓVILES (< 768px) --- */
 @media (max-width: 767.98px) {
   .responsive-table {
@@ -24,26 +34,24 @@
     width: 100%;
   }
 
-  /* 1. CORRECCIÓN: Muestra el thead y el tr del encabezado */
+  /* ✅ Correcciones de visibilidad forzada */
   .responsive-table thead {
-    display: table-header-group !important; /* Muestra el thead */
+    display: table-header-group !important;
   }
 
-  /* 🛑 NUEVA CORRECCIÓN CRÍTICA: Fuerza el TR del encabezado a ser una fila real, no un bloque */
   .responsive-table thead tr {
-    display: table-row !important; /* Evita que el tr del encabezado se rompa */
+    display: table-row !important;
   }
   
-  /* 2. ✅ Asegura que las celdas (th) dentro del thead también se muestren */
   .responsive-table th {
     display: table-cell !important;
   }
 
+  /* Reglas de modo tarjeta para el cuerpo */
   .responsive-table tbody {
-    display: block; /* Sigue mostrando el cuerpo de la tabla como bloques (modo tarjeta) */
+    display: block;
   }
 
-  /* El TR del cuerpo de la tabla sí debe ser un bloque para el modo tarjeta */
   .responsive-table tbody tr { 
     display: block;
     margin-bottom: 1rem;
@@ -53,7 +61,6 @@
     background-color: #f8f9fa;
   }
   
-  /* ... El resto de tus reglas para el modo tarjeta se mantienen ... */
   .responsive-table td {
     display: flex;
     justify-content: space-between;
