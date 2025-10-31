@@ -52,16 +52,8 @@
     flex-shrink: 0;
   }
 
-  /* Estilos para el input de cantidad */
-  .responsive-table .table-cell.qty-input-container {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-  }
-
   .responsive-table .qty-input {
     width: 80px !important;
     flex-shrink: 0;
-    display: inline-block;
   }
 }

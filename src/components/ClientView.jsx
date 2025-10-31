@@ -1,7 +1,7 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
 import { usePayment } from '../hooks/usePayment';
-import { filtroProductos } from '../utils/helpers';
+import './ResponsiveTable.css'; // 👈 Importamos el mismo CSS
 
 const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -12,15 +12,9 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
 
   const productosConNombreCategoria = useMemo(() => {
     return productos.map(p => {
-      if (p.categoria_nombre) {
-        return p;
-      } else if (p.categoria_id) {
-        const categoria = cats.find(c => c.id === p.categoria_id);
-        return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida', categoria: categoria ? categoria.nombre : 'Categoría Desconocida' };
-      } else if (p.categoria) {
-        return p;
-      }
-      return { ...p, categoria_nombre: 'Sin Categoría', categoria: 'Sin Categoría' };
+      if (p.categoria_nombre) return p;
+      const categoria = cats.find(c => c.id === p.categoria_id);
+      return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Sin Categoría', categoria: categoria ? categoria.nombre : 'Sin Categoría' };
     });
   }, [productos, cats]);
 
@@ -42,15 +36,18 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   }, [cats]);
 
   const productosFiltrados = useMemo(() => {
-    return filtroProductos(productosConNombreCategoria, filtroTxt, filtroCat);
-  }, [productosConNombreCategoria, filtroTxt, filtroCat]);
+    return productosConNombreCategoria.filter(p => {
+      const coincideCat = filtroCat === 'Todas' || p.categoria_nombre === filtroCat;
+      const coincideTxt = !filtroTxt || p.nombre.toLowerCase().includes(filtroTxt.toLowerCase());
+      return coincideCat && coincideTxt;
+    });
+  }, [productosConNombreCategoria, filtroCat, filtroTxt]);
 
   const handleQuantityChange = (productoId, precioUnitario) => (e) => {
     const cantidad = parseInt(e.target.value) || 0;
-    setCarrito(prevCarrito => {
-      const idx = prevCarrito.findIndex(item => item.id === productoId);
-      let newCarrito = [...prevCarrito];
-
+    setCarrito(prev => {
+      const idx = prev.findIndex(item => item.id === productoId);
+      let newCarrito = [...prev];
       if (cantidad > 0) {
         if (idx > -1) {
           newCarrito[idx] = { ...newCarrito[idx], cantidad, precio: precioUnitario * cantidad };
@@ -58,104 +55,105 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
           newCarrito.push({ id: productoId, cantidad, precio: precioUnitario * cantidad });
         }
       } else {
-        if (idx > -1) {
-          newCarrito.splice(idx, 1);
-        }
+        if (idx > -1) newCarrito.splice(idx, 1);
       }
       return newCarrito;
     });
   };
 
-  const handleInputFocus = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
-    }
-  };
+  // 👇 Preparar datos para ResponsiveTable
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoria_nombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock' },
+    { key: 'cantidadInput', label: 'Cantidad' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' }
+  ];
 
-  const handleInputInput = (e) => {
-    if (e.target.value === '0' || e.target.value === 0) {
-      e.target.value = '';
-    }
-  };
+  const tableData = productosFiltrados.map(p => {
+    const itemCarrito = carrito.find(item => item.id === p.id);
+    const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      categoria_nombre: p.categoria_nombre,
+      cantidad: p.cantidad,
+      cantidadInput: (
+        <input
+          type="number"
+          min="0"
+          className="form-control form-control-sm qty-input"
+          value={cantidadActual > 0 ? cantidadActual : ''}
+          placeholder="0"
+          onChange={handleQuantityChange(p.id, p.precio)}
+          style={{ width: '80px' }}
+        />
+      ),
+      precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'
+    };
+  });
 
   return (
-    <div className="card p-4 w-100"> {/* 👈 w-100 agregado */}
+    <div className="card p-4 w-100">
       <h4 className="text-dark">Catálogo de Productos</h4>
       <div className="row g-2 mb-3">
         <div className="col">
-          <select id="filtroCat" className="form-select" value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}>
+          <select className="form-select" value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
             {categoriasFiltro.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="col">
           <input
-            id="filtroTxt"
             className="form-control"
             placeholder="Buscar..."
             value={filtroTxt}
-            onChange={(e) => setFiltroTxt(e.target.value)}
+            onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
-      <div className="table-responsive" style={{ maxHeight: '300px', overflow: 'auto' }}> {/* 👈 table-responsive aquí */}
-        <table className="table table-bordered table-sm mb-0 w-100"> {/* 👈 w-100 en la tabla */}
-          <thead className="table-light">
+
+      {/* 👇 Usamos el mismo sistema responsive */}
+      <div className="responsive-table-container">
+        <table className="responsive-table w-100">
+          <thead>
             <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoria</th>
-              <th>Stock</th>
-              <th style={{ width: '60px' }}>Cantidad</th>
-              <th style={{ width: '120px' }}>Precio Unidad</th>
+              {tableHeaders.map(h => (
+                <th key={h.key} style={{ textAlign: h.align || 'left' }}>{h.label}</th>
+              ))}
             </tr>
           </thead>
-          <tbody id="tblClient">
-            {productosFiltrados.length === 0 ? (
+          <tbody>
+            {tableData.length === 0 ? (
               <tr><td colSpan="6" className="text-center">No se encontraron productos.</td></tr>
             ) : (
-              productosFiltrados.map(p => {
-                const itemCarrito = carrito.find(item => item.id === p.id);
-                const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
-
-                return (
-                  <tr key={p.id} className="table-row">
-                    <td className="table-cell" data-title="ID">{p.id}</td>
-                    <td className="table-cell" data-title="Nombre">{p.nombre}</td>
-                    <td className="table-cell" data-title="Categoria">{p.categoria_nombre}</td>
-                    <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
-                    <td className="table-cell qty-input-container" data-title="Cantidad">
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-control form-control-sm qty-input"
-                        id={`qty-${p.id}`}
-                        data-id={p.id}
-                        data-precio={p.precio}
-                        value={cantidadActual > 0 ? cantidadActual : ''}
-                        placeholder="0"
-                        onChange={handleQuantityChange(p.id, p.precio)}
-                        onFocus={handleInputFocus}
-                        onInput={handleInputInput}
-                      />
+              tableData.map((row, i) => (
+                <tr key={i} className="table-row">
+                  {tableHeaders.map(h => (
+                    <td
+                      key={h.key}
+                      data-label={h.label}
+                      className="table-cell"
+                      style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
+                    >
+                      {row[h.key]}
                     </td>
-                    <td className="table-cell" data-title="Precio Unidad" style={{ textAlign: 'right' }}>
-                      {typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO') : '—'}
-                    </td>
-                  </tr>
-                );
-              })
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
+
       <div className="d-flex flex-wrap align-items-center mt-3">
         <strong style={{ fontSize: '1.3em' }} className="me-auto">
           <span style={{ color: '#FF4500' }}>Total: $</span>
-          <span id="totalLbl" style={{ color: '#222' }}>{total.toLocaleString('es-CO')} COP</span>
+          <span>{total.toLocaleString('es-CO')} COP</span>
         </strong>
         <div>
-          <button onClick={() => setShowPaymentModal(true)} id="btnPay" className="btn btn-success me-2">Pagar</button>
-          <button onClick={onLogout} id="btnLogout" className="btn btn-danger">Cerrar Sesión</button>
+          <button onClick={() => setShowPaymentModal(true)} className="btn btn-success me-2">Pagar</button>
+          <button onClick={onLogout} className="btn btn-danger">Cerrar Sesión</button>
         </div>
       </div>
 
@@ -169,8 +167,8 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
                 <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)}></button>
               </div>
               <div className="modal-body px-0 pt-3 pb-4">
-                <button onClick={() => { handlePayCard(); setShowPaymentModal(false); }} id="payCard" className="btn btn-dark w-100 mb-2">Tarjeta</button>
-                <button onClick={() => { handlePayEfecty(); setShowPaymentModal(false); }} id="payEfecty" className="btn btn-success w-100">Consignación en Efecty</button>
+                <button onClick={() => { handlePayCard(); setShowPaymentModal(false); }} className="btn btn-dark w-100 mb-2">Tarjeta</button>
+                <button onClick={() => { handlePayEfecty(); setShowPaymentModal(false); }} className="btn btn-success w-100">Consignación en Efecty</button>
               </div>
             </div>
           </div>

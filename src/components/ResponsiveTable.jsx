@@ -23,10 +23,7 @@ const ResponsiveTable = ({ headers, data }) => {
                   key={h.key}
                   data-label={h.label}
                   className="table-cell"
-                  style={{
-                    textAlign: h.align || 'left',
-                    verticalAlign: 'middle'
-                  }}
+                  style={{ textAlign: h.align || 'left' }}
                 >
                   {row[h.key] ?? '—'}
                 </td>
