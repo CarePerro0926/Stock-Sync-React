@@ -24,21 +24,27 @@
     width: 100%;
   }
 
-  /* 1. CORRECCIÓN PRINCIPAL: Muestra el encabezado (thead) */
+  /* 1. CORRECCIÓN: Muestra el thead y el tr del encabezado */
   .responsive-table thead {
-    display: table-header-group !important; /* Muestra el encabezado */
+    display: table-header-group !important; /* Muestra el thead */
+  }
+
+  /* 🛑 NUEVA CORRECCIÓN CRÍTICA: Fuerza el TR del encabezado a ser una fila real, no un bloque */
+  .responsive-table thead tr {
+    display: table-row !important; /* Evita que el tr del encabezado se rompa */
   }
   
-  /* 2. ✅ CORRECCIÓN FINAL: Asegura que las celdas (th) dentro del thead también se muestren */
+  /* 2. ✅ Asegura que las celdas (th) dentro del thead también se muestren */
   .responsive-table th {
     display: table-cell !important;
   }
 
   .responsive-table tbody {
-    display: block;
+    display: block; /* Sigue mostrando el cuerpo de la tabla como bloques (modo tarjeta) */
   }
 
-  .responsive-table tr {
+  /* El TR del cuerpo de la tabla sí debe ser un bloque para el modo tarjeta */
+  .responsive-table tbody tr { 
     display: block;
     margin-bottom: 1rem;
     padding: 0.75rem;
