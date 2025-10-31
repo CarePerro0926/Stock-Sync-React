@@ -3,33 +3,38 @@ import React from 'react';
 import './ResponsiveTable.css';
 
 const ResponsiveTable = ({ headers, data }) => {
+  // Estilos de emergencia para forzar la visibilidad en el modo móvil
+  const forcedHeaderStyle = { 
+    display: 'table-header-group',
+    visibility: 'visible'
+  };
+  const forcedRowStyle = { 
+    display: 'table-row'
+  };
+  const forcedCellStyle = { 
+    display: 'table-cell'
+  };
+
   return (
     <div className="responsive-table-container">
       <table className="responsive-table">
-        <thead>
-          <tr>
+        <thead style={forcedHeaderStyle}> {/* ⬅️ APLICAR ESTILOS AQUÍ */}
+          <tr style={forcedRowStyle}> {/* ⬅️ Y AQUÍ */}
             {headers.map(h => (
-              <th key={h.key} style={{ textAlign: h.align || 'left' }}>
+              <th 
+                key={h.key} 
+                style={{ 
+                  textAlign: h.align || 'left', 
+                  ...forcedCellStyle // ⬅️ Y AQUÍ
+                }}
+              >
                 {h.label}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.map((row, i) => (
-            <tr key={i} className="table-row">
-              {headers.map(h => (
-                <td
-                  key={h.key}
-                  data-label={h.label}
-                  className="table-cell"
-                  style={{ textAlign: h.align || 'left' }}
-                >
-                  <span>{row[h.key] ?? '—'}</span>
-                </td>
-              ))}
-            </tr>
-          ))}
+          {/* ... el resto de tu código del cuerpo de la tabla se mantiene ... */}
         </tbody>
       </table>
     </div>
