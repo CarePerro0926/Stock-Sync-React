@@ -24,8 +24,10 @@
     width: 100%;
   }
 
+  /* ✅ CORRECCIÓN: Esta regla asegura que el encabezado (thead) sea visible 
+     en lugar de estar oculto, como estaba en la versión anterior. */
   .responsive-table thead {
-    display: none !important;
+    display: table-header-group !important; /* Muestra el encabezado */
   }
 
   .responsive-table tbody {
@@ -44,7 +46,7 @@
   .responsive-table td {
     display: flex;
     justify-content: space-between;
-    align-items: center; /* 👈 asegura alineación vertical */
+    align-items: center;
     padding: 0.25rem 0;
     border-bottom: 1px solid #e9ecef;
     word-break: break-word;
