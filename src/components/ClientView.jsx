@@ -1,36 +1,29 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
-import { usePayment } from '../hooks/usePayment'; // ✅ Importa el hook
+import { usePayment } from '../hooks/usePayment';
 import { filtroProductos } from '../utils/helpers';
 
-const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => { // Recibe categorias
+const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
-  const [showPaymentModal, setShowPaymentModal] = useState(false); // ✅ Estado para el modal de pago
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  // Normaliza categorias por si viene undefined
   const cats = Array.isArray(categorias) ? categorias : [];
 
-  // Mapear categoria_id a nombre si es necesario
   const productosConNombreCategoria = useMemo(() => {
     return productos.map(p => {
       if (p.categoria_nombre) {
-        // Si ya tiene categoria_nombre, devolverlo como está
         return p;
       } else if (p.categoria_id) {
-        // Si tiene categoria_id, buscar el nombre
         const categoria = cats.find(c => c.id === p.categoria_id);
-        return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida', categoria: categoria ? categoria.nombre : 'Categoría Desconocida' }; // Añadir 'categoria' también para compatibilidad con filtroProductos
+        return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Categoría Desconocida', categoria: categoria ? categoria.nombre : 'Categoría Desconocida' };
       } else if (p.categoria) {
-        // Si tiene categoria (nombre directo), devolverlo como está (compatibilidad con initialData)
         return p;
       }
-      // Si no tiene ninguno, asignar un nombre por defecto
       return { ...p, categoria_nombre: 'Sin Categoría', categoria: 'Sin Categoría' };
     });
   }, [productos, cats]);
 
-  // Usa el hook de pago
   const {
     showCreditCardModal,
     showConfirmationModal,
@@ -39,17 +32,17 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
     handlePayEfecty,
     handlePayCardConfirm,
     closeModals
-  } = usePayment(() => setCarrito([])); // Limpia el carrito al pagar
+  } = usePayment(() => setCarrito([]));
 
   const total = carrito.reduce((sum, item) => sum + item.precio, 0);
 
   const categoriasFiltro = useMemo(() => {
-  const nombres = cats.map(c => c.nombre).filter(Boolean);
-  return ['Todas', ...nombres];
-}, [cats]);
+    const nombres = cats.map(c => c.nombre).filter(Boolean);
+    return ['Todas', ...nombres];
+  }, [cats]);
 
   const productosFiltrados = useMemo(() => {
-    return filtroProductos(productosConNombreCategoria, filtroTxt, filtroCat); // Usar productos con categoria mapeada
+    return filtroProductos(productosConNombreCategoria, filtroTxt, filtroCat);
   }, [productosConNombreCategoria, filtroTxt, filtroCat]);
 
   const handleQuantityChange = (productoId, precioUnitario) => (e) => {
@@ -86,12 +79,12 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   };
 
   return (
-    <div className="card p-4">
+    <div className="card p-4 w-100"> {/* 👈 w-100 agregado */}
       <h4 className="text-dark">Catálogo de Productos</h4>
       <div className="row g-2 mb-3">
         <div className="col">
           <select id="filtroCat" className="form-select" value={filtroCat} onChange={(e) => setFiltroCat(e.target.value)}>
-            {categoriasFiltro.map(c => <option key={c} value={c}>{c}</option>)} {/* Usar categoriasFiltro */}
+            {categoriasFiltro.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="col">
@@ -104,13 +97,13 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
           />
         </div>
       </div>
-      <div className="table-responsive responsive-table" style={{ maxHeight: '300px', overflow: 'auto' }}>
-        <table className="table table-bordered table-sm mb-0">
+      <div className="table-responsive" style={{ maxHeight: '300px', overflow: 'auto' }}> {/* 👈 table-responsive aquí */}
+        <table className="table table-bordered table-sm mb-0 w-100"> {/* 👈 w-100 en la tabla */}
           <thead className="table-light">
             <tr>
               <th>ID</th>
               <th>Nombre</th>
-              <th>Categoria</th> {/* Mostrar categoria_nombre */}
+              <th>Categoria</th>
               <th>Stock</th>
               <th style={{ width: '60px' }}>Cantidad</th>
               <th style={{ width: '120px' }}>Precio Unidad</th>
@@ -124,12 +117,11 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
                 const itemCarrito = carrito.find(item => item.id === p.id);
                 const cantidadActual = itemCarrito ? itemCarrito.cantidad : 0;
 
-                // reemplaza este bloque dentro de productosFiltrados.map(...)
                 return (
                   <tr key={p.id} className="table-row">
                     <td className="table-cell" data-title="ID">{p.id}</td>
                     <td className="table-cell" data-title="Nombre">{p.nombre}</td>
-                    <td className="table-cell" data-title="Categoria">{p.categoria_nombre}</td> {/* Mostrar categoria_nombre */}
+                    <td className="table-cell" data-title="Categoria">{p.categoria_nombre}</td>
                     <td className="table-cell" data-title="Stock" style={{ textAlign: 'center' }}>{p.cantidad}</td>
                     <td className="table-cell qty-input-container" data-title="Cantidad">
                       <input
@@ -162,13 +154,12 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
           <span id="totalLbl" style={{ color: '#222' }}>{total.toLocaleString('es-CO')} COP</span>
         </strong>
         <div>
-          {/* Reemplaza el alert por la apertura del modal de pago */}
           <button onClick={() => setShowPaymentModal(true)} id="btnPay" className="btn btn-success me-2">Pagar</button>
           <button onClick={onLogout} id="btnLogout" className="btn btn-danger">Cerrar Sesión</button>
         </div>
       </div>
 
-      {/* Modal de selección de método de pago */}
+      {/* Modales (sin cambios) */}
       {showPaymentModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
@@ -186,7 +177,6 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
         </div>
       )}
 
-      {/* Modal de tarjeta */}
       {showCreditCardModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
@@ -203,7 +193,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
                 <div className="row g-2 mb-3">
                   <div className="col-6">
                     <label className="form-label">Fecha de vencimiento</label>
-                    <input type="text" className="form-control" placeholder="MM/AA" /> {/* CORREGIDO: Auto-cierre */}
+                    <input type="text" className="form-control" placeholder="MM/AA" />
                   </div>
                   <div className="col-6">
                     <label className="form-label">CVC</label>
@@ -230,7 +220,6 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
         </div>
       )}
 
-      {/* Modal de confirmación (Efecty) */}
       {showConfirmationModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">

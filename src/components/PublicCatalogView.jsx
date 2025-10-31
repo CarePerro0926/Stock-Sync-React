@@ -56,7 +56,7 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
   }));
 
   return (
-    <div className="card p-4">
+    <div className="card p-4 w-100"> {/* 👈 w-100 agregado */}
       <h5 className="mb-3">Catálogo Público</h5>
 
       <div className="row g-2 mb-3">
@@ -120,7 +120,9 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
             ))}
           </div>
         ) : (
-          <ResponsiveTable headers={tableHeaders} data={tableData} />
+          <div className="table-responsive"> {/* 👈 envuelve en table-responsive */}
+            <ResponsiveTable headers={tableHeaders} data={tableData} />
+          </div>
         )}
       </div>
     </div>
