@@ -1,152 +1,256 @@
-// src/App.js
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { initialUsuarios, initialProductos, initialProveedores } from './data/initialData.js';
-import { filtroProductos } from './utils/helpers';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
 import PublicCatalogView from './components/PublicCatalogView';
 import ClientView from './components/ClientView';
 import AdminView from './components/AdminView';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
-import PaymentModal from './components/Modals/PaymentModal';
-import ConfirmationModal from './components/Modals/ConfirmationModal';
-import CreditCardModal from './components/Modals/CreditCardModal';
+import { productService } from './services/productService';
+import { providerService } from './services/providerService';
+import { categoryService } from './services/categoryService';
+import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
+import { filtroProductos } from './utils/helpers';
+import { supabase } from './services/supabaseClient';
 
 function App() {
-  // Estados Globales
-  const [usuarios, setUsuarios] = useState(initialUsuarios);
-  const [productos, setProductos] = useState(initialProductos);
-  const [proveedores, setProveedores] = useState(initialProveedores);
+  const [productos, setProductos] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [vistaActual, setVistaActual] = useState('login'); // 'login', 'register', 'catalog', 'client', 'admin'
-  const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory'); // 'inventory', 'add', 'delete', 'providers'
-
-  // Estados para Modales
+  const [vistaActual, setVistaActual] = useState('login');
+  const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [showCreditCardModal, setShowCreditCardModal] = useState(false);
-  const [confirmationData, setConfirmationData] = useState({ title: '', body: '' });
 
-  // Lógica de Negocio (funciones que modifican el estado global)
-  const validarUsuario = (user, pass) => {
-    const u = user.trim().toLowerCase();
-    const p = pass.trim();
-    return usuarios.find(x => x.user.toLowerCase()===u && x.pass===p) || null;
+  // Restaurar sesión desde localStorage al iniciar la app
+  useEffect(() => {
+    const storedSession = localStorage.getItem('userSession');
+    if (storedSession) {
+      try {
+        const usr = JSON.parse(storedSession);
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+      } catch (err) {
+        console.error('Error parsing userSession:', err);
+        localStorage.removeItem('userSession');
+      }
+    }
+  }, []);
+
+  const recargarProductos = async () => {
+    const data = await productService.getAll();
+    setProductos(data);
   };
 
-  const registrarUsuario = (nuevoUsuario) => {
-    setUsuarios(prev => [...prev, nuevoUsuario]);
-  };
+  // Cargar datos iniciales
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
+          productService.getAll(),
+          providerService.getAll(),
+          categoryService.getAll()
+        ]);
 
-  const getInventario = () => productos;
-  const getProveedores = () => proveedores;
+        setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+        setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+        setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        setProductos(initialProductos);
+        setProveedores(initialProveedores);
+        setCategorias(initialCategorias);
+      }
+    };
+    cargarDatos();
+  }, []);
 
-  const agregarProducto = (producto) => {
-    setProductos(prev => [...prev, producto]);
-  };
+  // Canal realtime: productos
+  useEffect(() => {
+    const canalProductos = supabase
+      .channel('realtime-productos')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => [payload.new, ...prev.filter(p => p.id !== payload.new.id)]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'productos' }, payload => {
+        setProductos(prev => prev.filter(p => p.id !== payload.old.id));
+      })
+      .subscribe();
 
-  const eliminarProducto = (id) => {
-    setProductos(prev => prev.filter(p => p.id !== id));
-  };
+    return () => {
+      supabase.removeChannel(canalProductos);
+    };
+  }, []);
 
-  const agregarProveedor = (proveedor) => {
-    setProveedores(prev => [...prev, proveedor]);
-  };
+  // Canal realtime: proveedores
+  useEffect(() => {
+    const canalProveedores = supabase
+      .channel('realtime-proveedores')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => [payload.new, ...prev]);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'proveedores' }, payload => {
+        setProveedores(prev => prev.filter(p => p.id !== payload.old.id));
+      })
+      .subscribe();
 
-  const actualizarTotal = () => {
-    return carrito.reduce((s, c) => s + c.precio, 0);
-  };
+    return () => {
+      supabase.removeChannel(canalProveedores);
+    };
+  }, []);
 
-  // Funciones para cambiar vistas
-  const handleLogin = (user, pass) => {
-    const usr = validarUsuario(user, pass);
+  const handleLogin = (usr) => {
     if (!usr) {
       alert('Usuario/clave inválidos');
       return;
     }
-    setUsuarioActual(usr);
-    if (usr.role === 'admin') {
-      setVistaActual('admin');
-      setVistaAdminActiva('inventory'); // Iniciar en Inventario
-    } else {
-      setVistaActual('client');
+    try {
+      localStorage.setItem('userSession', JSON.stringify(usr));
+    } catch (err) {
+      console.error('No se pudo guardar la sesión en localStorage:', err);
     }
+    setUsuarioActual(usr);
+    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem('userSession');
+    } catch (err) {
+      console.error('No se pudo eliminar userSession:', err);
+    }
     setUsuarioActual(null);
     setCarrito([]);
     setVistaActual('login');
   };
 
-  const handleShowCatalog = () => {
-    setVistaActual('catalog');
-  };
+  const handleShowCatalog = () => setVistaActual('catalog');
+  const handleShowRegister = () => setVistaActual('register');
+  const handleShowLogin = () => setVistaActual('login');
 
-  const handleShowRegister = () => {
-    setVistaActual('register');
-  };
-
-  const handleShowLogin = () => {
-    setVistaActual('login');
-  };
-
-  const handlePay = () => {
-    setShowPaymentModal(true);
-  };
-
-  const handlePayCard = () => {
-    setCarrito([]);
-    setShowPaymentModal(false);
-    setShowCreditCardModal(true); // Mostrar modal de tarjeta
-  };
-
-  const handlePayEfecty = () => {
-    setCarrito([]);
-    setShowPaymentModal(false);
-    const codigo = Math.floor(100000 + Math.random() * 900000);
-    setConfirmationData({
-      title: 'Consignación en Efecty seleccionada',
-      body: `<div>Guarde este código de consignación:</div><strong style="font-size:1.5em;">${codigo}</strong>`
-    });
-    setShowConfirmationModal(true);
-  };
-
-  const handlePayCardConfirm = () => {
-     setShowCreditCardModal(false);
-     alert("Pago con tarjeta procesado (simulado). Carrito vaciado.");
-  };
-
-  // Renderizado condicional
   const renderView = () => {
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
       case 'register':
-        return <RegisterView usuarios={usuarios} onRegister={registrarUsuario} onShowLogin={handleShowLogin} />;
+        return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
-        return <PublicCatalogView productos={getInventario()} onBack={handleShowLogin} />;
+        return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />;
       case 'client':
-        return <ClientView productos={getInventario()} carrito={carrito} setCarrito={setCarrito} total={actualizarTotal()} onLogout={handleLogout} onPay={handlePay} />;
+        return <ClientView productos={productos} categorias={categorias} carrito={carrito} setCarrito={setCarrito} onLogout={handleLogout} />;
       case 'admin':
-        return <AdminView productos={getInventario()} proveedores={getProveedores()} vistaActiva={vistaAdminActiva} setVistaActiva={setVistaAdminActiva} onAddProducto={agregarProducto} onDeleteProducto={eliminarProducto} onAddProveedor={agregarProveedor} onLogout={handleLogout} />;
+        return (
+          <AdminView
+            productos={productos}
+            proveedores={proveedores}
+            categorias={categorias}
+            vistaActiva={vistaAdminActiva}
+            setVistaActiva={setVistaAdminActiva}
+            onAddProducto={handleAddProducto}
+            onDeleteProducto={handleDeleteProducto}
+            onAddProveedor={handleAddProveedor}
+            onAddCategoria={handleAddCategoria}
+            onDeleteCategoria={handleDeleteCategoria}
+            onDeleteProveedor={handleDeleteProveedor}
+            onLogout={handleLogout}
+            onUpdateSuccess={recargarProductos}
+          />
+        );
       default:
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
     }
   };
 
+  const handleAddProducto = async (nuevoProducto) => {
+    try {
+      const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
+      if (!categoriaSeleccionada) {
+        alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
+        return;
+      }
+
+      const productoParaInsertar = {
+        ...nuevoProducto,
+        categoria_id: categoriaSeleccionada.id
+      };
+
+      await productService.create(productoParaInsertar);
+    } catch (error) {
+      console.error('Error al crear producto:', error);
+      alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
+    }
+  };
+
+  const handleDeleteProducto = async (id) => {
+    try {
+      await productService.remove(id);
+    } catch (error) {
+      console.error('Error al eliminar producto:', error);
+      alert('Error al eliminar el producto');
+    }
+  };
+
+  const handleAddProveedor = async (nuevoProveedor) => {
+    try {
+      if (nuevoProveedor.telefono) {
+        const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
+        if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
+            !(cleaned.length === 12 && cleaned.startsWith('573'))) {
+          alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
+          return;
+        }
+      }
+
+      await providerService.create(nuevoProveedor);
+    } catch (error) {
+      console.error('Error al crear proveedor:', error);
+      alert('Error al crear el proveedor: ' + (error.message || 'Desconocido'));
+    }
+  };
+
+  const handleDeleteProveedor = async (id) => {
+    try {
+      await providerService.remove(id);
+    } catch (error) {
+      console.error('Error al eliminar proveedor:', error);
+      alert('Error al eliminar el proveedor');
+    }
+  };
+
+  const handleAddCategoria = async (nombreCategoria) => {
+    try {
+      await categoryService.create({ nombre: nombreCategoria });
+      const updated = await categoryService.getAll();
+      setCategorias(updated);
+    } catch (error) {
+      console.error('Error al crear categoría:', error);
+      alert('Error al crear la categoría: ' + (error.message || 'Ya existe'));
+    }
+  };
+
+  const handleDeleteCategoria = async (id) => {
+    try {
+      await categoryService.remove(id);
+      setCategorias(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar categoría:', error);
+      alert('Error al eliminar la categoría');
+    }
+  };
+
   return (
     <div className="container-fluid p-4">
-      <div className="d-flex justify-content-center">
-        {renderView()}
-      </div>
-      {/* Modales */}
+      <div className="d-flex justify-content-center">{renderView()}</div>
       <ForgotPasswordModal show={showForgotModal} onClose={() => setShowForgotModal(false)} />
-      <PaymentModal show={showPaymentModal} onClose={() => setShowPaymentModal(false)} onPayCard={handlePayCard} onPayEfecty={handlePayEfecty} />
-      <ConfirmationModal show={showConfirmationModal} onClose={() => setShowConfirmationModal(false)} title={confirmationData.title} body={confirmationData.body} />
-      <CreditCardModal show={showCreditCardModal} onClose={() => setShowCreditCardModal(false)} onConfirm={handlePayCardConfirm} />
     </div>
   );
 }
