@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
-  const [identifier, setIdentifier] = useState(''); // Puede ser correo o usuario
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,13 +16,11 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       const pass = password.trim();
       let emailToUse = null;
 
-      // Si el input es un correo, lo usamos directamente
       if (input.includes('@')) {
         emailToUse = input;
       } else {
-        // Buscar el correo asociado al username en Supabase Auth
-        const { data: authUsers, error: authLookupError } = await supabase
-          .from('users') // tabla interna de Supabase Auth
+        const { data: authUsers } = await supabase
+          .from('users')
           .select('email, user_metadata')
           .eq('user_metadata->>nickname', input);
 
@@ -31,7 +29,6 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         }
       }
 
-      // Intentar login con Supabase Auth solo si tenemos un correo válido
       let authData = null;
       if (emailToUse?.includes('@')) {
         const result = await supabase.auth.signInWithPassword({
@@ -42,7 +39,6 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       }
 
       if (authData?.user) {
-        // Login con Auth exitoso → buscar perfil en tabla usuarios
         const { data: userData } = await supabase
           .from('usuarios')
           .select('username, role')
@@ -56,12 +52,12 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           role: userData?.role || 'cliente',
         };
 
+        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
         onLogin(usr);
         return;
       }
 
-      // Si Auth falla o no hay correo, intentar login local con email o username
-      const { data: localUser, error: localError } = await supabase
+      const { data: localUser } = await supabase
         .from('usuarios')
         .select('*')
         .or(`email.eq.${input},username.eq.${input}`)
@@ -76,6 +72,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           role: localUser.role || 'cliente',
         };
 
+        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
         onLogin(usr);
         return;
       }

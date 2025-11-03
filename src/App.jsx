@@ -23,6 +23,22 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
+  // Restaurar sesión desde localStorage al iniciar la app
+  useEffect(() => {
+    const storedSession = localStorage.getItem('userSession');
+    if (storedSession) {
+      try {
+        const usr = JSON.parse(storedSession);
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+      } catch (err) {
+        console.error('Error parsing userSession:', err);
+        localStorage.removeItem('userSession');
+      }
+    }
+  }, []);
+
   const recargarProductos = async () => {
     const data = await productService.getAll();
     setProductos(data);
@@ -51,7 +67,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // 🔁 Canal realtime: productos
+  // Canal realtime: productos
   useEffect(() => {
     const canalProductos = supabase
       .channel('realtime-productos')
@@ -71,7 +87,7 @@ function App() {
     };
   }, []);
 
-  // 🔁 Canal realtime: proveedores
+  // Canal realtime: proveedores
   useEffect(() => {
     const canalProveedores = supabase
       .channel('realtime-proveedores')
@@ -96,12 +112,22 @@ function App() {
       alert('Usuario/clave inválidos');
       return;
     }
+    try {
+      localStorage.setItem('userSession', JSON.stringify(usr));
+    } catch (err) {
+      console.error('No se pudo guardar la sesión en localStorage:', err);
+    }
     setUsuarioActual(usr);
     setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
     if (usr.role === 'administrador') setVistaAdminActiva('inventory');
   };
 
   const handleLogout = () => {
+    try {
+      localStorage.removeItem('userSession');
+    } catch (err) {
+      console.error('No se pudo eliminar userSession:', err);
+    }
     setUsuarioActual(null);
     setCarrito([]);
     setVistaActual('login');
