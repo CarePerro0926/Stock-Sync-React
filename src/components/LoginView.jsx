@@ -1,6 +1,6 @@
 // src/components/LoginView.jsx
 import React, { useState } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseClient'; // Ruta relativa
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
   const [email, setEmail] = useState('');
@@ -11,17 +11,16 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     e.preventDefault();
     setLoading(true);
 
-    // ✅ Validación estricta ANTES de llamar a Supabase
     const cleanEmail = email.trim();
     const cleanPassword = password.trim();
 
     if (!cleanEmail || !cleanPassword) {
-      alert('Por favor ingresa un correo y una contraseña.');
+      alert('Por favor ingresa correo y contraseña.');
       setLoading(false);
       return;
     }
 
-    // ✅ Validar formato de email básico
+    // Validar formato básico de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
       alert('Por favor ingresa un correo electrónico válido.');
@@ -36,21 +35,15 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       });
 
       if (error) {
-        // Mensaje amigable
-        let msg = error.message || 'Credenciales incorrectas';
-        // Supabase a veces da mensajes técnicos; simplificamos
-        if (msg.includes('json') || msg.includes('unmarshal')) {
-          msg = 'Correo o contraseña inválidos';
-        }
-        alert('Usuario/clave inválidos: ' + msg);
+        alert('Usuario/clave inválidos: ' + (error.message?.replace(/json:.*/, 'Datos inválidos') || 'Error desconocido'));
         return;
       }
 
-      // ✅ Solo si NO hay error
-      onLogin();
+      // ✅ Todo lo demás (perfil, rol, vista) se maneja en App.jsx vía onAuthStateChange
+      onLogin(); // sin parámetros
     } catch (err) {
-      console.error('Error inesperado en login:', err);
-      alert('Error interno. Por favor intenta de nuevo.');
+      console.error('Error inesperado:', err);
+      alert('Error interno. Revisa la consola.');
     } finally {
       setLoading(false);
     }
