@@ -11,21 +11,46 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     e.preventDefault();
     setLoading(true);
 
+    // ✅ Validación estricta ANTES de llamar a Supabase
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      alert('Por favor ingresa un correo y una contraseña.');
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Validar formato de email básico
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      alert('Por favor ingresa un correo electrónico válido.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
+        email: cleanEmail,
+        password: cleanPassword,
       });
 
       if (error) {
-        alert('Error: ' + (error.message || 'Credenciales incorrectas'));
+        // Mensaje amigable
+        let msg = error.message || 'Credenciales incorrectas';
+        // Supabase a veces da mensajes técnicos; simplificamos
+        if (msg.includes('json') || msg.includes('unmarshal')) {
+          msg = 'Correo o contraseña inválidos';
+        }
+        alert('Usuario/clave inválidos: ' + msg);
         return;
       }
 
+      // ✅ Solo si NO hay error
       onLogin();
     } catch (err) {
-      console.error('Error inesperado:', err);
-      alert('Error interno. Revisa la consola.');
+      console.error('Error inesperado en login:', err);
+      alert('Error interno. Por favor intenta de nuevo.');
     } finally {
       setLoading(false);
     }
