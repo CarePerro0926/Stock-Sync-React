@@ -1,9 +1,9 @@
 // src/components/LoginView.jsx
 import React, { useState } from 'react';
-import { supabase } from '@/services/supabaseClient';
+import { supabase } from '../services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -12,72 +12,17 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     setLoading(true);
 
     try {
-      const input = identifier.trim();
-      const pass = password.trim();
-      let emailToUse = null;
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
 
-      if (input.includes('@')) {
-        emailToUse = input;
-      } else {
-        const { data: authUsers } = await supabase
-          .from('users')
-          .select('email, user_metadata')
-          .eq('user_metadata->>nickname', input);
-
-        if (authUsers?.length > 0 && authUsers[0]?.email) {
-          emailToUse = authUsers[0].email;
-        }
-      }
-
-      let authData = null;
-      if (emailToUse?.includes('@')) {
-        const result = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password: pass,
-        });
-        authData = result.data;
-      }
-
-      if (authData?.user) {
-        const { data: userData } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', authData.user.id)
-          .single();
-
-        const usr = {
-          id: authData.user.id,
-          email: authData.user.email,
-          username: userData?.username || authData.user.email.split('@')[0],
-          role: userData?.role || 'cliente',
-        };
-
-        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
-        onLogin(usr);
+      if (error) {
+        alert('Error: ' + (error.message || 'Credenciales incorrectas'));
         return;
       }
 
-      const { data: localUser } = await supabase
-        .from('usuarios')
-        .select('*')
-        .or(`email.eq.${input},username.eq.${input}`)
-        .eq('pass', pass)
-        .single();
-
-      if (localUser) {
-        const usr = {
-          id: localUser.id,
-          email: localUser.email,
-          username: localUser.username,
-          role: localUser.role || 'cliente',
-        };
-
-        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
-        onLogin(usr);
-        return;
-      }
-
-      alert('Credenciales incorrectas');
+      onLogin();
     } catch (err) {
       console.error('Error inesperado:', err);
       alert('Error interno. Revisa la consola.');
@@ -93,9 +38,10 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         <input
           id="loginUser"
           className="form-control mb-2"
-          placeholder="Correo o usuario"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          placeholder="Correo electrónico"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
         <input
