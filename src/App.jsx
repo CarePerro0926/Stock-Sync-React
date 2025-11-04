@@ -18,52 +18,56 @@ function App() {
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [vistaActual, setVistaActual] = useState('loading'); // Cambiado a 'loading' inicialmente
+  const [vistaActual, setVistaActual] = useState('loading');
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // ✅ 1. Manejar autenticación con Supabase (sin localStorage)
+  // Restaurar sesión al cargar la app (clave para que funcione en recarga)
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+    const restoreSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
       if (error) {
         console.error('Error al obtener sesión:', error);
         setVistaActual('login');
         return;
       }
 
-      if (session?.user) {
-        const { data: perfil, error: profileError } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError || !perfil) {
-          console.warn('Perfil no encontrado. Cerrando sesión.');
-          await supabase.auth.signOut();
-          setVistaActual('login');
-          return;
-        }
-
-        const usr = {
-          id: session.user.id,
-          email: session.user.email,
-          username: perfil.username,
-          role: perfil.role,
-        };
-
-        setUsuarioActual(usr);
-        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
-      } else {
+      if (!data?.session?.user) {
         setVistaActual('login');
+        return;
       }
+
+      const { data: perfil, error: profileError } = await supabase
+        .from('usuarios')
+        .select('username, role')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (profileError || !perfil) {
+        console.warn('Perfil no encontrado. Cerrando sesión.');
+        await supabase.auth.signOut();
+        setVistaActual('login');
+        return;
+      }
+
+      const usr = {
+        id: data.session.user.id,
+        email: data.session.user.email,
+        username: perfil.username,
+        role: perfil.role,
+      };
+
+      setUsuarioActual(usr);
+      setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+      if (usr.role === 'administrador') setVistaAdminActiva('inventory');
     };
 
-    checkSession();
+    restoreSession();
+  }, []);
 
-    // ✅ 2. Escuchar cambios de autenticación
+  // Escuchar cambios de autenticación en tiempo real
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -98,9 +102,9 @@ function App() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // Solo al montar
+  }, []);
 
-  // ✅ Cargar datos iniciales
+  // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -123,7 +127,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // ✅ Realtime: productos
+  // Canal realtime: productos
   useEffect(() => {
     const canalProductos = supabase
       .channel('realtime-productos')
@@ -143,7 +147,7 @@ function App() {
     };
   }, []);
 
-  // ✅ Realtime: proveedores
+  // Canal realtime: proveedores
   useEffect(() => {
     const canalProveedores = supabase
       .channel('realtime-proveedores')
@@ -163,24 +167,14 @@ function App() {
     };
   }, []);
 
-  // ✅ handleLogin ahora usa Supabase directamente (requiere email y password)
-  const handleLogin = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      alert('Usuario/clave inválidos: ' + (error.message || 'Error desconocido'));
-      return;
-    }
-
-    // La sesión ya está guardada en sessionStorage por Supabase
-    // El onAuthStateChange ya se encargará de actualizar el estado
+  // handleLogin: NO recibe parámetros
+  const handleLogin = () => {
+    // Todo se maneja mediante onAuthStateChange
   };
 
-  // ✅ handleLogout usa signOut de Supabase
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setCarrito([]);
-    // El onAuthStateChange ya actualizará `usuarioActual` y `vistaActual`
   };
 
   const handleShowCatalog = () => setVistaActual('catalog');
@@ -194,14 +188,7 @@ function App() {
 
     switch (vistaActual) {
       case 'login':
-        return (
-          <LoginView
-            onLogin={handleLogin}
-            onShowRegister={handleShowRegister}
-            onShowCatalog={handleShowCatalog}
-            onShowForgot={() => setShowForgotModal(true)}
-          />
-        );
+        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
       case 'register':
         return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
