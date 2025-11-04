@@ -10,7 +10,6 @@ import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
-import { filtroProductos } from './utils/helpers';
 import { supabase } from './services/supabaseClient';
 
 function App() {
@@ -19,32 +18,89 @@ function App() {
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [vistaActual, setVistaActual] = useState('login');
+  const [vistaActual, setVistaActual] = useState('loading'); // Cambiado a 'loading' inicialmente
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Restaurar sesión desde localStorage al iniciar la app
+  // ✅ 1. Manejar autenticación con Supabase (sin localStorage)
   useEffect(() => {
-    const storedSession = localStorage.getItem('userSession');
-    if (storedSession) {
-      try {
-        const usr = JSON.parse(storedSession);
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error al obtener sesión:', error);
+        setVistaActual('login');
+        return;
+      }
+
+      if (session?.user) {
+        const { data: perfil, error: profileError } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError || !perfil) {
+          console.warn('Perfil no encontrado. Cerrando sesión.');
+          await supabase.auth.signOut();
+          setVistaActual('login');
+          return;
+        }
+
+        const usr = {
+          id: session.user.id,
+          email: session.user.email,
+          username: perfil.username,
+          role: perfil.role,
+        };
+
         setUsuarioActual(usr);
         setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
         if (usr.role === 'administrador') setVistaAdminActiva('inventory');
-      } catch (err) {
-        console.error('Error parsing userSession:', err);
-        localStorage.removeItem('userSession');
+      } else {
+        setVistaActual('login');
       }
-    }
-  }, []);
+    };
 
-  const recargarProductos = async () => {
-    const data = await productService.getAll();
-    setProductos(data);
-  };
+    checkSession();
 
-  // Cargar datos iniciales
+    // ✅ 2. Escuchar cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const { data: perfil, error: profileError } = await supabase
+            .from('usuarios')
+            .select('username, role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError || !perfil) {
+            console.warn('Perfil no encontrado tras cambio de estado.');
+            return;
+          }
+
+          const usr = {
+            id: session.user.id,
+            email: session.user.email,
+            username: perfil.username,
+            role: perfil.role,
+          };
+
+          setUsuarioActual(usr);
+          setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+          if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+        } else {
+          setUsuarioActual(null);
+          setVistaActual('login');
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []); // Solo al montar
+
+  // ✅ Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -67,7 +123,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // Canal realtime: productos
+  // ✅ Realtime: productos
   useEffect(() => {
     const canalProductos = supabase
       .channel('realtime-productos')
@@ -87,7 +143,7 @@ function App() {
     };
   }, []);
 
-  // Canal realtime: proveedores
+  // ✅ Realtime: proveedores
   useEffect(() => {
     const canalProveedores = supabase
       .channel('realtime-proveedores')
@@ -107,30 +163,24 @@ function App() {
     };
   }, []);
 
-  const handleLogin = (usr) => {
-    if (!usr) {
-      alert('Usuario/clave inválidos');
+  // ✅ handleLogin ahora usa Supabase directamente (requiere email y password)
+  const handleLogin = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      alert('Usuario/clave inválidos: ' + (error.message || 'Error desconocido'));
       return;
     }
-    try {
-      localStorage.setItem('userSession', JSON.stringify(usr));
-    } catch (err) {
-      console.error('No se pudo guardar la sesión en localStorage:', err);
-    }
-    setUsuarioActual(usr);
-    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+
+    // La sesión ya está guardada en sessionStorage por Supabase
+    // El onAuthStateChange ya se encargará de actualizar el estado
   };
 
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem('userSession');
-    } catch (err) {
-      console.error('No se pudo eliminar userSession:', err);
-    }
-    setUsuarioActual(null);
+  // ✅ handleLogout usa signOut de Supabase
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCarrito([]);
-    setVistaActual('login');
+    // El onAuthStateChange ya actualizará `usuarioActual` y `vistaActual`
   };
 
   const handleShowCatalog = () => setVistaActual('catalog');
@@ -138,9 +188,20 @@ function App() {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
+    if (vistaActual === 'loading') {
+      return <div>Cargando...</div>;
+    }
+
     switch (vistaActual) {
       case 'login':
-        return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
+        return (
+          <LoginView
+            onLogin={handleLogin}
+            onShowRegister={handleShowRegister}
+            onShowCatalog={handleShowCatalog}
+            onShowForgot={() => setShowForgotModal(true)}
+          />
+        );
       case 'register':
         return <RegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
@@ -168,6 +229,11 @@ function App() {
       default:
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
     }
+  };
+
+  const recargarProductos = async () => {
+    const data = await productService.getAll();
+    setProductos(data);
   };
 
   const handleAddProducto = async (nuevoProducto) => {
