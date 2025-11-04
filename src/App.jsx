@@ -22,51 +22,68 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Restaurar sesión al cargar la app (clave para que funcione en recarga)
+  // 🔑 Restaurar sesión con manejo robusto
   useEffect(() => {
+    let isMounted = true;
+
     const restoreSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error('Error al obtener sesión:', error);
-        setVistaActual('login');
-        return;
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Error al obtener sesión:', error);
+          setVistaActual('login');
+          return;
+        }
+
+        const session = data?.session;
+        if (!session?.user) {
+          setVistaActual('login');
+          return;
+        }
+
+        const { data: perfil, error: profileError } = await supabase
+          .from('usuarios')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!isMounted) return;
+
+        if (profileError || !perfil) {
+          console.warn('Perfil no encontrado. Redirigiendo a login.');
+          setVistaActual('login');
+          return;
+        }
+
+        const usr = {
+          id: session.user.id,
+          email: session.user.email,
+          username: perfil.username,
+          role: perfil.role,
+        };
+
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+      } catch (err) {
+        console.error('Excepción al restaurar sesión:', err);
+        if (isMounted) {
+          setVistaActual('login');
+        }
       }
-
-      if (!data?.session?.user) {
-        setVistaActual('login');
-        return;
-      }
-
-      const { data: perfil, error: profileError } = await supabase
-        .from('usuarios')
-        .select('username, role')
-        .eq('id', data.session.user.id)
-        .single();
-
-      if (profileError || !perfil) {
-        console.warn('Perfil no encontrado. Cerrando sesión.');
-        await supabase.auth.signOut();
-        setVistaActual('login');
-        return;
-      }
-
-      const usr = {
-        id: data.session.user.id,
-        email: data.session.user.email,
-        username: perfil.username,
-        role: perfil.role,
-      };
-
-      setUsuarioActual(usr);
-      setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-      if (usr.role === 'administrador') setVistaAdminActiva('inventory');
     };
 
     restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Escuchar cambios de autenticación en tiempo real
+  // 🔁 Escuchar cambios de autenticación
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -127,7 +144,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // Canal realtime: productos
+  // Realtime: productos
   useEffect(() => {
     const canalProductos = supabase
       .channel('realtime-productos')
@@ -147,7 +164,7 @@ function App() {
     };
   }, []);
 
-  // Canal realtime: proveedores
+  // Realtime: proveedores
   useEffect(() => {
     const canalProveedores = supabase
       .channel('realtime-proveedores')
@@ -167,9 +184,8 @@ function App() {
     };
   }, []);
 
-  // handleLogin: NO recibe parámetros
   const handleLogin = () => {
-    // Todo se maneja mediante onAuthStateChange
+    // Vacío: manejado por onAuthStateChange
   };
 
   const handleLogout = async () => {
