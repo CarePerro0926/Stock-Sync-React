@@ -91,7 +91,7 @@ const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
     }
 
     if (onUpdateSuccess) {
-      onUpdateSuccess(); // 🔁 sincroniza el estado global
+      onUpdateSuccess(); // sincroniza el estado global
     }
 
     alert('Producto actualizado correctamente.');

@@ -5,15 +5,15 @@ import { initialProveedores, initialProductos, initialUsuarios } from '../data/i
 export async function migrarDatos() {
   // 1. Proveedores
   const { error: errProv } = await supabase.from('proveedores').insert(initialProveedores);
-  if (errProv) return console.error('❌ Proveedores:', errProv.message);
+  if (errProv) return console.error('Proveedores:', errProv.message);
 
   // 2. Productos
   const { error: errProd } = await supabase.from('productos').insert(initialProductos);
-  if (errProd) return console.error('❌ Productos:', errProd.message);
+  if (errProd) return console.error('Productos:', errProd.message);
 
   // 3. Usuarios
   const { error: errUser } = await supabase.from('usuarios').insert(initialUsuarios);
-  if (errUser) return console.error('❌ Usuarios:', errUser.message);
+  if (errUser) return console.error('Usuarios:', errUser.message);
 
   console.log('Migración completada');
 }

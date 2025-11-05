@@ -85,7 +85,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
-    <div className="w-100"> {/* 👈 w-100 agregado */}
+    <div className="w-100"> {/* w-100 agregado */}
       <h5>Inventario</h5>
 
       <div className="row g-2 mb-3">
@@ -115,7 +115,7 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
       </div>
 
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <div className="table-responsive"> {/* 👈 envuelve en table-responsive */}
+        <div className="table-responsive"> {/* envuelve en table-responsive */}
           <ResponsiveTable
             headers={tableHeaders}
             data={tableData}

@@ -36,7 +36,7 @@ const ForgotPasswordModal = ({ show, onClose }) => {
 
       // Enviar correo de recuperación
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-        redirectTo: 'https://stocksync.com/reset-password' // ← actualiza con tu URL real
+        redirectTo: 'https://stocksync.com/reset-password' // actualiza con tu URL real
       });
 
       if (resetError) {

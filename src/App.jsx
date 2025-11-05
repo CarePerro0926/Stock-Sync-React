@@ -25,7 +25,7 @@ function App() {
 
   // Restaurar sesión desde sessionStorage al iniciar la app
     useEffect(() => {
-      const storedSession = sessionStorage.getItem('userSession'); // ← sessionStorage
+      const storedSession = sessionStorage.getItem('userSession'); // sessionStorage
       if (storedSession) {
         try {
           const usr = JSON.parse(storedSession);
@@ -34,7 +34,7 @@ function App() {
           if (usr.role === 'administrador') setVistaAdminActiva('inventory');
         } catch (err) {
           console.error('Error parsing userSession:', err);
-          sessionStorage.removeItem('userSession'); // ← sessionStorage
+          sessionStorage.removeItem('userSession'); // sessionStorage
         }
       }
     }, []);
@@ -113,7 +113,7 @@ function App() {
         return;
       }
       try {
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); // ← sessionStorage
+        sessionStorage.setItem('userSession', JSON.stringify(usr)); // sessionStorage
       } catch (err) {
         console.error('No se pudo guardar la sesión:', err);
       }
@@ -124,7 +124,7 @@ function App() {
 
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem('userSession'); // ← sessionStorage
+      sessionStorage.removeItem('userSession'); // sessionStorage
     } catch (err) {
       console.error('No se pudo eliminar userSession:', err);
     }

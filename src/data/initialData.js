@@ -59,7 +59,7 @@ export const initialCategorias = nombresCategorias.map((nombre) => ({
   nombre
 }));
 
-// Crear mapa nombre → id
+// Crear mapa nombre id
 const categoriaMap = {};
 initialCategorias.forEach(cat => {
   categoriaMap[cat.nombre] = cat.id;

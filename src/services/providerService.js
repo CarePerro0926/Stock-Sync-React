@@ -17,7 +17,7 @@ export const providerService = {
     const proveedoresConCategorias = await Promise.all(
       proveedores.map(async (prov) => {
         const { data: cats, error: catsErr } = await supabase
-          .from('proveedor_categorias') // ← corregido: plural
+          .from('proveedor_categorias') // corregido: plural
           .select('categoria_id')
           .eq('proveedor_id', prov.id);
 
@@ -54,7 +54,7 @@ export const providerService = {
         categoria_id: catId
       }));
       const { error: relCatsErr } = await supabase
-        .from('proveedor_categorias') // ← corregido: plural
+        .from('proveedor_categorias') // corregido: plural
         .insert(relacionesCats)
         .onConflict(['proveedor_id', 'categoria_id'])
         .ignore();
