@@ -1,5 +1,5 @@
 // src/utils/seedDatabase.js
-import { supabase } from '@/services/supabaseClient'; // ✅ Importa la instancia ya creada
+import { supabase } from '@/services/supabaseClient'; // Importa la instancia ya creada
 // Tus datos iniciales (puedes importarlos desde initialData.js)
 import { initialUsuarios, initialProductos, initialProveedores } from '../data/initialData';
 
@@ -28,6 +28,6 @@ export async function seedDatabase() {
 
     console.log(' Base de datos inicializada correctamente');
   } catch (error) {
-    console.error('❌ Error al inicializar la base de datos:', error.message);
+    console.error('Error al inicializar la base de datos:', error.message);
   }
 }

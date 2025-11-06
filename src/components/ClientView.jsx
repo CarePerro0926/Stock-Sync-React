@@ -1,7 +1,7 @@
 // src/components/ClientView.jsx
 import React, { useState, useMemo } from 'react';
 import { usePayment } from '../hooks/usePayment';
-import './ResponsiveTable.css'; // 👈 Mantiene el modo tarjeta
+import './ResponsiveTable.css'; // Mantiene el modo tarjeta
 
 const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -61,7 +61,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
     });
   };
 
-  // 👇 Preparar datos para ResponsiveTable
+  // Preparar datos para ResponsiveTable
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombre', label: 'Nombre' },
@@ -115,7 +115,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
         </div>
       </div>
 
-      {/* 👇 Contenedor con scroll VERTICAL solo para la tabla/tarjetas */}
+      {/* Contenedor con scroll VERTICAL solo para la tabla/tarjetas */}
       <div style={{ maxHeight: '45vh', overflowY: 'auto', marginBottom: '1rem' }}>
         <div className="responsive-table-container">
           <table className="responsive-table w-100">

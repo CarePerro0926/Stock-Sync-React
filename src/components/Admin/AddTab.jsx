@@ -151,6 +151,7 @@ const AddTab = ({
 
   return (
     <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
+      
       {/* -------------------- Agregar Producto -------------------- */}
       <h5>Agregar Producto</h5>
       <form onSubmit={handleAddProductoSubmit} className="mb-4">

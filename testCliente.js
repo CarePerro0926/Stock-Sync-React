@@ -14,11 +14,11 @@ const testLoginCliente = async () => {
     .single();
 
   if (error) {
-    console.error('❌ Error al buscar usuario:', error.message);
+    console.error('Error al buscar usuario:', error.message);
   } else if (!data) {
-    console.log('⚠️ Usuario no encontrado o contraseña incorrecta');
+    console.log(' Usuario no encontrado o contraseña incorrecta');
   } else {
-    console.log('✅ Usuario encontrado:', data);
+    console.log(' Usuario encontrado:', data);
   }
 };
 

@@ -12,9 +12,9 @@ const registerCliente = async () => {
   });
 
   if (error) {
-    console.error('❌ Error al registrar cliente:', error.message);
+    console.error('Error al registrar cliente:', error.message);
   } else {
-    console.log('✅ Cliente registrado en Auth:', data);
+    console.log(' Cliente registrado en Auth:', data);
   }
 };
 

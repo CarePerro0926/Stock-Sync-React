@@ -28,7 +28,7 @@ export const useAuth = () => {
     });
 
     if (error) {
-      console.error('❌ Error al registrar usuario:', error);
+      console.error('Error al registrar usuario:', error);
       return false;
     }
     return true;

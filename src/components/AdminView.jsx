@@ -54,7 +54,7 @@ const AdminView = ({
   };
 
   return (
-    <div className="card p-4 w-100"> {/* 👈 SOLO ESTE CAMBIO */}
+    <div className="card p-4 w-100"> {/* SOLO ESTE CAMBIO */}
       <h4 className="mb-3">Panel Administrador</h4>
 
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">

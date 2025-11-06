@@ -23,6 +23,22 @@ function App() {
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
+  // Restaurar sesión desde sessionStorage al iniciar la app
+    useEffect(() => {
+      const storedSession = sessionStorage.getItem('userSession'); // sessionStorage
+      if (storedSession) {
+        try {
+          const usr = JSON.parse(storedSession);
+          setUsuarioActual(usr);
+          setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+          if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+        } catch (err) {
+          console.error('Error parsing userSession:', err);
+          sessionStorage.removeItem('userSession'); // sessionStorage
+        }
+      }
+    }, []);
+
   const recargarProductos = async () => {
     const data = await productService.getAll();
     setProductos(data);
@@ -51,7 +67,7 @@ function App() {
     cargarDatos();
   }, []);
 
-  // 🔁 Canal realtime: productos
+  // Canal realtime: productos
   useEffect(() => {
     const canalProductos = supabase
       .channel('realtime-productos')
@@ -71,7 +87,7 @@ function App() {
     };
   }, []);
 
-  // 🔁 Canal realtime: proveedores
+  // Canal realtime: proveedores
   useEffect(() => {
     const canalProveedores = supabase
       .channel('realtime-proveedores')
@@ -91,17 +107,27 @@ function App() {
     };
   }, []);
 
-  const handleLogin = (usr) => {
-    if (!usr) {
-      alert('Usuario/clave inválidos');
-      return;
-    }
-    setUsuarioActual(usr);
-    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
-  };
+   const handleLogin = (usr) => {
+      if (!usr) {
+        alert('Usuario/clave inválidos');
+        return;
+      }
+      try {
+        sessionStorage.setItem('userSession', JSON.stringify(usr)); // sessionStorage
+      } catch (err) {
+        console.error('No se pudo guardar la sesión:', err);
+      }
+      setUsuarioActual(usr);
+      setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+      if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+    };
 
   const handleLogout = () => {
+    try {
+      sessionStorage.removeItem('userSession'); // sessionStorage
+    } catch (err) {
+      console.error('No se pudo eliminar userSession:', err);
+    }
     setUsuarioActual(null);
     setCarrito([]);
     setVistaActual('login');
