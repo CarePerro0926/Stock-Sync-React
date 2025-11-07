@@ -1,6 +1,5 @@
 // src/components/LoginView.jsx
 import React, { useState } from 'react';
-import { supabase } from '@/services/supabaseClient';
 
 const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => {
   const [identifier, setIdentifier] = useState('');
@@ -12,72 +11,31 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     setLoading(true);
 
     try {
-      const input = identifier.trim();
-      const pass = password.trim();
-      let emailToUse = null;
+      const res = await fetch('https://stock-sync-api.onrender.com/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: identifier.trim(),
+          pass: password.trim()
+        })
+      });
 
-      if (input.includes('@')) {
-        emailToUse = input;
-      } else {
-        const { data: authUsers } = await supabase
-          .from('users')
-          .select('email, user_metadata')
-          .eq('user_metadata->>nickname', input);
+      const result = await res.json();
 
-        if (authUsers?.length > 0 && authUsers[0]?.email) {
-          emailToUse = authUsers[0].email;
-        }
-      }
-
-      let authData = null;
-      if (emailToUse?.includes('@')) {
-        const result = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password: pass,
-        });
-        authData = result.data;
-      }
-
-      if (authData?.user) {
-        const { data: userData } = await supabase
-          .from('usuarios')
-          .select('username, role')
-          .eq('id', authData.user.id)
-          .single();
-
-        const usr = {
-          id: authData.user.id,
-          email: authData.user.email,
-          username: userData?.username || authData.user.email.split('@')[0],
-          role: userData?.role || 'cliente',
-        };
-
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); //  persistencia
-        onLogin(usr);
+      if (!res.ok) {
+        alert(result.message || 'Credenciales incorrectas');
         return;
       }
 
-      const { data: localUser } = await supabase
-        .from('usuarios')
-        .select('*')
-        .or(`email.eq.${input},username.eq.${input}`)
-        .eq('pass', pass)
-        .single();
+      const usr = {
+        id: result.user.id,
+        email: result.user.email,
+        username: result.user.username,
+        role: result.user.role || 'cliente'
+      };
 
-      if (localUser) {
-        const usr = {
-          id: localUser.id,
-          email: localUser.email,
-          username: localUser.username,
-          role: localUser.role || 'cliente',
-        };
-
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); //  persistencia
-        onLogin(usr);
-        return;
-      }
-
-      alert('Credenciales incorrectas');
+      sessionStorage.setItem('userSession', JSON.stringify(usr));
+      onLogin(usr);
     } catch (err) {
       console.error('Error inesperado:', err);
       alert('Error interno. Revisa la consola.');
