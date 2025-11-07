@@ -1,5 +1,5 @@
 // src/components/AdminView.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab'; 
 import AddTab from './Admin/AddTab';
@@ -23,18 +23,18 @@ const AdminView = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  const handleClickOutside = (event) => {
+  const handleClickOutside = useCallback((event) => {
     const menu = document.getElementById('adminMenu');
     const button = document.getElementById('btnMenuHamburguesa');
     if (showMenu && menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
       setShowMenu(false);
     }
-  };
+  }, [showMenu]); // showMenu es una dependencia de la función
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [showMenu]);
+  }, [handleClickOutside]); // handleClickOutside es ahora una dependencia estable
 
   const toggleMenu = () => setShowMenu(!showMenu);
   const selectTab = (tabId) => {
@@ -54,7 +54,7 @@ const AdminView = ({
   };
 
   return (
-    <div className="card p-4 w-100"> {/* SOLO ESTE CAMBIO */}
+    <div className="card p-4 w-100">
       <h4 className="mb-3">Panel Administrador</h4>
 
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
