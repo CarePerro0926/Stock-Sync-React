@@ -13,8 +13,15 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const cats = Array.isArray(categorias) ? categorias : [];
-  const prods = Array.isArray(productos) ? productos : [];
+  // Envolver la lógica de cats en useMemo para estabilidad
+  const cats = useMemo(() => {
+    return Array.isArray(categorias) ? categorias : [];
+  }, [categorias]); // cats solo cambia si categorias cambia
+
+  // Envolver la lógica de prods en useMemo para estabilidad
+  const prods = useMemo(() => {
+    return Array.isArray(productos) ? productos : [];
+  }, [productos]); // prods solo cambia si productos cambia
 
   const productosConNombreCategoria = useMemo(() => {
     return prods.map(p => {
@@ -25,7 +32,7 @@ export default function PublicCatalogView({ productos = [], categorias = [], onB
         categoria_nombre: categoria?.nombre || 'Sin Categoría'
       };
     });
-  }, [prods, cats]);
+  }, [prods, cats]); // Ahora depende de 'prods' y 'cats' que son estables
 
   const productosFiltrados = useMemo(() => {
     return productosConNombreCategoria.filter(p => {
