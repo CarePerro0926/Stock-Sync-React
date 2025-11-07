@@ -1,9 +1,12 @@
+// src/components/UsuariosView.jsx
+
 import React, { useEffect, useState } from 'react';
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroRol, setFiltroRol] = useState('todos');
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -27,24 +30,45 @@ const UsuariosView = () => {
 
   const usuariosFiltrados = usuarios.filter((u) => {
     const texto = busqueda.toLowerCase();
-    return (
+    const coincideBusqueda =
       u.nombres?.toLowerCase().includes(texto) ||
       u.apellidos?.toLowerCase().includes(texto) ||
       u.email?.toLowerCase().includes(texto) ||
-      u.username?.toLowerCase().includes(texto)
-    );
+      u.username?.toLowerCase().includes(texto);
+
+    const coincideRol =
+      filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
+
+    return coincideBusqueda && coincideRol;
   });
 
   return (
     <div className="mt-4">
       <h4>Usuarios Registrados</h4>
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Buscar por nombre, apellido, correo o usuario"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Buscar por nombre, apellido, correo o usuario"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+        <div className="col-md-6">
+          <select
+            className="form-select"
+            value={filtroRol}
+            onChange={(e) => setFiltroRol(e.target.value)}
+          >
+            <option value="todos">Todos los roles</option>
+            <option value="cliente">Solo clientes</option>
+            <option value="administrador">Solo administradores</option>
+          </select>
+        </div>
+      </div>
+
       {error && <div className="alert alert-danger">{error}</div>}
       <table className="table table-bordered table-striped">
         <thead>
