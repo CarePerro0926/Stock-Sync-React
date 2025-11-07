@@ -1,6 +1,5 @@
 // src/components/RegisterView.jsx
 import React, { useState } from 'react';
-import { supabase } from '@/services/supabaseClient';
 
 const RegisterView = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
@@ -50,75 +49,22 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     try {
-      // Validar que el username no esté repetido
-      const { data: existingUser } = await supabase
-        .from('usuarios')
-        .select('id')
-        .eq('username', user)
-        .single();
-
-      if (existingUser) {
-        alert('Ese nombre de usuario ya está en uso. Elige otro.');
-        return;
-      }
-
-      // Validar que el email no esté registrado en Auth
-      const { data: existingEmail } = await supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingEmail) {
-        alert('Ese correo ya está registrado. Intenta iniciar sesión o recuperar tu contraseña.');
-        return;
-      }
-
-      // 1. Registrar en Supabase Auth con nickname y role
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: pass.trim(),
-        options: {
-          data: {
-            nickname: user,
-            role: role === 'admin' ? 'administrador' : 'cliente'
-          }
-        }
+      const response = await fetch('https://stock-sync-api.onrender.com/api/registro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
       });
 
-      if (authError) {
-        console.error('Error Auth:', authError.message);
-        alert(`Error al registrar: ${authError.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(`Error: ${result.message}`);
         return;
       }
 
-      const userId = authData?.user?.id;
-      if (!userId) {
-        alert('No se pudo obtener el ID del usuario registrado.');
-        return;
-      }
-
-      // 2. Insertar perfil en tabla usuarios
-      const { error: insertError } = await supabase.from('usuarios').insert({
-        id: userId,
-        email: email,
-        username: user,
-        pass: pass,
-        role: role === 'admin' ? 'administrador' : 'cliente',
-        nombres: formData.nombres,
-        apellidos: formData.apellidos,
-        cedula: formData.cedula,
-        fecha_nacimiento: formData.fecha,
-        telefono: null
-      });
-
-      if (insertError) {
-        console.error('Error al insertar perfil:', insertError.message);
-        alert(`Error al guardar perfil: ${insertError.message}`);
-        return;
-      }
-
-      alert('Usuario registrado con éxito');
+      alert(result.message);
       onShowLogin();
     } catch (error) {
       console.error('Error inesperado:', error);
