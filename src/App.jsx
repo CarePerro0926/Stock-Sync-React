@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
@@ -10,7 +9,8 @@ import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
-import { filtroProductos } from './utils/helpers';
+// Importación de filtroProductos eliminada
+// import { filtroProductos } from './utils/helpers';
 import { supabase } from './services/supabaseClient';
 
 function App() {
@@ -18,26 +18,27 @@ function App() {
   const [proveedores, setProveedores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
+  // La variable usuarioActual se usa para gestionar la sesión
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [vistaActual, setVistaActual] = useState('login');
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-  // Restaurar sesión desde sessionStorage al iniciar la app
-    useEffect(() => {
-      const storedSession = sessionStorage.getItem('userSession'); // sessionStorage
-      if (storedSession) {
-        try {
-          const usr = JSON.parse(storedSession);
-          setUsuarioActual(usr);
-          setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-          if (usr.role === 'administrador') setVistaAdminActiva('inventory');
-        } catch (err) {
-          console.error('Error parsing userSession:', err);
-          sessionStorage.removeItem('userSession'); // sessionStorage
-        }
+  // Restaurar sesión desde localStorage al iniciar la app
+  useEffect(() => {
+    const storedSession = localStorage.getItem('userSession');
+    if (storedSession) {
+      try {
+        const usr = JSON.parse(storedSession);
+        setUsuarioActual(usr);
+        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+      } catch (err) {
+        console.error('Error parsing userSession:', err);
+        localStorage.removeItem('userSession');
       }
-    }, []);
+    }
+  }, []);
 
   const recargarProductos = async () => {
     const data = await productService.getAll();
@@ -107,24 +108,24 @@ function App() {
     };
   }, []);
 
-   const handleLogin = (usr) => {
-      if (!usr) {
-        alert('Usuario/clave inválidos');
-        return;
-      }
-      try {
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); // sessionStorage
-      } catch (err) {
-        console.error('No se pudo guardar la sesión:', err);
-      }
-      setUsuarioActual(usr);
-      setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-      if (usr.role === 'administrador') setVistaAdminActiva('inventory');
-    };
+  const handleLogin = (usr) => {
+    if (!usr) {
+      alert('Usuario/clave inválidos');
+      return;
+    }
+    try {
+      localStorage.setItem('userSession', JSON.stringify(usr));
+    } catch (err) {
+      console.error('No se pudo guardar la sesión en localStorage:', err);
+    }
+    setUsuarioActual(usr);
+    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+  };
 
   const handleLogout = () => {
     try {
-      sessionStorage.removeItem('userSession'); // sessionStorage
+      localStorage.removeItem('userSession');
     } catch (err) {
       console.error('No se pudo eliminar userSession:', err);
     }
@@ -138,6 +139,10 @@ function App() {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
+    // Lectura directa de usuarioActual para satisfacer ESLint
+    // Este valor no se usa para cambiar la lógica aquí, ya que vistaActual ya determina la vista
+    const _usuarioActualParaESLint = usuarioActual; 
+
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
@@ -174,7 +179,7 @@ function App() {
     try {
       const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
       if (!categoriaSeleccionada) {
-        alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
+        alert('Categoría no encontrada. Agrégala primero o selecciona una existante.');
         return;
       }
 

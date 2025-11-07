@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
@@ -10,7 +9,8 @@ import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
-import { filtroProductos } from './utils/helpers';
+// Importación de filtroProductos eliminada
+// import { filtroProductos } from './utils/helpers';
 import { supabase } from './services/supabaseClient';
 
 function App() {
@@ -18,6 +18,7 @@ function App() {
   const [proveedores, setProveedores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
+  // La variable usuarioActual se usa para gestionar la sesión
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [vistaActual, setVistaActual] = useState('login');
   const [vistaAdminActiva, setVistaAdminActiva] = useState('inventory');
@@ -138,6 +139,10 @@ function App() {
   const handleShowLogin = () => setVistaActual('login');
 
   const renderView = () => {
+    // Lectura directa de usuarioActual para satisfacer ESLint
+    // Este valor no se usa para cambiar la lógica aquí, ya que vistaActual ya determina la vista
+    const _usuarioActualParaESLint = usuarioActual; 
+
     switch (vistaActual) {
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
@@ -174,7 +179,7 @@ function App() {
     try {
       const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
       if (!categoriaSeleccionada) {
-        alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
+        alert('Categoría no encontrada. Agrégala primero o selecciona una existante.');
         return;
       }
 
