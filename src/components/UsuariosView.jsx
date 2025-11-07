@@ -1,3 +1,4 @@
+// src/components/UsuariosView.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,13 +14,12 @@ const UsuariosView = () => {
     navigate('/login');
   };
 
-  // Validación de rol administrador
   const usuarioActual = JSON.parse(localStorage.getItem('usuario'));
   const esAdmin = usuarioActual?.role === 'administrador';
 
   useEffect(() => {
     if (!esAdmin) {
-      navigate('/'); // redirige si no es admin
+      navigate('/');
       return;
     }
 
@@ -57,7 +57,7 @@ const UsuariosView = () => {
   });
 
   return (
-    <div className="container-fluid mt-3 position-relative">
+    <div className="container-fluid position-relative" style={{ height: '100vh', overflow: 'hidden' }}>
       {/* Botón fijo de cerrar sesión */}
       <div className="position-fixed top-0 end-0 m-3 z-3">
         <button className="btn btn-danger" onClick={cerrarSesion}>
@@ -65,7 +65,8 @@ const UsuariosView = () => {
         </button>
       </div>
 
-      <div className="px-3 pt-5">
+      {/* Contenido con scroll */}
+      <div className="px-3 pt-5" style={{ height: '100%', overflowY: 'auto', paddingBottom: '100px' }}>
         <h4 className="mb-3">Usuarios Registrados</h4>
 
         {/* Filtros */}
