@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-// Ya no importamos ResponsiveTable, pero sí sus estilos
-// si la nueva tabla los necesita.
-import './ResponsiveTable.css'; 
+import ResponsiveTable from './ResponsiveTable';
+import './ResponsiveTable.css';
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -82,7 +81,6 @@ const UsuariosView = () => {
     return filtered;
   }, [usuarios, filtroRol, filtroTxt]);
 
-  // tableData se mantiene igual, generando los datos
   const tableData = useMemo(() => {
     return usuariosFiltrados.map(u => ({
       id: u.id ?? '—',
@@ -95,7 +93,6 @@ const UsuariosView = () => {
     }));
   }, [usuariosFiltrados]);
 
-  // tableHeaders se mantiene igual
   const tableHeaders = [
     { key: 'id', label: 'ID' },
     { key: 'nombres', label: 'Nombres' },
@@ -118,7 +115,7 @@ const UsuariosView = () => {
       <div className="card p-4 mt-5 w-100">
         <h5>Usuarios Registrados</h5>
 
-        {/* Filtros: siempre visibles */}
+        {/* Filtros estilo UpdateTab */}
         <div className="row g-2 mb-3">
           <div className="col-12 col-md-6">
             <select
@@ -145,51 +142,12 @@ const UsuariosView = () => {
 
         {error && <div className="alert alert-danger">{error}</div>}
 
-        {/* Contenedor con scroll VERTICAL solo para la tabla (como en el ejemplo 1) */}
-        {/* Usamos 45vh como en tu ejemplo para mantener consistencia */}
-        <div style={{ maxHeight: '45vh', overflowY: 'auto', marginBottom: '1rem' }}>
-          <div className="responsive-table-container">
-            <table className="responsive-table w-100">
-              <thead>
-                <tr>
-                  {tableHeaders.map(h => (
-                    <th key={h.key} style={{ textAlign: h.align || 'left' }}>
-                      {h.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {tableData.length === 0 ? (
-                  <tr>
-                    <td colSpan={tableHeaders.length} className="text-center">
-                      No se encontraron usuarios.
-                    </td>
-                  </tr>
-                ) : (
-                  tableData.map((row, i) => (
-                    <tr key={i} className="table-row">
-                      {tableHeaders.map(h => (
-                        <td
-                          key={h.key}
-                          data-label={h.label} // Para el CSS responsive
-                          className="table-cell" // Para el CSS responsive
-                          style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
-                        >
-                          {row[h.key]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* Scroll vertical solo para la tabla */}
+        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          <div className="table-responsive">
+            <ResponsiveTable headers={tableHeaders} data={tableData} />
           </div>
         </div>
-        
-        {/* Aquí podrías poner botones o un footer si fuera necesario,
-            quedarían fuera del scroll, igual que los filtros. */}
-
       </div>
     </div>
   );
