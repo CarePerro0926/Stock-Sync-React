@@ -1,21 +1,18 @@
 // src/components/ResponsiveTable.jsx
 import React, { useState, useEffect } from 'react';
-import './ResponsiveTable.css'; // Asegúrate de tener los estilos aquí o en un archivo global
+import './ResponsiveTable.css';
 
 const ResponsiveTable = ({ headers, data }) => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Umbral para móvil
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768); // Actualiza al cambiar el tamaño
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize); // Limpia el listener
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Renderizado para móviles: tarjetas
   if (isMobile) {
-    // Renderiza tarjetas para móviles
     return (
       <div className="responsive-cards-container">
         {data.length === 0 ? (
@@ -35,48 +32,48 @@ const ResponsiveTable = ({ headers, data }) => {
         )}
       </div>
     );
-  } else {
-    // Renderiza tabla para desktop
-    return (
-      <div className="responsive-table-container">
-        <table className="responsive-table">
-          <thead>
-            <tr>
-              {headers.map(h => (
-                <th key={h.key} style={{ textAlign: h.align || 'left' }}>
-                  {h.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={headers.length} className="text-center">
-                  No hay datos disponibles.
-                </td>
-              </tr>
-            ) : (
-              data.map((row, i) => (
-                <tr key={i} className="table-row">
-                  {headers.map(h => (
-                    <td
-                      key={h.key}
-                      data-label={h.label}
-                      className="table-cell"
-                      style={{ textAlign: h.align || 'left' }}
-                    >
-                      {row[h.key] ?? '—'}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    );
   }
+
+  // Renderizado para desktop: tabla
+  return (
+    <div className="responsive-table-container">
+      <table className="responsive-table">
+        <thead>
+          <tr>
+            {headers.map(h => (
+              <th key={h.key} style={{ textAlign: h.align || 'left' }}>
+                {h.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan={headers.length} className="text-center">
+                No hay datos disponibles.
+              </td>
+            </tr>
+          ) : (
+            data.map((row, i) => (
+              <tr key={i} className="table-row">
+                {headers.map(h => (
+                  <td
+                    key={h.key}
+                    data-label={h.label}
+                    className="table-cell"
+                    style={{ textAlign: h.align || 'left' }}
+                  >
+                    {row[h.key] ?? '—'}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default ResponsiveTable;
