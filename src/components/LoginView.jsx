@@ -52,7 +52,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           role: userData?.role || 'cliente',
         };
 
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); //  persistencia
+        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
         onLogin(usr);
         return;
       }
@@ -72,7 +72,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           role: localUser.role || 'cliente',
         };
 
-        sessionStorage.setItem('userSession', JSON.stringify(usr)); //  persistencia
+        localStorage.setItem('userSession', JSON.stringify(usr)); // ✅ persistencia
         onLogin(usr);
         return;
       }
