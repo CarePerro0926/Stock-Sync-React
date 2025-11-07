@@ -1,12 +1,12 @@
-// src/components/UsuariosView.jsx
-
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -42,12 +42,24 @@ const UsuariosView = () => {
     return coincideBusqueda && coincideRol;
   });
 
-  return (
-    <div className="mt-4">
-      <h4>Usuarios Registrados</h4>
+  const cerrarSesion = () => {
+    localStorage.clear(); // o removeItem('token') si usas JWT
+    navigate('/login');
+  };
 
+  return (
+    <div className="container mt-4">
+      {/* Encabezado fijo con botón de cerrar sesión */}
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+        <h4 className="mb-2">Usuarios Registrados</h4>
+        <button className="btn btn-danger" onClick={cerrarSesion}>
+          Cerrar sesión
+        </button>
+      </div>
+
+      {/* Filtros */}
       <div className="row mb-3">
-        <div className="col-md-6">
+        <div className="col-md-6 mb-2">
           <input
             type="text"
             className="form-control"
@@ -56,7 +68,7 @@ const UsuariosView = () => {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <div className="col-md-6">
+        <div className="col-md-6 mb-2">
           <select
             className="form-select"
             value={filtroRol}
