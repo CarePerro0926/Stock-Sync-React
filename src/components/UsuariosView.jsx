@@ -104,26 +104,24 @@ const UsuariosView = () => {
   ];
 
   return (
-    <div className="container-fluid position-relative" style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* Botón fijo en la parte superior derecha */}
+    <div className="container-fluid position-relative" style={{ minHeight: '100vh' }}>
+      {/* Botón fijo fuera del scroll */}
       <div className="position-fixed top-0 end-0 m-3 z-3">
         <button className="btn btn-danger" onClick={cerrarSesion}>
           Cerrar sesión
         </button>
       </div>
 
-      {/* Contenedor principal con padding para no chocar con el botón */}
-      <div className="card p-4 w-100 h-100 pt-5">
+      <div className="card p-4 mt-5 w-100">
         <h5>Usuarios Registrados</h5>
 
-        {/* Filtros */}
+        {/* Filtros estilo UpdateTab */}
         <div className="row g-2 mb-3">
-          <div className="col">
+          <div className="col-12 col-md-6">
             <select
-              id="filtroRolAdmin"
               className="form-select"
               value={filtroRol}
-              onChange={e => setFiltroRol(e.target.value)}
+              onChange={(e) => setFiltroRol(e.target.value)}
             >
               {listaRolesFiltro.map((rol, index) => (
                 <option key={`${rol}-${index}`} value={rol}>
@@ -132,13 +130,12 @@ const UsuariosView = () => {
               ))}
             </select>
           </div>
-          <div className="col">
+          <div className="col-12 col-md-6">
             <input
-              id="filtroTxtAdmin"
               className="form-control"
               placeholder="Buscar por nombre, apellido, email o usuario..."
               value={filtroTxt}
-              onChange={e => setFiltroTxt(e.target.value)}
+              onChange={(e) => setFiltroTxt(e.target.value)}
             />
           </div>
         </div>
