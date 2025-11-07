@@ -1,18 +1,16 @@
 // src/components/UsuariosView.jsx
-
 import React, { useEffect, useState, useMemo } from 'react';
-import ResponsiveTable from '../ResponsiveTable'; // Ajusta si tu ruta es distinta
+import './UsuariosView.css'; // ✅ asegúrate que este archivo exista y esté en el repo
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState(''); // Puedes renombrar a filtroTxt si lo deseas para consistencia
+  const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
 
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
-        // Corregido: Eliminado espacio al final de la URL
         const response = await fetch('https://stock-sync-api.onrender.com/api/usuarios');
         const data = await response.json();
 
@@ -46,40 +44,17 @@ const UsuariosView = () => {
     });
   }, [usuarios, busqueda, filtroRol]);
 
-  const tableHeaders = [
-    { key: 'nombres', label: 'Nombre' },
-    { key: 'apellidos', label: 'Apellido' },
-    { key: 'cedula', label: 'Cédula' },
-    { key: 'email', label: 'Email' },
-    { key: 'username', label: 'Usuario' },
-    { key: 'role', label: 'Rol', align: 'center' }
-  ];
-
-  const tableData = useMemo(() => {
-    return usuariosFiltrados.map((u) => ({
-      nombres: u.nombres ?? '—',
-      apellidos: u.apellidos ?? '—',
-      cedula: u.cedula ?? '—',
-      email: u.email ?? '—',
-      username: u.username ?? '—',
-      role: u.role ?? '—'
-    }));
-  }, [usuariosFiltrados]);
-
   return (
-    <div className="w-100">
-      <h5>Usuarios Registrados</h5>
-
-      <div className="row g-2 mb-3">
-        <div className="col">
+    <div className="usuarios-container">
+      <div className="usuarios-header">
+        <h5>Usuarios Registrados</h5>
+        <div className="usuarios-filtros">
           <input
             className="form-control"
             placeholder="Buscar por nombre, apellido, correo o usuario"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
-        </div>
-        <div className="col">
           <select
             className="form-select"
             value={filtroRol}
@@ -94,10 +69,20 @@ const UsuariosView = () => {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <div className="table-responsive">
-          <ResponsiveTable headers={tableHeaders} data={tableData} />
-        </div>
+      <div className="usuarios-lista">
+        {usuariosFiltrados.map((u) => (
+          <div key={u.id} className="usuario-card">
+            <h6>{u.nombres} {u.apellidos}</h6>
+            <p><strong>Cédula:</strong> {u.cedula}</p>
+            <p><strong>Email:</strong> {u.email}</p>
+            <p><strong>Usuario:</strong> {u.username}</p>
+            <p><strong>Rol:</strong> {u.role}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="usuarios-footer">
+        <button className="btn btn-outline-secondary">Cerrar Sesión</button>
       </div>
     </div>
   );
