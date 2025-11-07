@@ -1,3 +1,4 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
