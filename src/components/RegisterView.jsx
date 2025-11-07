@@ -23,7 +23,7 @@ const RegisterView = ({ onShowLogin }) => {
     const { role, email, user, pass, fecha, ...rest } = formData;
 
     // Validación de correo para admin
-    if (role === 'admin' && !email.toLowerCase().endsWith('@stocksync.com')) {
+    if (role === 'administrador' && !email.toLowerCase().endsWith('@stocksync.com')) {
       alert('Los administradores deben registrarse con un correo @stocksync.com');
       return;
     }
@@ -86,7 +86,7 @@ const RegisterView = ({ onShowLogin }) => {
         <input name="pass" type="password" className="form-control mb-2" placeholder="Contraseña" value={formData.pass} onChange={handleChange} />
         <select name="role" className="form-select mb-3" value={formData.role} onChange={handleChange}>
           <option value="cliente">Cliente</option>
-          <option value="admin">Administrador</option>
+          <option value="administrador">Administrador</option>
         </select>
         <div className="d-flex justify-content-between">
           <button type="submit" className="btn btn-success">Registrar</button>
