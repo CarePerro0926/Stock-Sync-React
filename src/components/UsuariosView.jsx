@@ -1,4 +1,3 @@
-// src/components/UsuariosView.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -65,7 +64,7 @@ const UsuariosView = () => {
         </button>
       </div>
 
-      {/* Contenido con scroll */}
+      {/* Contenido con scroll vertical */}
       <div className="px-3 pt-5" style={{ height: '100%', overflowY: 'auto', paddingBottom: '100px' }}>
         <h4 className="mb-3">Usuarios Registrados</h4>
 
@@ -95,49 +94,52 @@ const UsuariosView = () => {
 
         {error && <div className="alert alert-danger">{error}</div>}
 
-        {/* Tarjetas responsivas para móviles */}
-        <div className="row d-md-none">
-          {usuariosFiltrados.map((u) => (
-            <div key={u.id} className="col-12 mb-3">
-              <div className="card shadow-sm">
-                <div className="card-body">
-                  <h5 className="card-title">{u.nombres} {u.apellidos}</h5>
-                  <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
-                  <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
-                  <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
-                  <p className="card-text"><strong>Rol:</strong> {u.role}</p>
+        {/* Contenedor con scroll vertical para tarjetas/tabla */}
+        <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '6px' }}>
+          {/* Tarjetas responsivas para móviles */}
+          <div className="row d-md-none">
+            {usuariosFiltrados.map((u) => (
+              <div key={u.id} className="col-12 mb-3">
+                <div className="card shadow-sm">
+                  <div className="card-body">
+                    <h5 className="card-title">{u.nombres} {u.apellidos}</h5>
+                    <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
+                    <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
+                    <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
+                    <p className="card-text"><strong>Rol:</strong> {u.role}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Tabla para pantallas medianas y grandes */}
-        <div className="d-none d-md-block">
-          <table className="table table-bordered table-striped">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Cédula</th>
-                <th>Email</th>
-                <th>Usuario</th>
-                <th>Rol</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.nombres}</td>
-                  <td>{u.apellidos}</td>
-                  <td>{u.cedula}</td>
-                  <td>{u.email}</td>
-                  <td>{u.username}</td>
-                  <td>{u.role}</td>
+          {/* Tabla para pantallas medianas y grandes */}
+          <div className="d-none d-md-block">
+            <table className="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Cédula</th>
+                  <th>Email</th>
+                  <th>Usuario</th>
+                  <th>Rol</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usuariosFiltrados.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.nombres}</td>
+                    <td>{u.apellidos}</td>
+                    <td>{u.cedula}</td>
+                    <td>{u.email}</td>
+                    <td>{u.username}</td>
+                    <td>{u.role}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
