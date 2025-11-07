@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabaseClient';
 
 const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
   const [busqueda, setBusqueda] = useState('');
+  const [sugerencias, setSugerencias] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [producto, setProducto] = useState(null);
   const [formData, setFormData] = useState({
@@ -48,6 +49,7 @@ const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
       cantidad: encontrado.cantidad || '',
       categoria: encontrado.categoria_id || ''
     });
+    setSugerencias([]);
   };
 
   const handleChange = (e) => {
@@ -91,7 +93,7 @@ const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
     }
 
     if (onUpdateSuccess) {
-      onUpdateSuccess(); // sincroniza el estado global
+      onUpdateSuccess();
     }
 
     alert('Producto actualizado correctamente.');
@@ -109,14 +111,56 @@ const UpdateTab = ({ productos, categorias, onUpdateSuccess }) => {
 
       <form onSubmit={handleBuscar} className="mb-4">
         <div className="row g-2 mb-2">
-          <div className="col-12 col-md-8">
+          <div className="col-12 col-md-8 position-relative">
             <input
               className="form-control"
               placeholder="Buscar por ID o nombre"
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) => {
+                const entrada = e.target.value;
+                setBusqueda(entrada);
+
+                const texto = entrada.trim().toLowerCase();
+                if (texto.length === 0) {
+                  setSugerencias([]);
+                  return;
+                }
+
+                const coincidencias = productos.filter(p =>
+                  p.nombre.toLowerCase().includes(texto) ||
+                  String(p.id).toLowerCase().includes(texto)
+                );
+
+                setSugerencias(coincidencias.slice(0, 5));
+              }}
             />
+
+            {busqueda && sugerencias.length > 0 && (
+              <ul className="list-group position-absolute z-3 w-100">
+                {sugerencias.map(p => (
+                  <li
+                    key={p.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setProducto(p);
+                      setFormData({
+                        nombre: p.nombre || '',
+                        precio: p.precio || '',
+                        cantidad: p.cantidad || '',
+                        categoria: p.categoria_id || ''
+                      });
+                      setBusqueda(`${p.id} - ${p.nombre}`);
+                      setSugerencias([]);
+                    }}
+                  >
+                    {p.id} - {p.nombre}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
           <div className="col-12 col-md-4">
             <button type="submit" className="btn btn-outline-primary w-100">
               Buscar
