@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-// No se importa ResponsiveTable
-// import ResponsiveTable from './ResponsiveTable';
-// Se mantiene la importación de estilos si es necesario para otros componentes
-// o si defines estilos globales aquí.
-// import './ResponsiveTable.css'; 
+// Ya no importamos ResponsiveTable, pero sí sus estilos
+// si la nueva tabla los necesita.
+import './ResponsiveTable.css'; 
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -29,7 +27,6 @@ const UsuariosView = () => {
 
     const fetchUsuarios = async () => {
       try {
-        // Corregido: Eliminado espacio al final de la URL
         const response = await fetch('https://stock-sync-api.onrender.com/api/usuarios');
         const data = await response.json();
 
@@ -151,8 +148,8 @@ const UsuariosView = () => {
         {/* Contenedor con scroll VERTICAL solo para la tabla (como en el ejemplo 1) */}
         {/* Usamos 45vh como en tu ejemplo para mantener consistencia */}
         <div style={{ maxHeight: '45vh', overflowY: 'auto', marginBottom: '1rem' }}>
-          <div className="table-responsive"> {/* envuelve en table-responsive */}
-            <table className="table table-striped table-bordered table-hover w-100">
+          <div className="responsive-table-container">
+            <table className="responsive-table w-100">
               <thead>
                 <tr>
                   {tableHeaders.map(h => (
@@ -171,11 +168,13 @@ const UsuariosView = () => {
                   </tr>
                 ) : (
                   tableData.map((row, i) => (
-                    <tr key={i}>
+                    <tr key={i} className="table-row">
                       {tableHeaders.map(h => (
                         <td
                           key={h.key}
-                          style={{ textAlign: h.align || 'left' }}
+                          data-label={h.label} // Para el CSS responsive
+                          className="table-cell" // Para el CSS responsive
+                          style={{ textAlign: h.align || 'left', verticalAlign: 'middle' }}
                         >
                           {row[h.key]}
                         </td>
@@ -188,13 +187,9 @@ const UsuariosView = () => {
           </div>
         </div>
         
-        {/* Botón de cierre de sesión fijo abajo, fuera del scroll de la tabla */}
-        {/* Este botón está dentro del card, pero fuera del contenedor scrollable */}
-        <div className="d-flex justify-content-end">
-          <button className="btn btn-danger" onClick={cerrarSesion}>
-            Cerrar sesión
-          </button>
-        </div>
+        {/* Aquí podrías poner botones o un footer si fuera necesario,
+            quedarían fuera del scroll, igual que los filtros. */}
+
       </div>
     </div>
   );
