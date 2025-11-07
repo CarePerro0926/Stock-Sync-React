@@ -1,13 +1,13 @@
-// src/components/UsuariosView.jsx
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../ResponsiveTable.css'; // reutiliza estilos de inventario
+import ResponsiveTable from './ResponsiveTable'; // Asegúrate de importar el componente ResponsiveTable
+import './ResponsiveTable.css'; // Asegúrate de importar los estilos CSS si son compartidos
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
+  const [filtroTxt, setFiltroTxt] = useState(''); // Renombrado de 'busqueda' para coincidir con InventoryTab
   const navigate = useNavigate();
 
   const cerrarSesion = () => {
@@ -26,6 +26,7 @@ const UsuariosView = () => {
 
     const fetchUsuarios = async () => {
       try {
+        // Corregido el espacio al final de la URL
         const response = await fetch('https://stock-sync-api.onrender.com/api/usuarios');
         const data = await response.json();
 
@@ -43,106 +44,140 @@ const UsuariosView = () => {
     fetchUsuarios();
   }, [esAdmin, navigate]);
 
+  // useMemo para la lista de roles únicos para el filtro
+  const listaRolesFiltro = useMemo(() => {
+    const roles = usuarios
+      .map(u => u.role)
+      .filter(role => role && String(role).trim() !== '');
+    const unicos = [...new Set(roles.map(role => String(role).trim()))];
+    return ['todos', ...unicos];
+  }, [usuarios]);
+
+  // useMemo para filtrar usuarios
   const usuariosFiltrados = useMemo(() => {
-    return usuarios.filter((u) => {
-      const texto = busqueda.toLowerCase();
-      const coincideBusqueda =
-        u.nombres?.toLowerCase().includes(texto) ||
-        u.apellidos?.toLowerCase().includes(texto) ||
-        u.email?.toLowerCase().includes(texto) ||
-        u.username?.toLowerCase().includes(texto);
+    let filtered = [...usuarios];
 
-      const coincideRol =
-        filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
+    // Filtrar por rol
+    if (filtroRol !== 'todos') {
+      const filtroRolStr = String(filtroRol).trim();
+      filtered = filtered.filter(u => {
+        const role = u.role;
+        return role && String(role).trim() === filtroRolStr;
+      });
+    }
 
-      return coincideBusqueda && coincideRol;
-    });
-  }, [usuarios, busqueda, filtroRol]);
+    // Filtrar por texto (nombre, apellido, email, username)
+    if (filtroTxt.trim()) {
+      const term = filtroTxt.toLowerCase().trim();
+      filtered = filtered.filter(u => {
+        const nombresStr = String(u.nombres ?? '');
+        const apellidosStr = String(u.apellidos ?? '');
+        const emailStr = String(u.email ?? '');
+        const usernameStr = String(u.username ?? '');
+        return (
+          nombresStr.toLowerCase().includes(term) ||
+          apellidosStr.toLowerCase().includes(term) ||
+          emailStr.toLowerCase().includes(term) ||
+          usernameStr.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [usuarios, filtroRol, filtroTxt]);
+
+  // useMemo para preparar los datos para ResponsiveTable
+  const tableData = useMemo(() => {
+    return usuariosFiltrados.map(u => ({
+      id: u.id ?? '—',
+      nombres: u.nombres ?? 'Sin nombre',
+      apellidos: u.apellidos ?? 'Sin apellido',
+      cedula: u.cedula ?? '—',
+      email: u.email ?? '—',
+      username: u.username ?? '—',
+      role: u.role ?? 'Sin rol'
+    }));
+  }, [usuariosFiltrados]);
+
+  // Definir encabezados de la tabla
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombres', label: 'Nombres' },
+    { key: 'apellidos', label: 'Apellidos' },
+    { key: 'cedula', label: 'Cédula' },
+    { key: 'email', label: 'Email' },
+    { key: 'username', label: 'Usuario' },
+    { key: 'role', label: 'Rol' }
+  ];
+
+  // Si ResponsiveTable no maneja tarjetas, puedes renderizar condicionalmente aquí
+  // const renderTarjetas = () => (
+  //   <div className="row g-3">
+  //     {usuariosFiltrados.map(u => (
+  //       <div key={u.id} className="col-12">
+  //         <div className="card h-100">
+  //           <div className="card-body">
+  //             <h6 className="card-title mb-1">{u.nombres} {u.apellidos}</h6>
+  //             <p className="mb-1"><strong>Cédula:</strong> {u.cedula}</p>
+  //             <p className="mb-1"><strong>Email:</strong> {u.email}</p>
+  //             <p className="mb-1"><strong>Usuario:</strong> {u.username}</p>
+  //             <p className="mb-0"><strong>Rol:</strong> {u.role}</p>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     ))}
+  //   </div>
+  // );
 
   return (
-    <div className="w-100 position-relative" style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* Botón fijo de cerrar sesión */}
-      <div className="position-fixed top-0 end-0 m-3 z-3">
+    <div className="card p-4 w-100"> {/* w-100 agregado, similar a InventoryTab */}
+      <h5>Usuarios Registrados</h5> {/* Cambiado de h4 a h5 para coincidir con InventoryTab */}
+
+      {/* Filtros: siempre visibles, similar a InventoryTab */}
+      <div className="row g-2 mb-3">
+        <div className="col">
+          <select
+            id="filtroRolAdmin" // ID único para el filtro de rol
+            className="form-select"
+            value={filtroRol}
+            onChange={e => setFiltroRol(e.target.value)}
+          >
+            {listaRolesFiltro.map((rol, index) => (
+              <option key={`${rol}-${index}`} value={rol}>
+                {rol.charAt(0).toUpperCase() + rol.slice(1)} {/* Capitalizar primera letra */}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="col">
+          <input
+            id="filtroTxtAdmin" // ID único para el filtro de texto
+            className="form-control"
+            placeholder="Buscar por nombre, apellido, email o usuario..." // Placeholder actualizado
+            value={filtroTxt}
+            onChange={e => setFiltroTxt(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      {/* Contenedor con scroll VERTICAL solo para la tabla/tarjetas, similar a InventoryTab */}
+      <div style={{ maxHeight: '250px', overflowY: 'auto' }}> {/* Ajusta la altura según necesites */}
+        <div className="table-responsive">
+          <ResponsiveTable
+            headers={tableHeaders}
+            data={tableData}
+          />
+        </div>
+      </div>
+
+      {/* Botón de cerrar sesión (fuera del contenedor scrollable principal, pero puedes dejarlo aquí si lo deseas) */}
+      {/* Si decides dejarlo aquí, no será fijo */}
+      <div className="mt-3">
         <button className="btn btn-danger" onClick={cerrarSesion}>
           Cerrar sesión
         </button>
-      </div>
-
-      <div className="px-3 pt-5">
-        <h5>Usuarios Registrados</h5>
-
-        {/* Filtros estilo inventario */}
-        <div className="row g-2 mb-3">
-          <div className="col">
-            <select
-              className="form-select"
-              value={filtroRol}
-              onChange={(e) => setFiltroRol(e.target.value)}
-            >
-              <option value="todos">Todos los roles</option>
-              <option value="cliente">Solo clientes</option>
-              <option value="administrador">Solo administradores</option>
-            </select>
-          </div>
-          <div className="col">
-            <input
-              className="form-control"
-              placeholder="Buscar por nombre, apellido, correo o usuario..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {error && <div className="alert alert-danger">{error}</div>}
-
-        {/* Scroll vertical estilo inventario */}
-        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-          {/* Tarjetas responsivas para móviles */}
-          <div className="row d-md-none">
-            {usuariosFiltrados.map((u) => (
-              <div key={u.id} className="col-12 mb-3">
-                <div className="card shadow-sm responsive-card">
-                  <div className="card-body">
-                    <h6 className="card-title">{u.nombres} {u.apellidos}</h6>
-                    <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
-                    <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
-                    <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
-                    <p className="card-text"><strong>Rol:</strong> {u.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Tabla para escritorio */}
-          <div className="d-none d-md-block table-responsive">
-            <table className="table table-bordered table-striped responsive-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Cédula</th>
-                  <th>Email</th>
-                  <th>Usuario</th>
-                  <th>Rol</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuariosFiltrados.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.nombres}</td>
-                    <td>{u.apellidos}</td>
-                    <td>{u.cedula}</td>
-                    <td>{u.email}</td>
-                    <td>{u.username}</td>
-                    <td>{u.role}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
   );
