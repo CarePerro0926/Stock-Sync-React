@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+// src/components/UsuariosView.jsx
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../ResponsiveTable.css'; // reutiliza estilos de inventario
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -41,22 +43,24 @@ const UsuariosView = () => {
     fetchUsuarios();
   }, [esAdmin, navigate]);
 
-  const usuariosFiltrados = usuarios.filter((u) => {
-    const texto = busqueda.toLowerCase();
-    const coincideBusqueda =
-      u.nombres?.toLowerCase().includes(texto) ||
-      u.apellidos?.toLowerCase().includes(texto) ||
-      u.email?.toLowerCase().includes(texto) ||
-      u.username?.toLowerCase().includes(texto);
+  const usuariosFiltrados = useMemo(() => {
+    return usuarios.filter((u) => {
+      const texto = busqueda.toLowerCase();
+      const coincideBusqueda =
+        u.nombres?.toLowerCase().includes(texto) ||
+        u.apellidos?.toLowerCase().includes(texto) ||
+        u.email?.toLowerCase().includes(texto) ||
+        u.username?.toLowerCase().includes(texto);
 
-    const coincideRol =
-      filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
+      const coincideRol =
+        filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
 
-    return coincideBusqueda && coincideRol;
-  });
+      return coincideBusqueda && coincideRol;
+    });
+  }, [usuarios, busqueda, filtroRol]);
 
   return (
-    <div className="container-fluid position-relative" style={{ height: '100vh', overflow: 'hidden' }}>
+    <div className="w-100 position-relative" style={{ height: '100vh', overflow: 'hidden' }}>
       {/* Botón fijo de cerrar sesión */}
       <div className="position-fixed top-0 end-0 m-3 z-3">
         <button className="btn btn-danger" onClick={cerrarSesion}>
@@ -64,22 +68,12 @@ const UsuariosView = () => {
         </button>
       </div>
 
-      {/* Contenido con scroll vertical */}
-      <div className="px-3 pt-5" style={{ height: '100%', overflowY: 'auto', paddingBottom: '100px' }}>
-        <h4 className="mb-3">Usuarios Registrados</h4>
+      <div className="px-3 pt-5">
+        <h5>Usuarios Registrados</h5>
 
-        {/* Filtros */}
-        <div className="row mb-3">
-          <div className="col-md-6 mb-2">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Buscar por nombre, apellido, correo o usuario"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-          <div className="col-md-6 mb-2">
+        {/* Filtros estilo inventario */}
+        <div className="row g-2 mb-3">
+          <div className="col">
             <select
               className="form-select"
               value={filtroRol}
@@ -90,19 +84,27 @@ const UsuariosView = () => {
               <option value="administrador">Solo administradores</option>
             </select>
           </div>
+          <div className="col">
+            <input
+              className="form-control"
+              placeholder="Buscar por nombre, apellido, correo o usuario..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}
 
-        {/* Contenedor con scroll vertical para tarjetas/tabla */}
-        <div style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: '6px' }}>
+        {/* Scroll vertical estilo inventario */}
+        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
           {/* Tarjetas responsivas para móviles */}
           <div className="row d-md-none">
             {usuariosFiltrados.map((u) => (
               <div key={u.id} className="col-12 mb-3">
-                <div className="card shadow-sm">
+                <div className="card shadow-sm responsive-card">
                   <div className="card-body">
-                    <h5 className="card-title">{u.nombres} {u.apellidos}</h5>
+                    <h6 className="card-title">{u.nombres} {u.apellidos}</h6>
                     <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
                     <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
                     <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
@@ -113,9 +115,9 @@ const UsuariosView = () => {
             ))}
           </div>
 
-          {/* Tabla para pantallas medianas y grandes */}
-          <div className="d-none d-md-block">
-            <table className="table table-bordered table-striped">
+          {/* Tabla para escritorio */}
+          <div className="d-none d-md-block table-responsive">
+            <table className="table table-bordered table-striped responsive-table">
               <thead>
                 <tr>
                   <th>Nombre</th>
