@@ -1,15 +1,18 @@
+// src/components/UsuariosView.jsx
+
 import React, { useEffect, useState, useMemo } from 'react';
-import ResponsiveTable from '../ResponsiveTable'; // asegúrate que la ruta es correcta
+import ResponsiveTable from '../ResponsiveTable'; // Ajusta si tu ruta es distinta
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
+  const [busqueda, setBusqueda] = useState(''); // Puedes renombrar a filtroTxt si lo deseas para consistencia
   const [filtroRol, setFiltroRol] = useState('todos');
 
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
+        // Corregido: Eliminado espacio al final de la URL
         const response = await fetch('https://stock-sync-api.onrender.com/api/usuarios');
         const data = await response.json();
 
@@ -67,7 +70,6 @@ const UsuariosView = () => {
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
 
-      {/* Filtros */}
       <div className="row g-2 mb-3">
         <div className="col">
           <input
@@ -90,10 +92,8 @@ const UsuariosView = () => {
         </div>
       </div>
 
-      {/* Error */}
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* Tabla o tarjetas según pantalla */}
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
         <div className="table-responsive">
           <ResponsiveTable headers={tableHeaders} data={tableData} />
