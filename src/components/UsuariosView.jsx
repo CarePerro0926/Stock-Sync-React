@@ -69,22 +69,18 @@ const UsuariosView = () => {
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <div className="table-responsive">
-          <div className="row g-2">
-            {usuariosFiltrados.map((u) => (
-              <div key={u.id} className="col-md-4">
-                <div className="card border shadow-sm">
-                  <div className="card-body">
-                    <h6 className="card-title mb-1">{u.nombres} {u.apellidos}</h6>
-                    <p className="mb-1"><strong>Cédula:</strong> {u.cedula}</p>
-                    <p className="mb-1"><strong>Email:</strong> {u.email}</p>
-                    <p className="mb-1"><strong>Usuario:</strong> {u.username}</p>
-                    <p className="mb-0"><strong>Rol:</strong> {u.role}</p>
-                  </div>
-                </div>
+        <div className="d-flex flex-column gap-2">
+          {usuariosFiltrados.map((u) => (
+            <div key={u.id} className="card border shadow-sm w-100">
+              <div className="card-body">
+                <h6 className="card-title mb-1">{u.nombres} {u.apellidos}</h6>
+                <p className="mb-1"><strong>Cédula:</strong> {u.cedula}</p>
+                <p className="mb-1"><strong>Email:</strong> {u.email}</p>
+                <p className="mb-1"><strong>Usuario:</strong> {u.username}</p>
+                <p className="mb-0"><strong>Rol:</strong> {u.role}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
