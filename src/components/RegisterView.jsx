@@ -61,7 +61,7 @@ const RegisterView = ({ onShowLogin }) => {
     }
 
     try {
-      const response = await fetch('https://stock-sync-api.onrender.com/api/registro', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/registro`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
