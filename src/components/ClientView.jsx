@@ -8,7 +8,10 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   const [filtroTxt, setFiltroTxt] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const cats = Array.isArray(categorias) ? categorias : [];
+  // Envolver la lógica de cats en useMemo para estabilidad
+  const cats = useMemo(() => {
+    return Array.isArray(categorias) ? categorias : [];
+  }, [categorias]); // cats solo cambia si categorias cambia
 
   const productosConNombreCategoria = useMemo(() => {
     return productos.map(p => {
@@ -16,7 +19,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
       const categoria = cats.find(c => c.id === p.categoria_id);
       return { ...p, categoria_nombre: categoria ? categoria.nombre : 'Sin Categoría', categoria: categoria ? categoria.nombre : 'Sin Categoría' };
     });
-  }, [productos, cats]);
+  }, [productos, cats]); // Ahora depende de 'cats' que es estable
 
   const {
     showCreditCardModal,
@@ -33,7 +36,7 @@ const ClientView = ({ productos, categorias, carrito, setCarrito, onLogout }) =>
   const categoriasFiltro = useMemo(() => {
     const nombres = cats.map(c => c.nombre).filter(Boolean);
     return ['Todas', ...nombres];
-  }, [cats]);
+  }, [cats]); // Ahora depende de 'cats' que es estable
 
   const productosFiltrados = useMemo(() => {
     return productosConNombreCategoria.filter(p => {
