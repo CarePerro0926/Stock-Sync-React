@@ -1,3 +1,4 @@
+// src/components/UsuariosView.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -43,22 +44,22 @@ const UsuariosView = () => {
   });
 
   const cerrarSesion = () => {
-    localStorage.clear(); // o removeItem('token') si usas JWT
+    localStorage.clear();
     navigate('/login');
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container-fluid mt-3">
       {/* Encabezado fijo con botón de cerrar sesión */}
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+      <div className="d-flex justify-content-between align-items-center flex-wrap mb-3 px-3">
         <h4 className="mb-2">Usuarios Registrados</h4>
-        <button className="btn btn-danger" onClick={cerrarSesion}>
+        <button className="btn btn-danger mb-2" onClick={cerrarSesion}>
           Cerrar sesión
         </button>
       </div>
 
       {/* Filtros */}
-      <div className="row mb-3">
+      <div className="row mb-3 px-3">
         <div className="col-md-6 mb-2">
           <input
             type="text"
@@ -81,25 +82,27 @@ const UsuariosView = () => {
         </div>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-danger mx-3">{error}</div>}
 
-      {/* Vista tipo tarjeta para móviles */}
-      <div className="d-md-none">
+      {/* Tarjetas responsivas para móviles */}
+      <div className="row d-md-none px-3">
         {usuariosFiltrados.map((u) => (
-          <div key={u.id} className="card mb-3 shadow-sm">
-            <div className="card-body">
-              <h5 className="card-title">{u.nombres} {u.apellidos}</h5>
-              <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
-              <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
-              <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
-              <p className="card-text"><strong>Rol:</strong> {u.role}</p>
+          <div key={u.id} className="col-12 mb-3">
+            <div className="card shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">{u.nombres} {u.apellidos}</h5>
+                <p className="card-text mb-1"><strong>Cédula:</strong> {u.cedula}</p>
+                <p className="card-text mb-1"><strong>Email:</strong> {u.email}</p>
+                <p className="card-text mb-1"><strong>Usuario:</strong> {u.username}</p>
+                <p className="card-text"><strong>Rol:</strong> {u.role}</p>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Tabla para pantallas medianas y grandes */}
-      <div className="d-none d-md-block">
+      <div className="d-none d-md-block px-3">
         <table className="table table-bordered table-striped">
           <thead>
             <tr>
