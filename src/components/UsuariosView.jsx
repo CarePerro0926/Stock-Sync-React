@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
+  const [busqueda, setBusqueda] = useState('');
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -24,11 +25,28 @@ const UsuariosView = () => {
     fetchUsuarios();
   }, []);
 
+  const usuariosFiltrados = usuarios.filter((u) => {
+    const texto = busqueda.toLowerCase();
+    return (
+      u.nombres?.toLowerCase().includes(texto) ||
+      u.apellidos?.toLowerCase().includes(texto) ||
+      u.email?.toLowerCase().includes(texto) ||
+      u.username?.toLowerCase().includes(texto)
+    );
+  });
+
   return (
     <div className="mt-4">
       <h4>Usuarios Registrados</h4>
+      <input
+        type="text"
+        className="form-control mb-3"
+        placeholder="Buscar por nombre, apellido, correo o usuario"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+      />
       {error && <div className="alert alert-danger">{error}</div>}
-      <table className="table table-bordered table-striped mt-3">
+      <table className="table table-bordered table-striped">
         <thead>
           <tr>
             <th>Nombre</th>
@@ -40,7 +58,7 @@ const UsuariosView = () => {
           </tr>
         </thead>
         <tbody>
-          {usuarios.map((u) => (
+          {usuariosFiltrados.map((u) => (
             <tr key={u.id}>
               <td>{u.nombres}</td>
               <td>{u.apellidos}</td>
