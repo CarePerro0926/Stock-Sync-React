@@ -1,10 +1,10 @@
-// src/components/AdminView.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab'; 
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
+import UsuariosView from './UsuariosView'; // ✅ Importación nueva
 
 const AdminView = ({
   productos,
@@ -29,12 +29,12 @@ const AdminView = ({
     if (showMenu && menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
       setShowMenu(false);
     }
-  }, [showMenu]); // showMenu es una dependencia de la función
+  }, [showMenu]);
 
   useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [handleClickOutside]); // handleClickOutside es ahora una dependencia estable
+  }, [handleClickOutside]);
 
   const toggleMenu = () => setShowMenu(!showMenu);
   const selectTab = (tabId) => {
@@ -49,6 +49,7 @@ const AdminView = ({
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
+      case 'usuarios': return 'Usuarios';
       default: return 'Panel Administrador';
     }
   };
@@ -77,6 +78,7 @@ const AdminView = ({
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('usuarios')}>Usuarios</button> {/* ✅ Nueva opción */}
         </div>
       )}
 
@@ -106,6 +108,11 @@ const AdminView = ({
             Eliminar
           </button>
         </li>
+        <li className="nav-item">
+          <button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>
+            Usuarios
+          </button>
+        </li> {/* ✅ Nueva pestaña */}
       </ul>
 
       {vistaActiva === 'inventory' && (
@@ -140,6 +147,9 @@ const AdminView = ({
           onDeleteProveedor={onDeleteProveedor}
           onDeleteCategoria={onDeleteCategoria}
         />
+      )}
+      {vistaActiva === 'usuarios' && (
+        <UsuariosView /> // ✅ Renderiza la tabla de usuarios
       )}
 
       <div className="text-end mt-3">
