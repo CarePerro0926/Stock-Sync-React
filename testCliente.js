@@ -1,4 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   'https://TU_PROYECTO.supabase.co',
@@ -16,9 +16,9 @@ const testLoginCliente = async () => {
   if (error) {
     console.error('Error al buscar usuario:', error.message);
   } else if (!data) {
-    console.log(' Usuario no encontrado o contraseña incorrecta');
+    console.log('Usuario no encontrado o contraseña incorrecta');
   } else {
-    console.log(' Usuario encontrado:', data);
+    console.log('Usuario encontrado:', data);
   }
 };
 
