@@ -7,6 +7,7 @@ const RegisterView = ({ onShowLogin }) => {
     apellidos: '',
     cedula: '',
     fecha: '',
+    telefono: '',
     email: '',
     user: '',
     pass: '',
@@ -20,16 +21,16 @@ const RegisterView = ({ onShowLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { role, email, user, pass, fecha, ...rest } = formData;
+    const { role, email, user, pass, fecha, telefono, ...rest } = formData;
 
-    // Validación de correo para admin
+    // Validación de correo para administrador
     if (role === 'administrador' && !email.toLowerCase().endsWith('@stocksync.com')) {
       alert('Los administradores deben registrarse con un correo @stocksync.com');
       return;
     }
 
     // Validar campos obligatorios
-    if (Object.values(rest).some(v => !v) || !user || !pass || !email || !fecha) {
+    if (Object.values(rest).some(v => !v) || !user || !pass || !email || !fecha || !telefono) {
       alert('Completa todos los campos');
       return;
     }
@@ -48,16 +49,26 @@ const RegisterView = ({ onShowLogin }) => {
       return;
     }
 
+    // Validar formato de teléfono colombiano
+    const cleaned = telefono.replace(/\D/g, '');
+    const esValido =
+      (cleaned.length === 10 && cleaned.startsWith('3')) ||
+      (cleaned.length === 12 && cleaned.startsWith('573'));
+
+    if (!esValido) {
+      alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
+      return;
+    }
+
     try {
       const response = await fetch('https://stock-sync-api.onrender.com/api/registro', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
       const result = await response.json();
+      console.log('Respuesta del backend:', result);
 
       if (!response.ok) {
         alert(`Error: ${result.message}`);
@@ -81,6 +92,7 @@ const RegisterView = ({ onShowLogin }) => {
         <input name="cedula" className="form-control mb-2" placeholder="Cédula" value={formData.cedula} onChange={handleChange} />
         <label className="form-label">Fecha de Nacimiento</label>
         <input name="fecha" type="date" className="form-control mb-2" value={formData.fecha} onChange={handleChange} />
+        <input name="telefono" className="form-control mb-2" placeholder="Teléfono (Ej: 3001234567 o +573001234567)" value={formData.telefono} onChange={handleChange} />
         <input name="email" type="email" className="form-control mb-2" placeholder="Correo Electrónico" value={formData.email} onChange={handleChange} />
         <input name="user" className="form-control mb-2" placeholder="Nombre de Usuario" value={formData.user} onChange={handleChange} />
         <input name="pass" type="password" className="form-control mb-2" placeholder="Contraseña" value={formData.pass} onChange={handleChange} />
