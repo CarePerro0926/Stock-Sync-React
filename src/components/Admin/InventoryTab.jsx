@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import '../ResponsiveTable.css';
 import ResponsiveTable from '../ResponsiveTable';
 
-const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () => {} }) => {
+// Se eliminó onDeleteProducto de la lista de props
+const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
 
@@ -126,4 +127,4 @@ const InventoryTab = ({ productos = [], categorias = [], onDeleteProducto = () =
   );
 };
 
-export default InventoryTab;
+export default InventoryTab; 
