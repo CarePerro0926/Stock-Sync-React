@@ -1,6 +1,4 @@
-// src/components/UsuariosView.jsx
 import React, { useEffect, useState } from 'react';
-import './UsuariosView.css';
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -43,19 +41,19 @@ const UsuariosView = () => {
   });
 
   return (
-    <div className="usuarios-container">
-      {/* Filtros y encabezado */}
-      <div className="usuarios-header">
-        <h4>Usuarios Registrados</h4>
+    <div className="w-100">
+      <h5>Usuarios Registrados</h5>
 
-        <div className="usuarios-filtros">
+      <div className="row g-2 mb-3">
+        <div className="col">
           <input
-            type="text"
             className="form-control"
             placeholder="Buscar por nombre, apellido, correo o usuario"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+        </div>
+        <div className="col">
           <select
             className="form-select"
             value={filtroRol}
@@ -66,26 +64,28 @@ const UsuariosView = () => {
             <option value="administrador">Solo administradores</option>
           </select>
         </div>
-
-        {error && <div className="alert alert-danger">{error}</div>}
       </div>
 
-      {/* Tarjetas con scroll */}
-      <div className="usuarios-lista">
-        {usuariosFiltrados.map((u) => (
-          <div key={u.id} className="usuario-card">
-            <h5>{u.nombres} {u.apellidos}</h5>
-            <p><strong>Cédula:</strong> {u.cedula}</p>
-            <p><strong>Email:</strong> {u.email}</p>
-            <p><strong>Usuario:</strong> {u.username}</p>
-            <p><strong>Rol:</strong> {u.role}</p>
+      {error && <div className="alert alert-danger">{error}</div>}
+
+      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <div className="table-responsive">
+          <div className="row g-2">
+            {usuariosFiltrados.map((u) => (
+              <div key={u.id} className="col-md-4">
+                <div className="card border shadow-sm">
+                  <div className="card-body">
+                    <h6 className="card-title mb-1">{u.nombres} {u.apellidos}</h6>
+                    <p className="mb-1"><strong>Cédula:</strong> {u.cedula}</p>
+                    <p className="mb-1"><strong>Email:</strong> {u.email}</p>
+                    <p className="mb-1"><strong>Usuario:</strong> {u.username}</p>
+                    <p className="mb-0"><strong>Rol:</strong> {u.role}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Botón fijo */}
-      <div className="usuarios-footer">
-        <button className="btn btn-danger">Cerrar Sesión</button>
+        </div>
       </div>
     </div>
   );
