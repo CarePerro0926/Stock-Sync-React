@@ -117,7 +117,7 @@ const UsuariosView = () => {
 
         {/* Filtros estilo UpdateTab */}
         <div className="row g-2 mb-3">
-          <div className="col-12 col-md">
+          <div className="col-12 col-md-6">
             <select
               className="form-select"
               value={filtroRol}
@@ -130,7 +130,7 @@ const UsuariosView = () => {
               ))}
             </select>
           </div>
-          <div className="col-12 col-md">
+          <div className="col-12 col-md-6">
             <input
               className="form-control"
               placeholder="Buscar por nombre, apellido, email o usuario..."
