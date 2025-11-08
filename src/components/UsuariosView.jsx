@@ -104,7 +104,7 @@ const UsuariosView = () => {
   ];
 
   return (
-    <div className="container-fluid position-relative">
+    <div className="container-fluid position-relative" style={{ minHeight: '100vh' }}>
       {/* Botón fijo fuera del scroll */}
       <div className="position-fixed top-0 end-0 m-3 z-3">
         <button className="btn btn-danger" onClick={cerrarSesion}>
@@ -117,7 +117,7 @@ const UsuariosView = () => {
 
         {/* Filtros estilo UpdateTab */}
         <div className="row g-2 mb-3">
-          <div className="col-12 col-md">
+          <div className="col-12 col-md-6">
             <select
               className="form-select"
               value={filtroRol}
@@ -130,7 +130,7 @@ const UsuariosView = () => {
               ))}
             </select>
           </div>
-          <div className="col-12 col-md">
+          <div className="col-12 col-md-6">
             <input
               className="form-control"
               placeholder="Buscar por nombre, apellido, email o usuario..."
