@@ -1,8 +1,8 @@
-// src/components/UsuariosView.jsx
+// src/components/UsuariosTab.jsx
 import React, { useEffect, useState, useMemo } from 'react';
-import './UsuariosView.css'; // ✅ asegúrate que este archivo exista y esté en el repo
+import './UsuariosTab.css'; // ✅ asegúrate que este archivo exista y esté en el repo
 
-const UsuariosView = () => {
+const UUsuariosTab = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -88,4 +88,4 @@ const UsuariosView = () => {
   );
 };
 
-export default UsuariosView;
+export default UsuariosTab;

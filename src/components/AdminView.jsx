@@ -4,7 +4,7 @@ import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
-import UsuariosView from './UsuariosView'; //  Importación nueva
+import UsuariosTab from './components/Admin/UsuariosTab'; //  Importación nueva
 
 const AdminView = ({
   productos,
@@ -149,7 +149,7 @@ const AdminView = ({
         />
       )}
       {vistaActiva === 'usuarios' && (
-        <UsuariosView /> //  Renderiza la tabla de usuarios
+        <UsuariosTab /> //  Renderiza la tabla de usuarios
       )}
 
       <div className="text-end mt-3">
