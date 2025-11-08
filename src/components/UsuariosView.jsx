@@ -104,17 +104,14 @@ const UsuariosView = () => {
   ];
 
   return (
-    <div className="vh-100 d-flex flex-column w-100 position-relative">
-      {/* Botón fijo fuera del scroll */}
-      <div className="position-fixed top-0 end-0 m-3 z-3">
-        <button className="btn btn-danger" onClick={cerrarSesion}>
-          Cerrar sesión
-        </button>
-      </div>
-
-      {/* Encabezado y filtros */}
+    <div className="vh-100 d-flex flex-column w-100">
       <div className="container-fluid p-3">
-        <h5>Usuarios Registrados</h5>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0">Usuarios Registrados</h5>
+          <button className="btn btn-danger" onClick={cerrarSesion}>
+            Cerrar sesión
+          </button>
+        </div>
 
         <div className="row g-2 mb-3">
           <div className="col-12 col-md-6">
@@ -143,7 +140,6 @@ const UsuariosView = () => {
         {error && <div className="alert alert-danger">{error}</div>}
       </div>
 
-      {/* Scroll vertical solo para la tabla */}
       <div className="flex-grow-1 overflow-auto px-3">
         <div className="table-responsive">
           <ResponsiveTable headers={tableHeaders} data={tableData} />
