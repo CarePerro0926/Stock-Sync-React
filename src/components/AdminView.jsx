@@ -4,7 +4,7 @@ import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
-import UsuariosTab from './components/Admin/UsuariosTab'; //  Importación nueva
+import UsuariosTab from "./Admin/UsuariosTab"; //  Importación nueva
 
 const AdminView = ({
   productos,
