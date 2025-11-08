@@ -104,21 +104,23 @@ const UsuariosView = () => {
   ];
 
   return (
-    <div className="vh-100 d-flex flex-column w-100">
-      <div className="container-fluid p-3">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0">Usuarios Registrados</h5>
-          <button className="btn btn-danger" onClick={cerrarSesion}>
-            Cerrar sesión
-          </button>
-        </div>
+    <div className="container-fluid position-relative" style={{ minHeight: '100vh' }}>
+      {/* Botón fijo fuera del scroll */}
+      <div className="position-fixed top-0 end-0 m-3 z-3">
+        <button className="btn btn-danger" onClick={cerrarSesion}>
+          Cerrar sesión
+        </button>
+      </div>
 
+      <div className="card p-4 mt-5 w-100">
+        <h5>Usuarios Registrados</h5>
+
+        {/* Filtros estilo UpdateTab */}
         <div className="row g-2 mb-3">
           <div className="col-12 col-md">
             <select
               className="form-select"
               value={filtroRol}
-              
               onChange={(e) => setFiltroRol(e.target.value)}
             >
               {listaRolesFiltro.map((rol, index) => (
@@ -139,11 +141,12 @@ const UsuariosView = () => {
         </div>
 
         {error && <div className="alert alert-danger">{error}</div>}
-      </div>
 
-      <div className="flex-grow-1 overflow-auto px-3">
-        <div className="table-responsive">
-          <ResponsiveTable headers={tableHeaders} data={tableData} />
+        {/* Scroll vertical solo para la tabla */}
+        <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          <div className="table-responsive">
+            <ResponsiveTable headers={tableHeaders} data={tableData} />
+          </div>
         </div>
       </div>
     </div>
