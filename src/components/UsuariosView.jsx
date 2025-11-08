@@ -114,10 +114,11 @@ const UsuariosView = () => {
         </div>
 
         <div className="row g-2 mb-3">
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-md">
             <select
               className="form-select"
               value={filtroRol}
+              
               onChange={(e) => setFiltroRol(e.target.value)}
             >
               {listaRolesFiltro.map((rol, index) => (
@@ -127,7 +128,7 @@ const UsuariosView = () => {
               ))}
             </select>
           </div>
-          <div className="col-12 col-md-6">
+          <div className="col-12 col-md">
             <input
               className="form-control"
               placeholder="Buscar por nombre, apellido, email o usuario..."
