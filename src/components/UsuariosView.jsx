@@ -1,7 +1,8 @@
 // src/components/UsuariosView.jsx
 
 import React, { useEffect, useState, useMemo } from 'react';
-// import ResponsiveTable from '../ResponsiveTable'; // ¡Ya no se usa!
+import './ResponsiveTable.css';
+
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
