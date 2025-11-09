@@ -84,7 +84,7 @@ const RegisterView = ({ onShowLogin }) => {
   };
 
   return (
-    <div className="card mx-auto p-4" style={{ maxWidth: '400px' }}>
+    <div className="card mx-auto p-4 w-100" style={{ maxWidth: '500px' }}>
       <h4 className="mb-3">Registro de Usuario</h4>
       <form onSubmit={handleSubmit}>
         <input name="nombres" className="form-control mb-2" placeholder="Nombres" value={formData.nombres} onChange={handleChange} />
