@@ -94,7 +94,7 @@ const UsuariosView = () => {
 
       {/* Contenedor con scroll VERTICAL para las tarjetas */}
       {/* Usamos un max-height y overflow-y: auto, similar a tu ejemplo de Inventario */}
-      <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingRight: '15px' }}>
+      <div style={{ height: '504px', overflowY: 'auto', paddingRight: '8px' }}>
         {usuariosFiltrados.length === 0 ? (
           <div className="text-center p-4">
             <p>No se encontraron usuarios que coincidan con los filtros.</p>
