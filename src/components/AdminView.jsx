@@ -5,7 +5,7 @@ import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
 import UsuariosView from './UsuariosView'; //  Importación nueva
-import './ResponsiveTable.css'; // Mantiene el modo tarjeta
+import ResponsiveTable from './ResponsiveTable'; // Mantiene el modo tarjeta
 
 const AdminView = ({
   productos,
