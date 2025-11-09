@@ -1,5 +1,6 @@
 // src/components/UsuariosView.jsx
 import React, { useEffect, useState, useMemo } from 'react';
+import './ResponsiveTable.css'; // Mantiene el modo tarjeta
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
