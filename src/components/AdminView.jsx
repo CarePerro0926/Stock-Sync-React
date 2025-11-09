@@ -1,3 +1,4 @@
+// src/components/AdminView.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab'; 
@@ -113,7 +114,7 @@ const AdminView = ({
           <button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>
             Usuarios
           </button>
-        </li> {/* ✅ Nueva pestaña */}
+        </li> {/* Nueva pestaña */}
       </ul>
 
       {vistaActiva === 'inventory' && (
@@ -150,7 +151,7 @@ const AdminView = ({
         />
       )}
       {vistaActiva === 'usuarios' && (
-        <UsuariosView /> // ✅ Renderiza la tabla de usuarios
+        <UsuariosView /> // Renderiza la tabla de usuarios
       )}
 
       <div className="text-end mt-3">
