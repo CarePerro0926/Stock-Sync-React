@@ -57,3 +57,11 @@
     flex-shrink: 0;
   }
 }
+
+/* --- CONTENEDOR DE TARJETAS CON SCROLL INTERNO FIJO --- */
+.usuarios-scroll-container {
+  height: 320px; /* Ajusta este valor según el alto exacto que ves con “Administrador” */
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-bottom: 1rem;
+}
