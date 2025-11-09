@@ -1,5 +1,5 @@
 // registerCliente.js
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   'https://TU_PROYECTO.supabase.co',
