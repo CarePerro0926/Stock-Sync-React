@@ -1,3 +1,4 @@
+// src/services/productService.ts
 import { supabase } from '@/services/supabaseClient';
 
 export const getAll = async () => {
