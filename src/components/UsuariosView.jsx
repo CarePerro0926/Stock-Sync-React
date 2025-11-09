@@ -107,7 +107,7 @@ const UsuariosView = () => {
 
       {/* Tarjetas con scroll interno */}
       {!loading && (
-        <div style={{ height: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
+        <div className="flex-grow-1 overflow-auto" style={{ maxHeight: '70vh', paddingRight: '8px' }}>
           {usuariosFiltrados.length === 0 ? (
             <div className="text-center p-4">
               <p>No se encontraron usuarios que coincidan con los filtros.</p>
