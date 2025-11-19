@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import RegisterView from './RegisterView';
+import * as bootstrap from 'bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import './ResponsiveTable.css';
 
 const UsuariosView = () => {
@@ -7,7 +9,6 @@ const UsuariosView = () => {
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [recargar, setRecargar] = useState(false);
 
   useEffect(() => {
@@ -70,19 +71,14 @@ const UsuariosView = () => {
       <h5>Usuarios Registrados</h5>
 
       <div className="d-flex justify-content-end mb-3">
-        <button className="btn btn-primary" onClick={() => setMostrarFormulario(true)}>
+        <button
+          className="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#modalRegistro"
+        >
           Agregar Usuario
         </button>
       </div>
-
-      {mostrarFormulario && (
-        <RegisterView
-          onShowLogin={() => {
-            setMostrarFormulario(false);
-            setRecargar(prev => !prev);
-          }}
-        />
-      )}
 
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
@@ -154,6 +150,33 @@ const UsuariosView = () => {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Modal Bootstrap para registrar usuario */}
+      <div
+        className="modal fade"
+        id="modalRegistro"
+        tabIndex="-1"
+        aria-labelledby="modalRegistroLabel"
+        aria-hidden="true"
+      >
+        <div className="modal-dialog modal-dialog-centered modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="modalRegistroLabel">Registrar Usuario</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div className="modal-body">
+              <RegisterView
+                onShowLogin={() => {
+                  const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegistro'));
+                  modal.hide();
+                  setRecargar(prev => !prev);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
