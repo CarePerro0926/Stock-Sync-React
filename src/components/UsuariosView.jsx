@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import RegisterView from './RegisterView';
-import * as bootstrap from 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './ResponsiveTable.css';
 
@@ -73,8 +71,7 @@ const UsuariosView = () => {
       <div className="d-flex justify-content-end mb-3">
         <button
           className="btn btn-primary"
-          data-bs-toggle="modal"
-          data-bs-target="#modalRegistro"
+          onClick={() => window.open('/admin/registrar-usuario', '_blank')}
         >
           Agregar Usuario
         </button>
@@ -150,33 +147,6 @@ const UsuariosView = () => {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Modal Bootstrap para registrar usuario */}
-      <div
-        className="modal fade"
-        id="modalRegistro"
-        tabIndex="-1"
-        aria-labelledby="modalRegistroLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title" id="modalRegistroLabel">Registrar Usuario</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div className="modal-body">
-              <RegisterView
-                onShowLogin={() => {
-                  const modal = bootstrap.Modal.getInstance(document.getElementById('modalRegistro'));
-                  modal.hide();
-                  setRecargar(prev => !prev);
-                }}
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
