@@ -1,25 +1,21 @@
-// src/components/UsuariosView.jsx
-
 import React, { useEffect, useState, useMemo } from 'react';
+import RegisterView from './RegisterView';
 import './ResponsiveTable.css';
-
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [recargar, setRecargar] = useState(false);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
-        const response = await fetch('https://stock-sync-api.onrender.com/api/usuarios');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Error al obtener usuarios');
-        }
-
+        if (!response.ok) throw new Error(data.message || 'Error al obtener usuarios');
         setUsuarios(data);
       } catch (err) {
         console.error('Error:', err.message);
@@ -28,9 +24,8 @@ const UsuariosView = () => {
     };
 
     fetchUsuarios();
-  }, []);
+  }, [recargar]);
 
-  // Lista de roles únicos para el filtro (similar a listaCategoriasFiltro en InventoryTab)
   const listaRolesFiltro = useMemo(() => {
     const roles = usuarios
       .map(u => u.role)
@@ -38,7 +33,6 @@ const UsuariosView = () => {
     const unicos = [...new Set(roles.map(role => String(role).trim()))];
     return ['todos', ...unicos];
   }, [usuarios]);
-
 
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter((u) => {
@@ -48,7 +42,7 @@ const UsuariosView = () => {
         u.apellidos?.toLowerCase().includes(texto) ||
         u.email?.toLowerCase().includes(texto) ||
         u.username?.toLowerCase().includes(texto) ||
-        String(u.cedula ?? '').toLowerCase().includes(texto); // Incluimos cédula en la búsqueda
+        String(u.cedula ?? '').toLowerCase().includes(texto);
 
       const coincideRol =
         filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
@@ -57,13 +51,39 @@ const UsuariosView = () => {
     });
   }, [usuarios, busqueda, filtroRol]);
 
-  // Ya no necesitamos tableHeaders ni tableData
+  const eliminarUsuario = async (id) => {
+    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Error al eliminar');
+      setRecargar(prev => !prev);
+    } catch (err) {
+      alert('Error al eliminar usuario');
+      console.error(err);
+    }
+  };
 
   return (
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
 
-      {/* Filtros: Visibles siempre en la parte superior */}
+      <div className="d-flex justify-content-end mb-3">
+        <button className="btn btn-primary" onClick={() => setMostrarFormulario(true)}>
+          Agregar Usuario
+        </button>
+      </div>
+
+      {mostrarFormulario && (
+        <RegisterView
+          onShowLogin={() => {
+            setMostrarFormulario(false);
+            setRecargar(prev => !prev);
+          }}
+        />
+      )}
+
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
           <input
@@ -93,15 +113,12 @@ const UsuariosView = () => {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* Contenedor con scroll VERTICAL para las tarjetas */}
-      {/* Usamos un max-height y overflow-y: auto, similar a tu ejemplo de Inventario */}
       <div className="usuarios-scroll-container">
         {usuariosFiltrados.length === 0 ? (
           <div className="text-center p-4">
             <p>No se encontraron usuarios que coincidan con los filtros.</p>
           </div>
         ) : (
-          /* Estructura de grid responsivo para las tarjetas (similar a InventoryTab) */
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => (
               <div className="col" key={user.id}>
@@ -110,8 +127,6 @@ const UsuariosView = () => {
                     <h5 className="card-title text-primary mb-3">
                       {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
                     </h5>
-                    
-                    {/* Detalles del usuario en la tarjeta */}
                     <p className="card-text mb-1">
                       <strong>Email:</strong> {user.email ?? '—'}
                     </p>
@@ -122,12 +137,17 @@ const UsuariosView = () => {
                       <strong>Cédula:</strong> {user.cedula ?? '—'}
                     </p>
                     <p className="card-text">
-                      <strong>Rol:</strong> 
+                      <strong>Rol:</strong>
                       <span className={`badge ${user.role === 'administrador' ? 'bg-danger' : 'bg-success'} ms-2`}>
                         {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
                       </span>
                     </p>
-
+                    <button
+                      className="btn btn-sm btn-outline-danger mt-3"
+                      onClick={() => eliminarUsuario(user.id)}
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 </div>
               </div>
