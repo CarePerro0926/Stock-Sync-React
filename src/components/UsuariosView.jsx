@@ -1,7 +1,8 @@
-// src/components/UsuariosView.jsx
 import React, { useEffect, useState, useMemo } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './ResponsiveTable.css';
+import RegisterView from './RegisterView';
 
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -9,6 +10,7 @@ const UsuariosView = () => {
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
   const [recargar, setRecargar] = useState(false);
+  const [mostrarModal, setMostrarModal] = useState(false);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -72,7 +74,7 @@ const UsuariosView = () => {
       <div className="d-flex justify-content-end mb-3">
         <button
           className="btn btn-primary"
-          onClick={() => window.open('/admin/registrar-usuario', '_blank')}
+          onClick={() => setMostrarModal(true)}
         >
           Agregar Usuario
         </button>
@@ -149,6 +151,26 @@ const UsuariosView = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de registro */}
+      {mostrarModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Registrar Usuario</h5>
+                <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <RegisterView onShowLogin={() => {
+                  setMostrarModal(false);
+                  setRecargar(prev => !prev);
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
