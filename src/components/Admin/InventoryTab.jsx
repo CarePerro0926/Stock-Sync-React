@@ -1,6 +1,9 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
+import '../ResponsiveTable.css';
+import ResponsiveTable from '../ResponsiveTable';
 
+// Se eliminó onDeleteProducto de la lista de props
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
@@ -9,6 +12,12 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     console.log('--- DATOS EN INVENTORYTAB ---');
     console.log('Productos recibidos:', productos);
     console.log('Categorías recibidas:', categorias);
+    if (productos.length > 0) {
+      console.log('Ejemplo de producto:', productos[0]);
+    }
+    if (categorias.length > 0) {
+      console.log('Ejemplo de categoría:', categorias[0]);
+    }
   }, [productos, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
@@ -47,14 +56,43 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     return filtered;
   }, [productos, filtroCat, filtroTxt]);
 
+  const tableData = useMemo(() => {
+    return productosFiltrados.map(p => {
+      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
+      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
+        nombreCategoria = 'Sin Categoría';
+      }
+
+      return {
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
+        categoriaNombre: nombreCategoria,
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number'
+          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+          : p.precio ?? '—'
+      };
+    });
+  }, [productosFiltrados]);
+
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoriaNombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock', align: 'center' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' }
+  ];
+
+  console.log("Renderizando InventoryTab con productos:", productos);
+
   return (
+    // Usamos flex-column y que el área desplazable ocupe el espacio restante del padre,
+    // así la altura del contenedor será la misma que la de UpdateTab cuando ambos estén dentro del mismo padre.
     <div className="w-100 d-flex flex-column" style={{ height: '100%' }}>
       <h5 className="mb-3">Inventario</h5>
 
-      {/* Filtros */}
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
-          <label htmlFor="filtroCatAdmin" className="form-label mb-1">Categoría</label>
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -62,72 +100,38 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
             onChange={e => setFiltroCat(e.target.value)}
           >
             {listaCategoriasFiltro.map((cat, index) => (
-              <option key={`${cat}-${index}`} value={cat}>{cat}</option>
+              <option key={`${cat}-${index}`} value={cat}>
+                {cat}
+              </option>
             ))}
           </select>
         </div>
-
         <div className="col-12 col-md-6">
-          <label htmlFor="filtroTxtAdmin" className="form-label mb-1">Buscar</label>
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="ID, nombre o categoría..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Zona desplazable: ocupa el espacio restante del padre */}
+      {/* Zona desplazable: ocupa el espacio restante del padre (igual comportamiento que UpdateTab) */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 6 }}>
-        {/* Desktop/tablet: tabla */}
+        {/* Desktop/tablet: tabla responsive */}
         <div className="d-none d-md-block">
           <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Stock</th>
-                  <th>Precio unidad</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productosFiltrados.map(p => (
-                  <tr key={p.id}>
-                    <td>{p.id ?? '—'}</td>
-                    <td>{p.nombre ?? 'Sin nombre'}</td>
-                    <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
-                    <td>{p.cantidad ?? 0}</td>
-                    <td>
-                      {typeof p.precio === 'number'
-                        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                        : p.precio ?? '—'}
-                    </td>
-                    <td>
-                      <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
-                        {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {productosFiltrados.length === 0 && (
-                  <tr><td colSpan={6}>No hay productos</td></tr>
-                )}
-              </tbody>
-            </table>
+            <ResponsiveTable headers={tableHeaders} data={tableData} />
           </div>
         </div>
 
         {/* Móvil: tarjetas apiladas (una columna) */}
         <div className="d-block d-md-none">
-          <div className="row g-3 p-2">
+          <div className="row g-3 p-1">
             {productosFiltrados.map(p => (
               <div className="col-12" key={p.id}>
-                <div className="card h-100 shadow-sm">
+                <div className="card shadow-sm">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start mb-2">
                       <h6 className="card-title mb-0">{p.nombre ?? 'Sin nombre'}</h6>
