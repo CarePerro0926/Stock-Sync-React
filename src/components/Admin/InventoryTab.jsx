@@ -1,7 +1,6 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 
-// Se eliminó onDeleteProducto de la lista de props
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
@@ -10,12 +9,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     console.log('--- DATOS EN INVENTORYTAB ---');
     console.log('Productos recibidos:', productos);
     console.log('Categorías recibidas:', categorias);
-    if (productos.length > 0) {
-      console.log('Ejemplo de producto:', productos[0]);
-    }
-    if (categorias.length > 0) {
-      console.log('Ejemplo de categoría:', categorias[0]);
-    }
   }, [productos, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
@@ -58,8 +51,10 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     <div className="w-100">
       <h5>Inventario</h5>
 
+      {/* Filtros */}
       <div className="row g-2 mb-3">
-        <div className="col">
+        <div className="col-12 col-md-6">
+          <label htmlFor="filtroCatAdmin" className="form-label mb-1">Categoría</label>
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -67,25 +62,31 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
             onChange={e => setFiltroCat(e.target.value)}
           >
             {listaCategoriasFiltro.map((cat, index) => (
-              <option key={`${cat}-${index}`} value={cat}>
-                {cat}
-              </option>
+              <option key={`${cat}-${index}`} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
-        <div className="col">
+
+        <div className="col-12 col-md-6">
+          <label htmlFor="filtroTxtAdmin" className="form-label mb-1">Buscar</label>
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar por ID, nombre o categoría..."
+            placeholder="ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Contenedor único con desplazamiento vertical para tabla y tarjetas */}
-      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+      {/* Contenedor con desplazamiento vertical; altura aumentada para móvil */}
+      <div
+        style={{
+          maxHeight: '520px', // aumentado para mostrar más tarjetas en móvil
+          overflowY: 'auto',
+          paddingRight: 6
+        }}
+      >
         {/* Tabla para pantallas md+ */}
         <div className="d-none d-md-block">
           <div className="table-responsive">
@@ -127,12 +128,12 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
           </div>
         </div>
 
-        {/* Tarjetas en móvil: apiladas verticalmente dentro del mismo contenedor desplazable */}
+        {/* Tarjetas en móvil: UNA columna (apiladas verticalmente) dentro del mismo contenedor desplazable */}
         <div className="d-block d-md-none">
-          <div className="row g-3 p-1">
+          <div className="row g-3 p-2">
             {productosFiltrados.map(p => (
               <div className="col-12" key={p.id}>
-                <div className="card shadow-sm">
+                <div className="card h-100 shadow-sm">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start mb-2">
                       <h6 className="card-title mb-0">{p.nombre ?? 'Sin nombre'}</h6>
