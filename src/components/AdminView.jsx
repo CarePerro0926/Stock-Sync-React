@@ -26,7 +26,7 @@ const AdminView = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  // usuarios (se cargan si no se pasan desde el padre)
+  // usuarios (se cargan desde el endpoint /api/usuarios para mantener consistencia con UsuariosView)
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
@@ -64,7 +64,7 @@ const AdminView = ({
   };
 
   // -------------------------
-  // Funciones auxiliares para activar/desactivar el borrado lógico
+  // Funciones auxiliares para activar/desactivar el borrado lógico (productos/proveedores/categorías)
   // -------------------------
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
@@ -120,51 +120,69 @@ const AdminView = ({
     }
   };
 
-  // toggleUsuario: soft-delete en la tabla principal de usuarios
+  // -------------------------
+  // toggleUsuario: preferimos usar el endpoint /api/usuarios si existe; si no, fallback a supabase
+  // -------------------------
   const toggleUsuario = async (userId, currentlyDisabled) => {
+    // Intentamos usar el endpoint del backend (coherente con UsuariosView)
+    try {
+      const action = currentlyDisabled ? 'enable' : 'disable';
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/usuarios/${userId}/${action}`;
+
+      if (import.meta.env.VITE_API_URL) {
+        const res = await fetch(apiUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: `cambio desde admin (${action})` })
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || 'Error API usuarios');
+        }
+
+        // recargar lista desde API para mantener consistencia
+        fetchedUsersRef.current = false;
+        await fetchUsuariosFromApi();
+        if (onUpdateSuccess) {
+          try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('toggleUsuario: fallo en endpoint API, intentando fallback con supabase', err);
+      // fallback: continuar abajo con supabase
+    }
+
+    // Fallback con supabase (actualiza tabla 'usuarios' o 'user_profiles')
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      // Actualizamos la tabla "usuarios" (la que contiene todos los registros)
-      const { error } = await supabase
-        .from('usuarios')
-        .update(payload)
-        .eq('id', userId);
-
-      if (error) throw error;
+      let { error } = await supabase.from('usuarios').update(payload).eq('id', userId);
+      if (error) {
+        const { error: err2 } = await supabase.from('user_profiles').update(payload).eq('user_id', userId);
+        if (err2) throw err2;
+      }
+      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (e) { console.error(e); }
       }
-      // actualizar lista localmente para reflejar cambio inmediato
-      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
     } catch (err) {
-      console.error('Error toggling usuario:', err);
+      console.error('Error toggling usuario (fallback supabase):', err);
       alert('Ocurrió un error al cambiar el estado del usuario.');
     }
   };
 
   // -------------------------
-  // Cargar usuarios si es necesario (si no se pasan desde el padre)
+  // Cargar usuarios desde /api/usuarios (misma fuente que UsuariosView)
   // -------------------------
-  useEffect(() => {
-    let mounted = true;
+  const fetchUsuariosFromApi = async () => {
+    setUsuariosLoading(true);
+    setUsuariosError('');
+    try {
+      if (import.meta.env.VITE_API_URL) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
 
-    // si ya hicimos fetch, no volver a hacerlo
-    if (fetchedUsersRef.current) return () => { mounted = false; };
-
-    const fetchUsuarios = async () => {
-      setUsuariosLoading(true);
-      setUsuariosError('');
-      try {
-        // Leer desde la tabla "usuarios" que contiene todos los registros
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('id, nombres, apellidos, email, username, deleted_at')
-          .order('nombres', { ascending: true });
-
-        if (error) throw error;
-        if (!mounted) return;
-
-        // Normalizamos la respuesta para usar siempre id y display_name
         const normalized = (data || []).map(u => ({
           id: String(u.id ?? u.user_id ?? ''),
           display_name: (u.nombres || u.apellidos)
@@ -176,19 +194,45 @@ const AdminView = ({
 
         setUsuarios(normalized);
         fetchedUsersRef.current = true;
-      } catch (err) {
-        console.error('Error cargando usuarios:', err);
-        setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios" o los permisos.');
-      } finally {
-        if (mounted) setUsuariosLoading(false);
+        setUsuariosLoading(false);
+        return;
       }
-    };
 
-    fetchUsuarios();
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nombres, apellidos, email, username, deleted_at')
+        .order('nombres', { ascending: true });
 
-    return () => { mounted = false; };
-  }, []); // efecto solo al montar
+      if (error) throw error;
 
+      const normalized = (data || []).map(u => ({
+        id: String(u.id ?? u.user_id ?? ''),
+        display_name: (u.nombres || u.apellidos)
+          ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+          : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+        deleted_at: u.deleted_at ?? null,
+        raw: u
+      }));
+
+      setUsuarios(normalized);
+      fetchedUsersRef.current = true;
+    } catch (err) {
+      console.error('Error cargando usuarios:', err);
+      setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios", el endpoint /api/usuarios o los permisos.');
+    } finally {
+      setUsuariosLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (fetchedUsersRef.current) return;
+    fetchUsuariosFromApi();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <div className="card p-4 w-100">
       <h4 className="mb-3">Panel Administrador</h4>
