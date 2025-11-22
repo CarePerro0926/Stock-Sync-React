@@ -13,7 +13,7 @@ const UsuariosView = () => {
   const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
-  const [togglingIds, setTogglingIds] = useState(new Set()); // ids en proceso
+  const [togglingIds, setTogglingIds] = useState(new Set());
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -46,7 +46,6 @@ const UsuariosView = () => {
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter((u) => {
       const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
-
       if (!mostrarInactivos && estaInhabilitado) return false;
 
       const texto = (busqueda || '').toLowerCase().trim();
@@ -57,76 +56,73 @@ const UsuariosView = () => {
         (u.username?.toLowerCase().includes(texto)) ||
         String(u.cedula ?? '').toLowerCase().includes(texto);
 
-      const coincideRol =
-        filtroRol === 'todos' || (u.role?.toLowerCase() === filtroRol);
-
+      const coincideRol = filtroRol === 'todos' || (u.role?.toLowerCase() === filtroRol);
       return coincideBusqueda && coincideRol;
     });
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
-  /**
-   * toggleUsuario:
-   * - Hace un único PATCH al recurso principal: /api/usuarios/:id con { disabled: true/false }.
-   * - Si la API responde 404, muestra mensaje claro y registra la respuesta en consola.
-   * - Deshabilita el botón mientras la petición está en curso.
-   */
-  const toggleUsuario = async (id, currentlyDisabled) => {
-    const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
-    if (!window.confirm(confirmMsg)) return;
-
-    // Marcar id como en proceso
-    setTogglingIds(prev => new Set(prev).add(id));
-
-    const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}`;
-    const body = { disabled: !currentlyDisabled };
-
+  // Helper para hacer PATCH a las rutas enable/disable
+  const doPatch = async (url, body) => {
     try {
       const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-
       const payload = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        // Manejo específico para 404 (ruta no encontrada)
-        if (res.status === 404) {
-          console.error('Ruta no encontrada al intentar PATCH usuario:', { status: res.status, payload });
-          alert('Ruta no encontrada en la API al intentar cambiar el estado del usuario (404). Revisa la configuración del backend.');
-        } else {
-          const serverMsg = payload?.message || payload?.error || `HTTP ${res.status}`;
-          console.error('Error al inhabilitar/reactivar usuario:', { status: res.status, payload });
-          alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
-        }
-        return;
-      }
-
-      // Éxito: actualizar estado localmente
-      setUsuarios(prev =>
-        prev.map(u => {
-          if (String(u.id) !== String(id)) return u;
-          return {
-            ...u,
-            disabled: !currentlyDisabled,
-            deleted_at: !currentlyDisabled ? new Date().toISOString() : null
-          };
-        })
-      );
-
-      // Opcional: forzar recarga para sincronizar con servidor
-      setRecargar(prev => !prev);
+      return { ok: res.ok, status: res.status, payload };
     } catch (networkError) {
-      console.error('Error de red al cambiar estado del usuario:', networkError);
-      alert('Error de red al cambiar el estado del usuario. Revisa la consola para más detalles.');
-    } finally {
-      // Quitar id del set de procesos
-      setTogglingIds(prev => {
-        const copy = new Set(prev);
-        copy.delete(id);
-        return copy;
-      });
+      return { ok: false, status: 0, payload: { error: networkError.message || String(networkError) } };
     }
+  };
+
+  // toggleUsuario ahora usa las rutas que tu backend expone: /disable y /enable
+  const toggleUsuario = async (id, currentlyDisabled) => {
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
+    if (!window.confirm(confirmMsg)) return;
+
+    setTogglingIds(prev => new Set(prev).add(id));
+
+    const action = currentlyDisabled ? 'enable' : 'disable';
+    const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}/${action}`;
+
+    // El backend en server.js ignora el body para estas rutas, pero enviamos un reason opcional
+    const result = await doPatch(url, { reason: currentlyDisabled ? 'reactivado desde admin' : 'inhabilitado desde admin' });
+
+    if (!result.ok) {
+      // Manejo específico para 404 y otros errores
+      if (result.status === 404) {
+        console.error('Ruta no encontrada al intentar PATCH usuario:', result);
+        alert('Ruta no encontrada en la API al intentar cambiar el estado del usuario (404). Revisa la configuración del backend.');
+      } else {
+        const serverMsg = result.payload?.message || result.payload?.error || `HTTP ${result.status}`;
+        console.error('Error al inhabilitar/reactivar usuario:', result);
+        alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
+      }
+      setTogglingIds(prev => {
+        const copy = new Set(prev); copy.delete(id); return copy;
+      });
+      return;
+    }
+
+    // Éxito: actualizar estado localmente (marcamos deleted_at o lo limpiamos)
+    setUsuarios(prev =>
+      prev.map(u => {
+        if (String(u.id) !== String(id)) return u;
+        return {
+          ...u,
+          deleted_at: !currentlyDisabled ? new Date().toISOString() : null,
+          disabled: !currentlyDisabled
+        };
+      })
+    );
+
+    setTogglingIds(prev => {
+      const copy = new Set(prev); copy.delete(id); return copy;
+    });
+
+    // Opcional: forzar recarga para sincronizar con servidor
+    setRecargar(prev => !prev);
   };
 
   return (
@@ -135,12 +131,7 @@ const UsuariosView = () => {
 
       <div className="d-flex justify-content-between mb-3">
         <div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setMostrarModal(true)}
-          >
-            Agregar Usuario
-          </button>
+          <button className="btn btn-primary" onClick={() => setMostrarModal(true)}>Agregar Usuario</button>
         </div>
 
         <div className="d-flex align-items-center">
@@ -167,19 +158,11 @@ const UsuariosView = () => {
           />
         </div>
         <div className="col-12 col-md-6">
-          <select
-            className="form-select"
-            value={filtroRol}
-            onChange={(evt) => setFiltroRol(evt.target.value)}
-          >
+          <select className="form-select" value={filtroRol} onChange={(evt) => setFiltroRol(evt.target.value)}>
             <option value="todos">Todos los roles</option>
-            {listaRolesFiltro
-              .filter(rol => rol !== 'todos')
-              .map((rol, index) => (
-                <option key={`${rol}-${index}`} value={rol}>
-                  {rol.charAt(0).toUpperCase() + rol.slice(1)}
-                </option>
-              ))}
+            {listaRolesFiltro.filter(rol => rol !== 'todos').map((rol, index) => (
+              <option key={`${rol}-${index}`} value={rol}>{rol.charAt(0).toUpperCase() + rol.slice(1)}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -188,9 +171,7 @@ const UsuariosView = () => {
 
       <div className="usuarios-scroll-container" style={{ maxHeight: '600px', overflowY: 'auto' }}>
         {usuariosFiltrados.length === 0 ? (
-          <div className="text-center p-4">
-            <p>No se encontraron usuarios que coincidan con los filtros.</p>
-          </div>
+          <div className="text-center p-4"><p>No se encontraron usuarios que coincidan con los filtros.</p></div>
         ) : (
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => {
@@ -200,18 +181,10 @@ const UsuariosView = () => {
                 <div className="col" key={user.id}>
                   <div className="card h-100 shadow-sm">
                     <div className="card-body">
-                      <h5 className="card-title text-primary mb-3">
-                        {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
-                      </h5>
-                      <p className="card-text mb-1">
-                        <strong>Email:</strong> {user.email ?? '—'}
-                      </p>
-                      <p className="card-text mb-1">
-                        <strong>Usuario:</strong> {user.username ?? '—'}
-                      </p>
-                      <p className="card-text mb-1">
-                        <strong>Cédula:</strong> {user.cedula ?? '—'}
-                      </p>
+                      <h5 className="card-title text-primary mb-3">{user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}</h5>
+                      <p className="card-text mb-1"><strong>Email:</strong> {user.email ?? '—'}</p>
+                      <p className="card-text mb-1"><strong>Usuario:</strong> {user.username ?? '—'}</p>
+                      <p className="card-text mb-1"><strong>Cédula:</strong> {user.cedula ?? '—'}</p>
                       <p className="card-text">
                         <strong>Rol:</strong>
                         <span className={`badge ${user.role === 'administrador' ? 'bg-danger' : 'bg-success'} ms-2`}>
@@ -237,7 +210,6 @@ const UsuariosView = () => {
         )}
       </div>
 
-      {/* Modal de registro */}
       {mostrarModal && (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -247,10 +219,7 @@ const UsuariosView = () => {
                 <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
               </div>
               <div className="modal-body">
-                <RegisterView onShowLogin={() => {
-                  setMostrarModal(false);
-                  setRecargar(prev => !prev);
-                }} />
+                <RegisterView onShowLogin={() => { setMostrarModal(false); setRecargar(prev => !prev); }} />
               </div>
             </div>
           </div>
