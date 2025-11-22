@@ -13,6 +13,7 @@ const UsuariosView = () => {
   const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
+  const [togglingIds, setTogglingIds] = useState(new Set()); // ids en proceso
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -64,13 +65,17 @@ const UsuariosView = () => {
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
   /**
-   * toggleUsuario: realiza un único PATCH al recurso principal con { disabled: true/false }.
-   * Si el servidor devuelve error, muestra el mensaje devuelto por el servidor (si existe)
-   * y registra la respuesta en consola para depuración.
+   * toggleUsuario:
+   * - Hace un único PATCH al recurso principal: /api/usuarios/:id con { disabled: true/false }.
+   * - Si la API responde 404, muestra mensaje claro y registra la respuesta en consola.
+   * - Deshabilita el botón mientras la petición está en curso.
    */
   const toggleUsuario = async (id, currentlyDisabled) => {
     const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
     if (!window.confirm(confirmMsg)) return;
+
+    // Marcar id como en proceso
+    setTogglingIds(prev => new Set(prev).add(id));
 
     const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}`;
     const body = { disabled: !currentlyDisabled };
@@ -82,35 +87,45 @@ const UsuariosView = () => {
         body: JSON.stringify(body)
       });
 
-      // Intentamos parsear JSON de respuesta (si lo hay)
       const payload = await res.json().catch(() => null);
 
       if (!res.ok) {
-        // Mostrar mensaje claro al usuario y log para depuración
-        const serverMsg = payload?.message || payload?.error || `HTTP ${res.status}`;
-        console.error('Error al inhabilitar/reactivar usuario:', { status: res.status, payload });
-        alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
+        // Manejo específico para 404 (ruta no encontrada)
+        if (res.status === 404) {
+          console.error('Ruta no encontrada al intentar PATCH usuario:', { status: res.status, payload });
+          alert('Ruta no encontrada en la API al intentar cambiar el estado del usuario (404). Revisa la configuración del backend.');
+        } else {
+          const serverMsg = payload?.message || payload?.error || `HTTP ${res.status}`;
+          console.error('Error al inhabilitar/reactivar usuario:', { status: res.status, payload });
+          alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
+        }
         return;
       }
 
-      // Éxito: actualizamos estado local para reflejar el cambio sin forzar recarga inmediata
+      // Éxito: actualizar estado localmente
       setUsuarios(prev =>
         prev.map(u => {
           if (String(u.id) !== String(id)) return u;
           return {
             ...u,
             disabled: !currentlyDisabled,
-            // si tu API usa deleted_at en lugar de disabled, puedes ajustar aquí
             deleted_at: !currentlyDisabled ? new Date().toISOString() : null
           };
         })
       );
 
-      // Opcional: forzar recarga para obtener datos frescos del servidor
+      // Opcional: forzar recarga para sincronizar con servidor
       setRecargar(prev => !prev);
     } catch (networkError) {
       console.error('Error de red al cambiar estado del usuario:', networkError);
       alert('Error de red al cambiar el estado del usuario. Revisa la consola para más detalles.');
+    } finally {
+      // Quitar id del set de procesos
+      setTogglingIds(prev => {
+        const copy = new Set(prev);
+        copy.delete(id);
+        return copy;
+      });
     }
   };
 
@@ -180,6 +195,7 @@ const UsuariosView = () => {
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => {
               const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
+              const isToggling = togglingIds.has(user.id);
               return (
                 <div className="col" key={user.id}>
                   <div className="card h-100 shadow-sm">
@@ -207,8 +223,9 @@ const UsuariosView = () => {
                         <button
                           className={`btn btn-sm ${estaInhabilitado ? 'btn-success' : 'btn-warning'}`}
                           onClick={() => toggleUsuario(user.id, estaInhabilitado)}
+                          disabled={isToggling}
                         >
-                          {estaInhabilitado ? 'Reactivar' : 'Inhabilitar'}
+                          {isToggling ? 'Procesando...' : (estaInhabilitado ? 'Reactivar' : 'Inhabilitar')}
                         </button>
                       </div>
                     </div>
