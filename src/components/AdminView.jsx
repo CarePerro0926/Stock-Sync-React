@@ -94,6 +94,7 @@ const AdminView = ({
   const [usuariosError, setUsuariosError] = useState('');
   const fetchedUsersRef = useRef(false);
 
+  // Evitar variable no usada en catch: usar event y usarlo en la función
   const handleClickOutside = useCallback((event) => {
     const menu = document.getElementById('adminMenu');
     const button = document.getElementById('btnMenuHamburguesa');
@@ -116,38 +117,41 @@ const AdminView = ({
     }
   }, [productosProp]);
 
+  /**
+   * fetchProductos - usa la API obligatoriamente.
+   * La API debe devolver un array de productos reales (cada objeto con id o product_id).
+   * Si la respuesta no es válida, se limpia la lista y se muestra error en consola.
+   */
   const fetchProductos = useCallback(async () => {
     try {
-      if (import.meta.env.VITE_API_URL) {
-        const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
-        const res = await fetch(url, { cache: 'no-store' });
-        const text = await res.text().catch(() => null);
-        let data = null;
-        try { data = JSON.parse(text); } catch { data = null; }
-
-        console.log('ADMINVIEW DEBUG: fetchProductos using API, raw text:', text?.slice?.(0, 200) ?? text);
-
-        if (res.ok && Array.isArray(data)) {
-          const normalized = data.map(normalizeProducto);
-          setProductos(normalized);
-          console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0,5));
-          return normalized;
-        }
+      if (!import.meta.env.VITE_API_URL) {
+        console.error('ADMINVIEW ERROR: VITE_API_URL no definido. La app está configurada para usar la API obligatoriamente.');
+        setProductos([]);
+        return null;
       }
 
-      // Leer directamente la tabla 'productos' (misma tabla que actualizamos)
-      const { data, error } = await supabase
-        .from('productos')
-        .select('*')
-        .order('nombre', { ascending: true });
+      const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const text = await res.text().catch(() => null);
+      let data = null;
+      try { data = JSON.parse(text); } catch { data = null; }
 
-      if (error) throw error;
-      const normalized = (data || []).map(normalizeProducto);
+      console.log('ADMINVIEW DEBUG: fetchProductos API raw:', text?.slice?.(0, 200) ?? text);
+
+      // Validación estricta: array y objetos con id/product_id
+      const looksValid = Array.isArray(data) && data.length > 0 && (data[0]?.id || data[0]?.product_id);
+      if (!res.ok || !looksValid) {
+        console.error('ADMINVIEW ERROR: API productos devolvió respuesta inválida', { status: res.status, data });
+        setProductos([]);
+        return null;
+      }
+
+      const normalized = data.map(normalizeProducto);
       setProductos(normalized);
-      console.log('ADMINVIEW DEBUG: fetchProductos (supabase productos) ->', normalized.slice(0,5));
+      console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0,5));
       return normalized;
     } catch (err) {
-      console.error('fetchProductos error:', err);
+      console.error('fetchProductos error (API):', err);
       setProductos([]);
       return null;
     }
@@ -159,78 +163,76 @@ const AdminView = ({
     }
   }, [productosProp, fetchProductos]);
 
+  /**
+   * toggleProducto - usa la API obligatoriamente para realizar el UPDATE en servidor.
+   * - Hace optimismo local inmediato.
+   * - Llama al endpoint PATCH /api/productos/:id/disable o /enable.
+   * - Valida la respuesta y sincroniza el estado local con lo que devuelva la API.
+   */
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
-      // API externa si existe
-      if (import.meta.env.VITE_API_URL) {
-        const action = currentlyDisabled ? 'enable' : 'disable';
-        const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${id}/${action}`;
-        const res = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
-        });
-        const payload = await res.json().catch(() => null);
-        if (!res.ok) {
-          console.error('API toggleProducto error:', payload);
-          alert(payload?.message || payload?.error || 'Error al cambiar el estado del producto (API).');
-          return false;
-        }
-        await fetchProductos();
-        if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
-        return true;
-      }
-
-      // Fallback directo a Supabase
-      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-
-      // Intento 1: actualizar por id
-      let res = await supabase
-        .from('productos')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single()
-        .catch(err => ({ error: err }));
-
-      // Si fallo o no afectó filas, intentar por product_id
-      if (!res || res.error) {
-        console.warn('toggleProducto: intento por id falló, intentando por product_id', { id, res });
-        res = await supabase
-          .from('productos')
-          .update(payload)
-          .eq('product_id', id)
-          .select()
-          .single()
-          .catch(err => ({ error: err }));
-      }
-
-      if (!res || res.error) {
-        console.error('toggleProducto: no se pudo actualizar producto en la BD', res);
-        alert('No fue posible cambiar el estado del producto. Revisa permisos o formato del id.');
+      if (!import.meta.env.VITE_API_URL) {
+        console.error('toggleProducto: VITE_API_URL no definido. La app requiere API.');
+        alert('Configuración inválida: falta VITE_API_URL.');
         return false;
       }
 
-      // Actualización optimista local: actualizar estado productos inmediatamente
-      setProductos(prev => {
-        return (prev || []).map(p => {
-          const pid = String(p.id ?? p.product_id ?? '');
-          const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
-          if (String(pid) === String(id) || String(rawPid) === String(id)) {
-            const newRaw = { ...(p._raw || {}), deleted_at: payload.deleted_at ?? null };
-            return normalizeProducto(newRaw);
-          }
-          return p;
-        });
+      const action = currentlyDisabled ? 'enable' : 'disable';
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${encodeURIComponent(id)}/${action}`;
+
+      // Optimismo local: marcar temporalmente el producto como inactivo/activo
+      setProductos(prev => (prev || []).map(p => {
+        const pid = String(p.id ?? p.product_id ?? '');
+        const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
+        if (String(pid) === String(id) || String(rawPid) === String(id)) {
+          const newRaw = { ...(p._raw || {}), deleted_at: currentlyDisabled ? null : new Date().toISOString() };
+          return normalizeProducto(newRaw);
+        }
+        return p;
+      }));
+
+      // Llamada al API (el servidor debe ejecutar el UPDATE en la BD con service role)
+      const res = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
       });
 
-      // Forzar recarga desde la fuente de verdad
-      await fetchProductos();
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        console.error('toggleProducto API error:', { status: res.status, payload });
+        // Re-sincronizar desde API para revertir optimismo si la API falló
+        await fetchProductos();
+        alert(payload?.message || 'Error al cambiar el estado del producto (API).');
+        return false;
+      }
+
+      // Si la API devuelve lista completa, reemplazar; si devuelve el producto, actualizar solo ese
+      if (Array.isArray(payload)) {
+        const normalized = payload.map(normalizeProducto);
+        setProductos(normalized);
+      } else if (payload && (payload.id || payload.product_id)) {
+        const returnedId = String(payload.product_id ?? payload.id ?? '');
+        setProductos(prev => (prev || []).map(p => {
+          const pid = String(p.id ?? p.product_id ?? '');
+          const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
+          if (String(pid) === returnedId || String(rawPid) === returnedId) {
+            return normalizeProducto(payload);
+          }
+          return p;
+        }));
+      } else {
+        // Respuesta inesperada: forzar recarga
+        await fetchProductos();
+      }
 
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
       return true;
     } catch (err) {
-      console.error('Error toggling producto:', err);
+      console.error('Error toggling producto (frontend):', err);
+      // En caso de fallo, recargar para sincronizar
+      await fetchProductos();
       alert('Ocurrió un error al cambiar el estado del producto.');
       return false;
     }
@@ -238,6 +240,8 @@ const AdminView = ({
 
   const toggleProveedor = async (id, currentlyDisabled) => {
     try {
+      // Proveedores pueden seguir usando Supabase directo si así lo deseas,
+      // pero aquí dejamos la implementación original (directa a supabase).
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('proveedores').update(payload).eq('id', id);
       if (error) throw error;
@@ -267,7 +271,7 @@ const AdminView = ({
   const toggleUsuario = async (userId, currentlyDisabled) => {
     try {
       const action = currentlyDisabled ? 'enable' : 'disable';
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/usuarios/${userId}/${action}`;
+      const apiUrl = `${import.meta.env.VITE_API_URL}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
       if (import.meta.env.VITE_API_URL) {
         const res = await fetch(apiUrl, {
           method: 'PATCH',
