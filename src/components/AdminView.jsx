@@ -120,13 +120,13 @@ const AdminView = ({
     }
   };
 
-  // toggleUsuario: soft-delete en la tabla correcta usando id
+  // toggleUsuario: soft-delete en la tabla principal de usuarios
   const toggleUsuario = async (userId, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      // Actualizar en la tabla "usuarios" (la que contiene todos los registros)
+      // Actualizamos la tabla "usuarios" (la que contiene todos los registros)
       const { error } = await supabase
-        .from('usuarios') // usar 'usuarios' si esa es la tabla principal
+        .from('usuarios')
         .update(payload)
         .eq('id', userId);
 
@@ -155,9 +155,9 @@ const AdminView = ({
       setUsuariosLoading(true);
       setUsuariosError('');
       try {
-        // Leer desde la tabla "usuarios" que contiene todos los registros
+        // Intentamos leer desde la tabla "usuarios" (la que contiene todos los registros)
         const { data, error } = await supabase
-          .from('usuarios') // <- tabla correcta con nombres/apellidos
+          .from('usuarios')
           .select('id, nombres, apellidos, email, username, deleted_at')
           .order('nombres', { ascending: true });
 
@@ -173,6 +173,7 @@ const AdminView = ({
           deleted_at: u.deleted_at ?? null,
           raw: u
         }));
+
         setUsuarios(normalized);
         fetchedUsersRef.current = true;
       } catch (err) {
@@ -306,10 +307,7 @@ const AdminView = ({
       )}
 
       {vistaActiva === 'usuarios' && (
-        <UsuariosView
-          // si implementas soft-delete para usuarios, puedes pasar onToggleUsuario aquí también
-          // onToggleUsuario={toggleUsuario}
-        />
+        <UsuariosView />
       )}
 
       <div className="text-end mt-3">
