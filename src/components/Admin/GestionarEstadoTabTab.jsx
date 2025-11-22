@@ -30,6 +30,7 @@ const GestionarEstadoTab = ({
   const [inputUsuario, setInputUsuario] = useState('');
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
   const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
+  const [usuarios, setUsuarios] = useState(usuariosProp);
 
   // -------------------- Cargas iniciales (si no vienen por props) --------------------
   useEffect(() => {
@@ -59,6 +60,34 @@ const GestionarEstadoTab = ({
     }
     return () => { mounted = false; };
   }, [categoriasProp]);
+
+  // Usuarios: cargar si no vienen por props. Normalizar a { id, nombres, apellidos, deleted_at }.
+  useEffect(() => {
+    let mounted = true;
+    if (!usuariosProp || usuariosProp.length === 0) {
+      supabase
+        .from('user_profiles')
+        .select('user_id, nombres, apellidos, deleted_at')
+        .order('nombres', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error al cargar usuarios:', error);
+            return;
+          }
+          const normalized = (data || []).map(u => ({
+            id: u.user_id,
+            nombres: u.nombres || '',
+            apellidos: u.apellidos || '',
+            deleted_at: u.deleted_at || null
+          }));
+          if (mounted) setUsuarios(normalized);
+        });
+    } else {
+      // si sí vienen, úsalo directamente (y asegúrate que tengan {id, nombres, apellidos, deleted_at})
+      setUsuarios(usuariosProp);
+    }
+    return () => { mounted = false; };
+  }, [usuariosProp]);
 
   // -------------------- Utilidades --------------------
   const filtrarSugerencias = (texto, lista, campo) => {
@@ -176,9 +205,9 @@ const GestionarEstadoTab = ({
     const entrada = parseIdFromInput(inputUsuario);
     let idFinal = entrada || usuarioSeleccionado;
 
-    let user = usuariosProp.find(u => String(u.id) === String(idFinal));
+    let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
-      user = usuariosProp.find(u => String(u.nombres).toLowerCase() === String(inputUsuario).trim().toLowerCase());
+      user = usuarios.find(u => String(u.nombres).toLowerCase() === String(inputUsuario).trim().toLowerCase());
       if (user) idFinal = user.id;
     }
     if (!user) return alert('No se encontró ningún usuario con ese ID o nombre.');
@@ -416,7 +445,7 @@ const GestionarEstadoTab = ({
                 const id = e.target.value;
                 setUsuarioSeleccionado(id);
                 if (id) {
-                  const u = usuariosProp.find(x => String(x.id) === String(id));
+                  const u = usuarios.find(x => String(x.id) === String(id));
                   if (u) setInputUsuario(`${u.id} - ${u.nombres} ${u.apellidos}`);
                 } else {
                   setInputUsuario('');
@@ -424,7 +453,7 @@ const GestionarEstadoTab = ({
               }}
             >
               <option value="">—</option>
-              {usuariosProp.map(u => (
+              {usuarios.map(u => (
                 <option key={u.id} value={u.id}>
                   {u.id} - {u.nombres} {u.apellidos}
                 </option>
@@ -442,7 +471,7 @@ const GestionarEstadoTab = ({
                 const entrada = e.target.value;
                 setInputUsuario(entrada);
                 setUsuarioSeleccionado('');
-                setSugerenciasUsuario(filtrarSugerencias(entrada, usuariosProp, 'nombres'));
+                setSugerenciasUsuario(filtrarSugerencias(entrada, usuarios, 'nombres'));
               }}
             />
             {inputUsuario && sugerenciasUsuario.length > 0 && (
