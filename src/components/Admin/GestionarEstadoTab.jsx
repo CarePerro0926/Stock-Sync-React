@@ -23,15 +23,13 @@ const GestionarEstadoTab = ({
   usuarios: usuariosProp = [] // opcional: pasar desde AdminView
 }) => {
   // -------------------- Normalización inicial --------------------
-  // Normalizamos productos para garantizar que siempre exista `id`
-  // (tomándolo de `id` o `product_id`) y que `deleted_at` esté saneado.
   const normalizeProductoForState = (p = {}) => ({
     ...p,
+    // garantizar id consistente para búsquedas y selects
     id: p.id ?? p.product_id ?? String(p.product_id ?? ''),
     deleted_at: normalizeDeletedAt(p.deleted_at)
   });
 
-  // Local copy de productos para permitir actualización optimista si el padre no recarga
   const [productos, setProductos] = useState(
     Array.isArray(productosProp) ? productosProp.map(normalizeProductoForState) : []
   );
@@ -173,7 +171,6 @@ const GestionarEstadoTab = ({
   };
 
   // Fallback que actualiza la tabla indicada vía supabase (si el padre no provee onToggle)
-  // Añadimos logging y pedimos `data` de vuelta para depuración.
   const applyToggleFallback = async ({ table, id, currentlyDisabled, idColumn = 'id' }) => {
     try {
       const newDeletedAt = currentlyDisabled ? null : new Date().toISOString();
@@ -182,14 +179,15 @@ const GestionarEstadoTab = ({
         .from(table)
         .update({ deleted_at: newDeletedAt })
         .eq(idColumn, id)
-        .select(); // solicitar data para inspección
+        .select()
+        .single();
       console.log('applyToggleFallback result', { data, error });
       if (error) throw error;
-      return true;
+      return data || null;
     } catch (err) {
       console.error('Fallback toggle error:', err);
       alert('Ocurrió un error al cambiar el estado. Intenta de nuevo.');
-      return false;
+      return null;
     }
   };
 
@@ -221,26 +219,36 @@ const GestionarEstadoTab = ({
           alert('No fue posible cambiar el estado del producto.');
           return;
         }
+        // El padre (AdminView) recargará o actualizará su estado; sincronizamos localmente también
+        applyLocalToggleProducto(idFinal, currentlyDisabled);
+        if (typeof onAfterToggle === 'function') {
+          try { await onAfterToggle('productos'); } catch (err) { console.error('onAfterToggle error:', err); }
+        }
+        setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
+        return;
       } catch (err) {
         console.error('onToggleProducto error:', err);
         alert('Error al comunicarse con el servidor al cambiar el estado del producto.');
         return;
       }
-    } else {
-      // Fallback: actualizar en la BD local vía supabase (si no hay onToggleProducto)
-      // IMPORTANTE: indicar idColumn correcto. Si tu tabla usa `product_id` como PK, usar 'product_id'.
-      // Si la tabla usa `id`, cambiar a 'id' o omitir el parámetro.
-      const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'product_id' });
-      if (!ok) return;
     }
 
-    // Actualización optimista local (si el padre no recarga)
+    // Si no hay onToggleProducto, usar fallback directo a Supabase y devolver la fila actualizada al padre
+    // Intentar por product_id primero, si no funciona intentar por id
+    let updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'product_id' });
+    if (!updatedRow) {
+      // intentar con id
+      updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updatedRow) return; // ya mostró alerta en applyToggleFallback
+    }
+
+    // Actualización optimista local
     applyLocalToggleProducto(idFinal, currentlyDisabled);
 
-    // Notificar al padre para que recargue si lo desea
+    // Notificar al padre con la fila actualizada (si existe)
     if (typeof onAfterToggle === 'function') {
       try {
-        await onAfterToggle('productos');
+        await onAfterToggle('productos', updatedRow ? { id: updatedRow.product_id ?? updatedRow.id, deleted_at: updatedRow.deleted_at } : null);
       } catch (err) {
         console.error('onAfterToggle error:', err);
       }
@@ -271,8 +279,8 @@ const GestionarEstadoTab = ({
         return;
       }
     } else {
-      const ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
-      if (!ok) return;
+      const updated = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updated) return;
     }
 
     // Actualización optimista local
@@ -311,8 +319,8 @@ const GestionarEstadoTab = ({
         return;
       }
     } else {
-      const ok = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled });
-      if (!ok) return;
+      const updated = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updated) return;
     }
 
     const now = !currentlyDisabled ? new Date().toISOString() : null;
@@ -351,13 +359,13 @@ const GestionarEstadoTab = ({
         return;
       }
     } else {
-      const ok = await applyToggleFallback({
+      const updated = await applyToggleFallback({
         table: 'user_profiles',
         id: idFinal,
         currentlyDisabled,
         idColumn: 'user_id'
       });
-      if (!ok) return;
+      if (!updated) return;
     }
 
     // Actualización optimista local
@@ -390,14 +398,14 @@ const GestionarEstadoTab = ({
                 setProductoSeleccionado(id);
                 if (id) {
                   const p = productos.find(x => String(x.id) === String(id));
-                  if (p) setInputProducto(`${p.id} - ${p.nombre}`);
+                  if (p) setInputProducto(`${p.id} - ${p.nombre ?? p._raw?.nombre ?? ''}`);
                 } else setInputProducto('');
               }}
             >
               <option value="">—</option>
               {productos.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.id} - {p.nombre}
+                  {p.id} - {p.nombre ?? p._raw?.nombre ?? ''}
                 </option>
               ))}
             </select>
@@ -424,12 +432,12 @@ const GestionarEstadoTab = ({
                     className="list-group-item list-group-item-action"
                     style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      setInputProducto(`${p.id} - ${p.nombre}`);
+                      setInputProducto(`${p.id} - ${p.nombre ?? p._raw?.nombre ?? ''}`);
                       setProductoSeleccionado(p.id);
                       setSugerenciasProducto([]);
                     }}
                   >
-                    {p.id} - {p.nombre}
+                    {p.id} - {p.nombre ?? p._raw?.nombre ?? ''}
                   </li>
                 ))}
               </ul>
