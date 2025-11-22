@@ -155,7 +155,7 @@ const AdminView = ({
       setUsuariosLoading(true);
       setUsuariosError('');
       try {
-        // Intentamos leer desde la tabla "usuarios" (la que contiene todos los registros)
+        // Leer desde la tabla "usuarios" que contiene todos los registros
         const { data, error } = await supabase
           .from('usuarios')
           .select('id, nombres, apellidos, email, username, deleted_at')
