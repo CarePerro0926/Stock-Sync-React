@@ -19,11 +19,12 @@ const UsuariosView = () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Error al obtener usuarios');
-        setUsuarios(data);
-      } catch (err) {
-        console.error('Error fetching usuarios:', err);
-        setError(err.message || 'Error al obtener usuarios');
+        if (!response.ok) throw new Error(data?.message || 'Error al obtener usuarios');
+        setUsuarios(Array.isArray(data) ? data : []);
+        setError(null);
+      } catch (fetchError) {
+        console.error('Error fetching usuarios:', fetchError);
+        setError(fetchError.message || 'Error al obtener usuarios');
       }
     };
 
@@ -44,7 +45,7 @@ const UsuariosView = () => {
 
       if (!mostrarInactivos && estaInhabilitado) return false;
 
-      const texto = busqueda.toLowerCase().trim();
+      const texto = (busqueda || '').toLowerCase().trim();
       const coincideBusqueda =
         (u.nombres?.toLowerCase().includes(texto)) ||
         (u.apellidos?.toLowerCase().includes(texto)) ||
@@ -59,59 +60,77 @@ const UsuariosView = () => {
     });
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
-  // Función que inhabilita o reactiva al usuario (soft delete)
+  /**
+   * toggleUsuario: intenta varios endpoints/fallbacks para inhabilitar/reactivar usuarios.
+   * - Primero intenta PATCH /api/usuarios/:id/disable o /enable (según acción).
+   * - Si falla, intenta PATCH /api/usuarios/:id con { disabled: true/false }.
+   * - Si sigue fallando, intenta PATCH /api/usuarios/:id con { deleted_at: timestamp/null }.
+   * - Actualiza el estado local (usuarios) al finalizar con éxito para evitar recarga inmediata.
+   */
   const toggleUsuario = async (id, currentlyDisabled) => {
     const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
     if (!window.confirm(confirmMsg)) return;
 
-    try {
-      // Intentamos llamar endpoints REST específicos (preferible)
-      if (!currentlyDisabled) {
-        // inhabilitar
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}/disable`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: 'inhabilitado desde admin' })
-        });
-        if (!res.ok) throw new Error('Error al inhabilitar usuario');
-      } else {
-        // reactivar
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}/enable`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: 'reactivado desde admin' })
-        });
-        if (!res.ok) throw new Error('Error al reactivar usuario');
-      }
+    const base = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}`;
 
-      // Forzar recarga de la lista
-      setRecargar(prev => !prev);
-    } catch (err) {
-      // Registramos el error y ejecutamos el fallback
-      console.error('Error al intentar toggle (primer intento):', err);
+    const tryPatch = async (url, body) => {
       try {
-        if (!currentlyDisabled) {
-          // fallback: PATCH al recurso principal con deleted_at
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deleted_at: new Date().toISOString() })
-          });
-          if (!res.ok) throw new Error('Error al inhabilitar usuario (fallback)');
-        } else {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deleted_at: null })
-          });
-          if (!res.ok) throw new Error('Error al reactivar usuario (fallback)');
-        }
-        setRecargar(prev => !prev);
-      } catch (err2) {
-        console.error('Error toggling usuario (fallback):', err2);
-        alert('Ocurrió un error al cambiar el estado del usuario.');
+        const res = await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        let parsed = null;
+        try { parsed = await res.json(); } catch { /* no json */ }
+        if (res.ok) return { ok: true, status: res.status, body: parsed };
+        const msg = parsed?.message || parsed?.error || `HTTP ${res.status}`;
+        return { ok: false, status: res.status, errorMessage: msg, body: parsed };
+      } catch (networkError) {
+        return { ok: false, status: 0, errorMessage: networkError.message || String(networkError) };
+      }
+    };
+
+    const attempts = [
+      { url: `${base}/${currentlyDisabled ? 'enable' : 'disable'}`, body: { reason: currentlyDisabled ? 'reactivado desde admin' : 'inhabilitado desde admin' } },
+      { url: base, body: { disabled: !currentlyDisabled } },
+      { url: base, body: { deleted_at: !currentlyDisabled ? new Date().toISOString() : null } }
+    ];
+
+    let success = false;
+    let lastError = null;
+
+    for (const attempt of attempts) {
+      const result = await tryPatch(attempt.url, attempt.body);
+      if (result.ok) {
+        success = true;
+        break;
+      } else {
+        lastError = result;
       }
     }
+
+    if (!success) {
+      console.error('Error al intentar toggle (todos los intentos):', lastError);
+      alert('Ocurrió un error al cambiar el estado del usuario. Revisa la consola para más detalles.');
+      return;
+    }
+
+    // Actualizamos el estado localmente para reflejar el cambio
+    setUsuarios(prev =>
+      prev.map(u => {
+        if (String(u.id) !== String(id)) return u;
+        const newDeletedAt = !currentlyDisabled ? new Date().toISOString() : null;
+        const newDisabled = !currentlyDisabled;
+        return {
+          ...u,
+          deleted_at: newDeletedAt,
+          disabled: newDisabled
+        };
+      })
+    );
+
+    // Forzar recarga si quieres datos frescos del servidor
+    setRecargar(prev => !prev);
   };
 
   return (
@@ -135,7 +154,7 @@ const UsuariosView = () => {
               className="form-check-input"
               type="checkbox"
               checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
+              onChange={(evt) => setMostrarInactivos(evt.target.checked)}
             />
             <label className="form-check-label" htmlFor="chkMostrarInactivosUsers">Mostrar inactivos</label>
           </div>
@@ -148,14 +167,14 @@ const UsuariosView = () => {
             className="form-control"
             placeholder="Buscar por nombre, apellido, correo, usuario o cédula..."
             value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            onChange={(evt) => setBusqueda(evt.target.value)}
           />
         </div>
         <div className="col-12 col-md-6">
           <select
             className="form-select"
             value={filtroRol}
-            onChange={(e) => setFiltroRol(e.target.value)}
+            onChange={(evt) => setFiltroRol(evt.target.value)}
           >
             <option value="todos">Todos los roles</option>
             {listaRolesFiltro
