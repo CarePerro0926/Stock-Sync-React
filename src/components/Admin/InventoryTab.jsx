@@ -3,34 +3,66 @@ import React, { useState, useMemo, useEffect } from 'react';
 import '../ResponsiveTable.css';
 import ResponsiveTable from '../ResponsiveTable';
 
-// Se eliminó onDeleteProducto de la lista de props
+// Normalizadores fuera del componente para que sean estables
+const normalizeDeletedAt = (val) => {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim().toLowerCase();
+  if (s === '' || s === 'null' || s === 'undefined') return null;
+  return val;
+};
+
+const normalizeBool = (val, defaultValue = false) => {
+  if (val === null || val === undefined) return defaultValue;
+  if (typeof val === 'boolean') return val;
+  const s = String(val).trim().toLowerCase();
+  return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
+};
+
+const normalizeProducto = (p) => ({
+  ...p,
+  deleted_at: normalizeDeletedAt(p?.deleted_at),
+  disabled: normalizeBool(p?.disabled, false),
+  inactivo: normalizeBool(p?.inactivo, false),
+  nombre: p?.nombre ?? '',
+  categoria_nombre: p?.categoria_nombre ?? ''
+});
+
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
+  // Normalizamos la lista de productos recibida para evitar falsos positivos
+  const productosNormalizados = useMemo(() => {
+    return (productos || []).map(normalizeProducto);
+  }, [productos]); // <-- normalizeProducto no debe estar en deps
+
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
-    console.log('Productos recibidos:', productos);
+    console.log('Productos recibidos (raw):', productos);
+    console.log('Productos normalizados:', productosNormalizados);
     console.log('Categorías recibidas:', categorias);
     if (productos.length > 0) {
-      console.log('Ejemplo de producto:', productos[0]);
+      console.log('Ejemplo de producto raw:', productos[0]);
+    }
+    if (productosNormalizados.length > 0) {
+      console.log('Ejemplo de producto normalizado:', productosNormalizados[0]);
     }
     if (categorias.length > 0) {
       console.log('Ejemplo de categoría:', categorias[0]);
     }
-  }, [productos, categorias]);
+  }, [productos, productosNormalizados, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
-    const nombresDesdeProductos = productos
+    const nombresDesdeProductos = productosNormalizados
       .map(p => p.categoria_nombre)
       .filter(nombre => nombre && String(nombre).trim() !== '');
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
     return ['Todas', ...unicas];
-  }, [productos]);
+  }, [productosNormalizados]);
 
   const productosFiltrados = useMemo(() => {
-    let filtered = [...productos];
+    let filtered = [...productosNormalizados];
 
     // Filtrar por estado (activo / inactivo) según checkbox
     if (mostrarInactivos) {
@@ -64,7 +96,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     }
 
     return filtered;
-  }, [productos, filtroCat, filtroTxt, mostrarInactivos]);
+  }, [productosNormalizados, filtroCat, filtroTxt, mostrarInactivos]);
 
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
@@ -80,7 +112,8 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : p.precio ?? '—'
+          : p.precio ?? '—',
+        _inactive: !!(p.deleted_at || p.disabled || p.inactivo)
       };
     });
   }, [productosFiltrados]);
@@ -93,7 +126,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  console.log("Renderizando InventoryTab con productos:", productos);
+  console.log("Renderizando InventoryTab con productos normalizados:", productosNormalizados);
 
   return (
     <div className="w-100">
