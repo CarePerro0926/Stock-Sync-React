@@ -8,11 +8,11 @@ import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
 
-
+/* Config de entorno */
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || ''; // solo para pruebas locales
+const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || ''; // temporal: en producción usa JWT por rol
 
-/* Helpers */
+/* Helpers de normalización */
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
   const s = String(val).trim().toLowerCase();
@@ -28,7 +28,6 @@ const normalizeBool = (val, defaultValue = false) => {
 };
 
 const normalizeProducto = (p = {}) => {
-  // Mantener product_id explícito además de id
   const productIdRaw = p?.product_id ?? p?.productId ?? null;
   const idRaw = p?.id ?? productIdRaw ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
@@ -76,6 +75,19 @@ const normalizeProducto = (p = {}) => {
   };
 };
 
+/* Headers para llamadas admin */
+const buildAdminHeaders = () => {
+  const headers = { 'Content-Type': 'application/json' };
+  if (ADMIN_API_TOKEN) headers['x-admin-token'] = ADMIN_API_TOKEN;
+  try {
+    const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
+    if (session?.token) headers['Authorization'] = `Bearer ${session.token}`;
+  } catch (err) {
+    console.warn('buildAdminHeaders: no se pudo leer userSession', err);
+  }
+  return headers;
+};
+
 const AdminView = ({
   productos: productosProp = [],
   proveedores = [],
@@ -98,7 +110,7 @@ const AdminView = ({
   const [usuariosError, setUsuariosError] = useState('');
   const fetchedUsersRef = useRef(false);
 
-  // Evitar variable no usada en catch: usar event y usarlo en la función
+  /* Cierre de menú mobile al hacer click fuera */
   const handleClickOutside = useCallback((event) => {
     const menu = document.getElementById('adminMenu');
     const button = document.getElementById('btnMenuHamburguesa');
@@ -109,12 +121,15 @@ const AdminView = ({
 
   useEffect(() => {
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
   }, [handleClickOutside]);
 
   const toggleMenu = () => setShowMenu(!showMenu);
   const selectTab = (tabId) => { setVistaActiva(tabId); setShowMenu(false); };
 
+  /* Sincronizar productos desde props */
   useEffect(() => {
     if (Array.isArray(productosProp) && productosProp.length > 0) {
       setProductos(productosProp.map(normalizeProducto));
@@ -122,37 +137,38 @@ const AdminView = ({
   }, [productosProp]);
 
   /**
-   * fetchProductos - usa la API obligatoriamente.
-   * La API debe devolver un array de productos reales (cada objeto con id o product_id).
-   * Si la respuesta no es válida, se limpia la lista y se muestra error en consola.
+   * fetchProductos - siempre por API
+   * Valida respuesta y normaliza
    */
   const fetchProductos = useCallback(async () => {
     try {
-      if (!import.meta.env.VITE_API_URL) {
-        console.error('ADMINVIEW ERROR: VITE_API_URL no definido. La app está configurada para usar la API obligatoriamente.');
+      if (!API_BASE) {
+        console.error('ADMINVIEW ERROR: VITE_API_URL no definido.');
         setProductos([]);
         return null;
       }
 
-      const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
+      const url = `${API_BASE}/api/productos?_=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
       const text = await res.text().catch(() => null);
       let data = null;
-      try { data = JSON.parse(text); } catch { data = null; }
+      try { data = JSON.parse(text); } catch (err) {
+        data = null;
+        console.warn('ADMINVIEW WARN: respuesta no JSON válida', err);
+      }
 
       console.log('ADMINVIEW DEBUG: fetchProductos API raw:', text?.slice?.(0, 200) ?? text);
 
-      // Validación estricta: array y objetos con id/product_id
       const looksValid = Array.isArray(data) && data.length > 0 && (data[0]?.id || data[0]?.product_id);
       if (!res.ok || !looksValid) {
-        console.error('ADMINVIEW ERROR: API productos devolvió respuesta inválida', { status: res.status, data });
+        console.error('ADMINVIEW ERROR: API productos inválida', { status: res.status, data });
         setProductos([]);
         return null;
       }
 
       const normalized = data.map(normalizeProducto);
       setProductos(normalized);
-      console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0,5));
+      console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0, 5));
       return normalized;
     } catch (err) {
       console.error('fetchProductos error (API):', err);
@@ -168,23 +184,26 @@ const AdminView = ({
   }, [productosProp, fetchProductos]);
 
   /**
-   * toggleProducto - usa la API obligatoriamente para realizar el UPDATE en servidor.
-   * - Hace optimismo local inmediato.
-   * - Llama al endpoint PATCH /api/productos/:id/disable o /enable.
-   * - Valida la respuesta y sincroniza el estado local con lo que devuelva la API.
+   * toggleProducto - PATCH /api/productos/:id/disable|enable
+   * Envío de x-admin-token y reversión si falla
    */
-  const toggleProducto = async (id, currentlyDisabled) => {
+  const toggleProducto = useCallback(async (id, currentlyDisabled) => {
     try {
-      if (!import.meta.env.VITE_API_URL) {
-        console.error('toggleProducto: VITE_API_URL no definido. La app requiere API.');
+      if (!API_BASE) {
+        console.error('toggleProducto: VITE_API_URL no definido.');
         alert('Configuración inválida: falta VITE_API_URL.');
+        return false;
+      }
+      if (!ADMIN_API_TOKEN) {
+        console.error('toggleProducto: VITE_ADMIN_API_TOKEN vacío.');
+        alert('Acción admin bloqueada: falta VITE_ADMIN_API_TOKEN en el frontend.');
         return false;
       }
 
       const action = currentlyDisabled ? 'enable' : 'disable';
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${encodeURIComponent(id)}/${action}`;
+      const apiUrl = `${API_BASE}/api/productos/${encodeURIComponent(id)}/${action}`;
 
-      // Optimismo local: marcar temporalmente el producto como inactivo/activo
+      // Optimismo local
       setProductos(prev => (prev || []).map(p => {
         const pid = String(p.id ?? p.product_id ?? '');
         const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
@@ -195,29 +214,23 @@ const AdminView = ({
         return p;
       }));
 
-      // Llamada al API (el servidor debe ejecutar el UPDATE en la BD con service role)
       const res = await fetch(apiUrl, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-token': ADMIN_API_TOKEN
-      },
-      body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
-    });
+        method: 'PATCH',
+        headers: buildAdminHeaders(),
+        body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
+      });
 
       const payload = await res.json().catch(() => null);
-
       console.log('TOGGLE PRODUCT payload:', payload, 'status:', res.status);
 
       if (!res.ok) {
         console.error('toggleProducto API error:', { status: res.status, payload });
-        // Re-sincronizar desde API para revertir optimismo si la API falló
-        await fetchProductos();
+        await fetchProductos(); // revertir optimismo
         alert(payload?.message || 'Error al cambiar el estado del producto (API).');
         return false;
       }
 
-      // Si la API devuelve lista completa, reemplazar; si devuelve el producto, actualizar solo ese
+      // Actualizar según el tipo de respuesta
       if (Array.isArray(payload)) {
         const normalized = payload.map(normalizeProducto);
         setProductos(normalized);
@@ -232,59 +245,72 @@ const AdminView = ({
           return p;
         }));
       } else {
-        // Respuesta inesperada: forzar recarga
+        // Respuesta inesperada: recargar
         await fetchProductos();
       }
 
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
+      }
       return true;
     } catch (err) {
       console.error('Error toggling producto (frontend):', err);
-      // En caso de fallo, recargar para sincronizar
       await fetchProductos();
       alert('Ocurrió un error al cambiar el estado del producto.');
       return false;
     }
-  };
+  }, [fetchProductos, onUpdateSuccess]);
 
-  const toggleProveedor = async (id, currentlyDisabled) => {
+  /**
+   * toggleProveedor - Supabase directo
+   */
+  const toggleProveedor = useCallback(async (id, currentlyDisabled) => {
     try {
-      // Proveedores pueden seguir usando Supabase directo si así lo deseas,
-      // pero aquí dejamos la implementación original (directa a supabase).
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('proveedores').update(payload).eq('id', id);
       if (error) throw error;
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
+      }
       return true;
     } catch (err) {
       console.error('Error toggling proveedor:', err);
       alert('Ocurrió un error al cambiar el estado del proveedor.');
       return false;
     }
-  };
+  }, [onUpdateSuccess]);
 
-  const toggleCategoria = async (id, currentlyDisabled) => {
+  /**
+   * toggleCategoria - Supabase directo
+   */
+  const toggleCategoria = useCallback(async (id, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('categorias').update(payload).eq('id', id);
       if (error) throw error;
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
+      }
       return true;
     } catch (err) {
       console.error('Error toggling categoria:', err);
       alert('Ocurrió un error al cambiar el estado de la categoría.');
       return false;
     }
-  };
+  }, [onUpdateSuccess]);
 
-  const toggleUsuario = async (userId, currentlyDisabled) => {
+  /**
+   * toggleUsuario - API con headers admin, fallback a Supabase
+   */
+  const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
+    // Primero intenta por API
     try {
-      const action = currentlyDisabled ? 'enable' : 'disable';
-      const apiUrl = `${import.meta.env.VITE_API_URL}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
-      if (import.meta.env.VITE_API_URL) {
+      if (API_BASE) {
+        const action = currentlyDisabled ? 'enable' : 'disable';
+        const apiUrl = `${API_BASE}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
         const res = await fetch(apiUrl, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: buildAdminHeaders(),
           body: JSON.stringify({ reason: `cambio desde admin (${action})` })
         });
         if (!res.ok) {
@@ -293,12 +319,16 @@ const AdminView = ({
         }
         fetchedUsersRef.current = false;
         await fetchUsuariosFromApi();
-        if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
+        if (onUpdateSuccess) {
+          try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
+        }
         return true;
       }
     } catch (err) {
       console.warn('toggleUsuario: fallo en endpoint API, intentando fallback con supabase', err);
     }
+
+    // Fallback directo a Supabase
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       let { error } = await supabase.from('usuarios').update(payload).eq('id', userId);
@@ -306,27 +336,38 @@ const AdminView = ({
         const { error: err2 } = await supabase.from('user_profiles').update(payload).eq('user_id', userId);
         if (err2) throw err2;
       }
-      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
+      setUsuarios(prev => prev.map(u => (
+        String(u.id) === String(userId)
+          ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at }
+          : u
+      )));
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
+      }
       return true;
     } catch (err) {
       console.error('Error toggling usuario (fallback supabase):', err);
       alert('Ocurrió un error al cambiar el estado del usuario.');
       return false;
     }
-  };
+  }, [fetchUsuariosFromApi, onUpdateSuccess]);
 
-  const fetchUsuariosFromApi = async () => {
+  /**
+   * fetchUsuariosFromApi - carga usuarios con API o Supabase
+   */
+  const fetchUsuariosFromApi = useCallback(async () => {
     setUsuariosLoading(true);
     setUsuariosError('');
     try {
-      if (import.meta.env.VITE_API_URL) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
+      if (API_BASE) {
+        const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
         const normalized = (data || []).map(u => ({
           id: String(u.id ?? u.user_id ?? ''),
-          display_name: (u.nombres || u.apellidos) ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim() : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+          display_name: (u.nombres || u.apellidos)
+            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
           deleted_at: normalizeDeletedAt(u.deleted_at),
           raw: u
         }));
@@ -336,14 +377,23 @@ const AdminView = ({
         return;
       }
 
-      const { data, error } = await supabase.from('usuarios').select('id, nombres, apellidos, email, username, deleted_at').order('nombres', { ascending: true });
+      // Fallback: Supabase directo
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nombres, apellidos, email, username, deleted_at')
+        .order('nombres', { ascending: true });
+
       if (error) throw error;
+
       const normalized = (data || []).map(u => ({
         id: String(u.id ?? u.user_id ?? ''),
-        display_name: (u.nombres || u.apellidos) ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim() : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+        display_name: (u.nombres || u.apellidos)
+          ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+          : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
         deleted_at: normalizeDeletedAt(u.deleted_at),
         raw: u
       }));
+
       setUsuarios(normalized);
       fetchedUsersRef.current = true;
     } catch (err) {
@@ -352,32 +402,45 @@ const AdminView = ({
     } finally {
       setUsuariosLoading(false);
     }
-  };
+  }, []);
 
+  /* Cargar usuarios al montar */
   useEffect(() => {
     if (fetchedUsersRef.current) return;
     fetchUsuariosFromApi();
-  }, []);
+  }, [fetchUsuariosFromApi]);
 
   return (
     <div className="card p-4 w-100">
       <h4 className="mb-3">Panel Administrador</h4>
 
+      {/* Header mobile */}
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
-        <button id="btnMenuHamburguesa" className="btn btn-primary me-3" type="button" aria-label="Menú de navegación" onClick={toggleMenu}>&#9776;</button>
-        <h5 id="adminSectionTitle" className="mb-0">{(() => {
-          switch (vistaActiva) {
-            case 'inventory': return 'Inventario';
-            case 'providers': return 'Proveedores';
-            case 'add': return 'Agregar';
-            case 'update': return 'Actualizar';
-            case 'delete': return 'Gestionar estado';
-            case 'usuarios': return 'Usuarios';
-            default: return 'Panel Administrador';
-          }
-        })()}</h5>
+        <button
+          id="btnMenuHamburguesa"
+          className="btn btn-primary me-3"
+          type="button"
+          aria-label="Menú de navegación"
+          onClick={toggleMenu}
+        >
+          &#9776;
+        </button>
+        <h5 id="adminSectionTitle" className="mb-0">
+          {(() => {
+            switch (vistaActiva) {
+              case 'inventory': return 'Inventario';
+              case 'providers': return 'Proveedores';
+              case 'add': return 'Agregar';
+              case 'update': return 'Actualizar';
+              case 'delete': return 'Gestionar estado';
+              case 'usuarios': return 'Usuarios';
+              default: return 'Panel Administrador';
+            }
+          })()}
+        </h5>
       </div>
 
+      {/* Menú mobile */}
       {showMenu && (
         <div id="adminMenu" className="list-group mb-3 d-md-none" style={{ display: 'block' }}>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('inventory')}>Inventario</button>
@@ -389,6 +452,7 @@ const AdminView = ({
         </div>
       )}
 
+      {/* Tabs desktop */}
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
         <li className="nav-item"><button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>Inventario</button></li>
         <li className="nav-item"><button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button></li>
@@ -398,13 +462,44 @@ const AdminView = ({
         <li className="nav-item"><button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>Usuarios</button></li>
       </ul>
 
-      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onToggleProducto={toggleProducto} />}
+      {/* Vistas */}
+      {vistaActiva === 'inventory' && (
+        <InventoryTab
+          productos={productos}
+          categorias={categorias}
+          onToggleProducto={toggleProducto}
+        />
+      )}
 
-      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} onToggleProveedor={toggleProveedor} />}
+      {vistaActiva === 'providers' && (
+        <ProvidersTab
+          proveedores={proveedores}
+          onAddProveedor={onAddProveedor}
+          onDeleteProveedor={onDeleteProveedor}
+          onToggleProveedor={toggleProveedor}
+        />
+      )}
 
-      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} onAddCategoria={onAddCategoria} onAddProveedor={onAddProveedor} categorias={categorias} productos={productos} proveedores={proveedores} />}
+      {vistaActiva === 'add' && (
+        <AddTab
+          onAddProducto={onAddProducto}
+          onAddCategoria={onAddCategoria}
+          onAddProveedor={onAddProveedor}
+          categorias={categorias}
+          productos={productos}
+          proveedores={proveedores}
+        />
+      )}
 
-      {vistaActiva === 'update' && <UpdateTab productos={productos} categorias={categorias} proveedores={proveedores} onUpdateSuccess={onUpdateSuccess} onUpdateProveedorSuccess={onUpdateSuccess} />}
+      {vistaActiva === 'update' && (
+        <UpdateTab
+          productos={productos}
+          categorias={categorias}
+          proveedores={proveedores}
+          onUpdateSuccess={onUpdateSuccess}
+          onUpdateProveedorSuccess={onUpdateSuccess}
+        />
+      )}
 
       {vistaActiva === 'delete' && (
         <GestionarEstadoTab
@@ -421,7 +516,15 @@ const AdminView = ({
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
           onToggleUsuario={toggleUsuario}
-          onAfterToggle={async (what) => { if (what === 'productos') await fetchProductos(); }}
+          onAfterToggle={async (what) => {
+            if (what === 'productos') {
+              try {
+                await fetchProductos();
+              } catch (err) {
+                console.error('onAfterToggle fetchProductos error:', err);
+              }
+            }
+          }}
         />
       )}
 
