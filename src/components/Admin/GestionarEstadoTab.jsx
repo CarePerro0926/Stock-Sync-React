@@ -78,7 +78,6 @@ const GestionarEstadoTab = ({
     const needFetch = !usuariosProp || usuariosProp.length === 0;
 
     if (!needFetch) {
-      // Normalizar la prop si viene desde AdminView (puede tener user_id/display_name o id/nombres)
       const normalizedFromProp = usuariosProp.map(u => ({
         id: String(u.user_id ?? u.id ?? ''),
         display_name: u.display_name ?? u.displayName ?? u.nombres ?? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim(),
@@ -120,16 +119,22 @@ const GestionarEstadoTab = ({
     if (!q) return [];
     return lista
       .filter(item =>
-        String(item.id).toLowerCase().includes(q) ||
         String(item[campo] ?? '').toLowerCase().includes(q)
       )
       .slice(0, 8);
   };
 
-  const parseIdFromInput = (entrada) => {
+  const parseIdOrNameFromInput = (entrada) => {
     const trimmed = String(entrada || '').trim();
     if (!trimmed) return '';
-    if (trimmed.includes(' - ')) return trimmed.split(' - ')[0].trim();
+    // si el usuario pegó un id exacto (UUID), lo devolvemos
+    const maybeId = trimmed;
+    // si existe un usuario con ese id, retornamos id
+    if (usuarios.find(u => String(u.id) === maybeId)) return maybeId;
+    // si no, intentamos buscar por display_name exacto (case-insensitive)
+    const byName = usuarios.find(u => String(u.display_name).toLowerCase() === maybeId.toLowerCase());
+    if (byName) return byName.id;
+    // no encontramos, devolvemos la entrada tal cual (se validará luego)
     return trimmed;
   };
 
@@ -152,7 +157,7 @@ const GestionarEstadoTab = ({
   // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
-    const entrada = parseIdFromInput(inputProducto);
+    const entrada = parseIdOrNameFromInput(inputProducto);
     let idFinal = entrada || productoSeleccionado;
     if (!idFinal && inputProducto) {
       const matchByName = productos.find(p => String(p.nombre).toLowerCase() === String(inputProducto).trim().toLowerCase());
@@ -174,7 +179,7 @@ const GestionarEstadoTab = ({
 
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
-    const entrada = parseIdFromInput(inputProveedor);
+    const entrada = parseIdOrNameFromInput(inputProveedor);
     let idFinal = entrada || proveedorSeleccionado;
     if (!idFinal && inputProveedor) {
       const matchByName = proveedores.find(p => String(p.nombre).toLowerCase() === String(inputProveedor).trim().toLowerCase());
@@ -196,7 +201,7 @@ const GestionarEstadoTab = ({
 
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
-    const entrada = parseIdFromInput(inputCategoria);
+    const entrada = parseIdOrNameFromInput(inputCategoria);
     let idFinal = entrada || categoriaSeleccionada;
 
     let cat = categorias.find(c => String(c.id) === String(idFinal));
@@ -220,15 +225,18 @@ const GestionarEstadoTab = ({
 
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
-    const entrada = parseIdFromInput(inputUsuario);
+    const entrada = parseIdOrNameFromInput(inputUsuario);
     let idFinal = entrada || usuarioSeleccionado;
 
+    // Si entrada es display_name, parseIdOrNameFromInput ya devuelve el id si lo encuentra
     let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
-      user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase());
+      // intentar buscar por display_name parcial o exacto
+      user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase())
+        || usuarios.find(u => String(u.display_name).toLowerCase().includes(String(inputUsuario).trim().toLowerCase()));
       if (user) idFinal = user.id;
     }
-    if (!user) return alert('No se encontró ningún usuario con ese ID o nombre.');
+    if (!user) return alert('No se encontró ningún usuario con ese nombre.');
 
     const currentlyDisabled = !!user.deleted_at;
     if (!window.confirm(currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?')) return;
@@ -245,7 +253,6 @@ const GestionarEstadoTab = ({
       if (!ok) return;
     }
 
-    // actualizar estado local para reflejar cambio inmediato
     setUsuarios(prev => prev.map(u => (String(u.id) === String(idFinal) ? { ...u, deleted_at: currentlyDisabled ? null : new Date().toISOString() } : u)));
     setInputUsuario(''); setUsuarioSeleccionado(''); setSugerenciasUsuario([]);
   };
@@ -467,7 +474,7 @@ const GestionarEstadoTab = ({
                 setUsuarioSeleccionado(id);
                 if (id) {
                   const u = usuarios.find(x => String(x.id) === String(id));
-                  setInputUsuario(`${u?.id} - ${u?.display_name}`);
+                  setInputUsuario(u?.display_name || '');
                 } else {
                   setInputUsuario('');
                 }
@@ -476,17 +483,17 @@ const GestionarEstadoTab = ({
               <option value="">—</option>
               {usuarios.map(u => (
                 <option key={u.id} value={u.id}>
-                  {u.id} - {u.display_name}
+                  {u.display_name}
                 </option>
               ))}
             </select>
-            <small className="text-muted">O escribe el ID o nombre</small>
+            <small className="text-muted">O escribe el nombre del usuario</small>
           </div>
 
           <div className="mb-2 position-relative">
             <input
               className="form-control"
-              placeholder="ID o nombre del usuario"
+              placeholder="Nombre del usuario"
               value={inputUsuario}
               onChange={(e) => {
                 const entrada = e.target.value;
@@ -503,12 +510,12 @@ const GestionarEstadoTab = ({
                     className="list-group-item list-group-item-action"
                     style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      setInputUsuario(`${u.id} - ${u.display_name}`);
+                      setInputUsuario(u.display_name);
                       setUsuarioSeleccionado(u.id);
                       setSugerenciasUsuario([]);
                     }}
                   >
-                    {u.id} - {u.display_name}
+                    {u.display_name}
                   </li>
                 ))}
               </ul>
