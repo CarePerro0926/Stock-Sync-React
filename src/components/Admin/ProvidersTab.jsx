@@ -1,8 +1,7 @@
 // src/components/Admin/ProvidersTab.jsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/services/supabaseClient';
 
-const ProvidersTab = ({ proveedores: proveedoresProp = [], onAddProveedor, onToggleProveedor }) => {
+const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
   const [proveedores, setProveedores] = useState(proveedoresProp);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [filtroTxt, setFiltroTxt] = useState('');
@@ -32,33 +31,6 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [], onAddProveedor, onTog
     return list;
   }, [proveedores, mostrarInactivos, filtroTxt]);
 
-  const handleToggle = async (p) => {
-    const currentlyDisabled = !!p.deleted_at;
-    const confirmMsg = currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?';
-    if (!window.confirm(confirmMsg)) return;
-
-    if (typeof onToggleProveedor === 'function') {
-      await onToggleProveedor(p.id, currentlyDisabled);
-      if (typeof onAddProveedor === 'function') onAddProveedor(); // notificar/recargar si el padre lo espera
-      return;
-    }
-
-    // Fallback: actualizar directamente desde aquí
-    try {
-      if (!currentlyDisabled) {
-        await supabase.from('proveedores').update({ deleted_at: new Date().toISOString() }).eq('id', p.id);
-      } else {
-        await supabase.from('proveedores').update({ deleted_at: null }).eq('id', p.id);
-      }
-      const { data } = await supabase.from('proveedores').select('*').order('nombre', { ascending: true });
-      setProveedores(data || []);
-      if (typeof onAddProveedor === 'function') onAddProveedor();
-    } catch (err) {
-      console.error(err);
-      alert('Error al cambiar estado del proveedor.');
-    }
-  };
-
   return (
     <div>
       <h5>Proveedores</h5>
@@ -87,7 +59,8 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [], onAddProveedor, onTog
         </div>
       </div>
 
-      <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+      {/* Vista en tabla para pantallas medianas y grandes */}
+      <div className="d-none d-md-block" style={{ maxHeight: '400px', overflowY: 'auto' }}>
         <table className="table">
           <thead>
             <tr>
@@ -95,7 +68,6 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [], onAddProveedor, onTog
               <th>Nombre</th>
               <th>Email</th>
               <th>Estado</th>
-              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -105,21 +77,36 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [], onAddProveedor, onTog
                 <td>{p.nombre}</td>
                 <td>{p.email}</td>
                 <td>{p.deleted_at ? 'Inhabilitado' : 'Activo'}</td>
-                <td>
-                  <button
-                    className={`btn btn-sm ${p.deleted_at ? 'btn-success' : 'btn-warning'}`}
-                    onClick={() => handleToggle(p)}
-                  >
-                    {p.deleted_at ? 'Reactivar' : 'Inhabilitar'}
-                  </button>
-                </td>
               </tr>
             ))}
             {proveedoresFiltrados.length === 0 && (
-              <tr><td colSpan={5}>No hay proveedores</td></tr>
+              <tr><td colSpan={4}>No hay proveedores</td></tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Vista en tarjetas para pantallas pequeñas */}
+      <div className="d-block d-md-none">
+        <div className="row row-cols-1 g-3">
+          {proveedoresFiltrados.map(p => (
+            <div className="col" key={p.id}>
+              <div className="card h-100 shadow-sm">
+                <div className="card-body">
+                  <h6 className="card-title text-primary">{p.nombre}</h6>
+                  <p className="card-text mb-1"><strong>ID:</strong> {p.id}</p>
+                  <p className="card-text mb-1"><strong>Email:</strong> {p.email}</p>
+                  <p className="card-text"><strong>Estado:</strong> {p.deleted_at ? 'Inhabilitado' : 'Activo'}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+          {proveedoresFiltrados.length === 0 && (
+            <div className="col">
+              <div className="card"><div className="card-body">No hay proveedores</div></div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
