@@ -8,6 +8,10 @@ import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
 
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
+const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || ''; // solo para pruebas locales
+
 /* Helpers */
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -193,10 +197,13 @@ const AdminView = ({
 
       // Llamada al API (el servidor debe ejecutar el UPDATE en la BD con service role)
       const res = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
-      });
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': ADMIN_API_TOKEN
+      },
+      body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
+    });
 
       const payload = await res.json().catch(() => null);
 
