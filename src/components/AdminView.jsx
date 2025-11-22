@@ -7,7 +7,6 @@ import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
-import ResponsiveTable from './ResponsiveTable';
 
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -94,12 +93,11 @@ const AdminView = ({
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-        });
+        // Removed custom headers to avoid CORS preflight rejection on servers that don't allow Cache-Control in Access-Control-Allow-Headers
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
         const text = await res.text().catch(() => null);
         let data = null;
-        try { data = JSON.parse(text); } catch { data = null; } // <-- parseErr eliminado
+        try { data = JSON.parse(text); } catch { data = null; }
         if (res.ok && Array.isArray(data)) {
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
