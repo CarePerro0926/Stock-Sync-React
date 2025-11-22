@@ -171,19 +171,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Debug visual temporal: muestra los primeros productos normalizados */}
-      <div className="mb-3">
-        <div className="alert alert-secondary">
-          <strong>DEBUG</strong>
-          <div>Productos recibidos: {productos.length}</div>
-          <div style={{ maxHeight: 120, overflow: 'auto' }}>
-            <pre style={{ margin: 0 }}>
-{JSON.stringify(productosNormalizados.slice(0, 10).map(p => ({ id: p.id, nombre: p.nombre, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}
-            </pre>
-          </div>
-        </div>
-      </div>
-
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
         <div className="table-responsive">
           {tableData.length > 0 ? (
