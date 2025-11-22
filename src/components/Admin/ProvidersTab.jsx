@@ -14,8 +14,12 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
   const proveedoresFiltrados = useMemo(() => {
     let list = [...(proveedores || [])];
 
-    if (!mostrarInactivos) {
-      list = list.filter(p => p.deleted_at == null);
+    // Mostrar solo inactivos cuando mostrarInactivos === true,
+    // en caso contrario mostrar solo activos.
+    if (mostrarInactivos) {
+      list = list.filter(p => p.deleted_at !== null && p.deleted_at !== undefined && String(p.deleted_at).trim() !== '');
+    } else {
+      list = list.filter(p => p.deleted_at === null || p.deleted_at === undefined || String(p.deleted_at).trim() === '');
     }
 
     if (filtroTxt.trim()) {
