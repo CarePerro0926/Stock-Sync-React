@@ -141,11 +141,38 @@ const GestionarEstadoTab = ({
   }, [usuariosProp]);
 
   // -------------------- Utilidades --------------------
-  const filtrarSugerencias = (texto, lista, campo) => {
-    const q = String(texto || '').trim().toLowerCase();
-    if (!q) return [];
+  /**
+   * filtrarSugerencias:
+   * - Si el texto es solo dígitos, busca por ID exacto (no por nombre).
+   * - Si el texto tiene formato "ID - Nombre", extrae el ID y busca por ID exacto si existe.
+   * - En otros casos busca por coincidencia parcial en el campo indicado (case-insensitive).
+   * - idField por defecto es 'id' y se usa para la búsqueda numérica/exacta.
+   */
+  const filtrarSugerencias = (texto, lista, campo, idField = 'id') => {
+    const raw = String(texto || '').trim();
+    if (!raw) return [];
+
+    // Si tiene formato "ID - Nombre", extraer ID y priorizar búsqueda por ID exacto
+    if (raw.includes(' - ')) {
+      const maybeId = raw.split(' - ')[0].trim();
+      if (maybeId) {
+        const found = lista.filter(item => String(item[idField] ?? item.id ?? '').trim() === maybeId);
+        if (found.length > 0) return found.slice(0, 8);
+        // si no existe exacto, no caer en búsqueda por nombre con ese fragmento
+      }
+    }
+
+    // Si el usuario escribió solo dígitos, buscar por ID exacto (no por nombre)
+    if (/^\d+$/.test(raw)) {
+      return lista
+        .filter(item => String(item[idField] ?? item.id ?? '').trim() === raw)
+        .slice(0, 8);
+    }
+
+    // Búsqueda por nombre parcial (case-insensitive)
+    const qLower = raw.toLowerCase();
     return lista
-      .filter(item => String(item[campo] ?? '').toLowerCase().includes(q))
+      .filter(item => String(item[campo] ?? '').toLowerCase().includes(qLower))
       .slice(0, 8);
   };
 
@@ -455,7 +482,8 @@ const GestionarEstadoTab = ({
                 const entrada = e.target.value;
                 setInputProducto(entrada);
                 setProductoSeleccionado('');
-                setSugerenciasProducto(filtrarSugerencias(entrada, productos, 'nombre'));
+                // Usar filtrarSugerencias que prioriza ID exacto cuando el usuario escribe solo dígitos
+                setSugerenciasProducto(filtrarSugerencias(entrada, productos, 'nombre', 'id'));
               }}
             />
             {inputProducto && sugerenciasProducto.length > 0 && (
@@ -521,7 +549,7 @@ const GestionarEstadoTab = ({
                 const entrada = e.target.value;
                 setInputProveedor(entrada);
                 setProveedorSeleccionado('');
-                setSugerenciasProveedor(filtrarSugerencias(entrada, proveedores, 'nombre'));
+                setSugerenciasProveedor(filtrarSugerencias(entrada, proveedores, 'nombre', 'id'));
               }}
             />
             {inputProveedor && sugerenciasProveedor.length > 0 && (
@@ -655,7 +683,7 @@ const GestionarEstadoTab = ({
                 const entrada = e.target.value;
                 setInputUsuario(entrada);
                 setUsuarioSeleccionado('');
-                setSugerenciasUsuario(filtrarSugerencias(entrada, usuarios, 'display_name'));
+                setSugerenciasUsuario(filtrarSugerencias(entrada, usuarios, 'display_name', 'id'));
               }}
             />
             {inputUsuario && sugerenciasUsuario.length > 0 && (
