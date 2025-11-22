@@ -11,33 +11,39 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
     setLoading(true);
 
     try {
-      const res = await fetch('https://stock-sync-api.onrender.com/api/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com';
+      // Si el identificador contiene '@' lo tratamos como email; si no, lo enviamos también como email vacío
+      // (ideal: backend debería aceptar username o email; aquí priorizamos email según la API)
+      const payload = {
+        email: identifier.trim(),
+        password: password.trim()
+      };
+
+      const res = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: identifier.trim(),
-          pass: password.trim()
-        })
+        body: JSON.stringify(payload)
       });
 
       const result = await res.json();
 
       if (!res.ok) {
+        console.warn('Login fallido:', result);
         alert(result.message || 'Credenciales incorrectas');
         return;
       }
 
       const usr = {
-        id: result.user.id,
-        email: result.user.email,
-        username: result.user.username,
-        role: result.user.role || 'cliente'
+        id: result.user?.id,
+        email: result.user?.email,
+        username: result.user?.username,
+        role: result.user?.role || 'cliente'
       };
 
       sessionStorage.setItem('userSession', JSON.stringify(usr));
       onLogin(usr);
     } catch (err) {
-      console.error('Error inesperado:', err);
+      console.error('Error inesperado en login:', err);
       alert('Error interno. Revisa la consola.');
     } finally {
       setLoading(false);
