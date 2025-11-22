@@ -1,4 +1,4 @@
-// src/components/Admin/DeleteTab.jsx
+// src/components/Admin/GestionarEstadoTabTab.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
 

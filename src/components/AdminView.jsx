@@ -5,7 +5,7 @@ import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
-import DeleteTab from './Admin/DeleteTab';
+import DeleteTab from './Admin/GestionarEstadoTabTab';
 import UsuariosView from './UsuariosView';
 import ResponsiveTable from './ResponsiveTable';
 
