@@ -3,22 +3,37 @@ import React, { useState, useMemo } from 'react';
 import ResponsiveTable from '../ResponsiveTable';
 import '../ResponsiveTable.css';
 
+/**
+ * Normaliza deleted_at:
+ * - devuelve null si está vacío, 'null', 'undefined' o no existe
+ * - devuelve la cadena original (trim) si parece una fecha/valor válido
+ */
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
-  const s = String(val).trim().toLowerCase();
-  if (s === '' || s === 'null' || s === 'undefined') return null;
-  return val;
+  const s = String(val).trim();
+  if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null;
+  return s;
 };
 
+/**
+ * Normaliza booleanos que pueden venir como string/number
+ */
 const normalizeBool = (val, defaultValue = false) => {
   if (val === null || val === undefined) return defaultValue;
   if (typeof val === 'boolean') return val;
   const s = String(val).trim().toLowerCase();
-  return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
+  if (s === '') return defaultValue;
+  if (['1', 'true', 'yes', 'y'].includes(s)) return true;
+  if (['0', 'false', 'no', 'n'].includes(s)) return false;
+  // fallback: si es texto no vacío, considerarlo true
+  return true;
 };
 
 /**
  * normalizeProducto: debe coincidir con la normalización en AdminView.
+ * - deleted_at se normaliza a null o string limpio
+ * - disabled / inactivo se normalizan a boolean
+ * - _inactive se calcula de forma determinista a partir de los campos anteriores
  */
 const normalizeProducto = (p = {}) => {
   const idRaw = p?.id ?? p?.product_id ?? '';
@@ -38,7 +53,9 @@ const normalizeProducto = (p = {}) => {
   if (typeof p?.precio === 'number') {
     precio = p.precio;
   } else if (typeof p?.precio === 'string' && p.precio.trim() !== '') {
-    const parsed = Number(String(p.precio).replace(/\D/g, ''));
+    // permitir puntos y comas, eliminar otros caracteres
+    const cleaned = String(p.precio).replace(/[^\d.-]/g, '');
+    const parsed = Number(cleaned);
     precio = Number.isFinite(parsed) ? parsed : null;
   } else if (typeof p?.precio_unitario === 'number') {
     precio = p.precio_unitario;
@@ -49,16 +66,19 @@ const normalizeProducto = (p = {}) => {
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
 
+  // _inactive: verdadero si deleted_at tiene valor válido o si alguno de los flags está activo
+  const _inactive = Boolean(deleted_at) || disabled || inactivo;
+
   return {
     id,
     nombre,
     categoria_nombre,
     cantidad,
     precio,
-    deleted_at: deleted_at,
+    deleted_at,
     disabled,
     inactivo,
-    _inactive: Boolean(deleted_at) || disabled || inactivo,
+    _inactive,
     _raw: p
   };
 };
@@ -68,10 +88,12 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
+  // Normalizar productos cada vez que cambie la prop
   const productosNormalizados = useMemo(() => {
     return (productos || []).map(normalizeProducto);
   }, [productos]);
 
+  // Construir lista de categorías para el select
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = productosNormalizados.map(p => p.categoria_nombre).filter(Boolean);
     const unicas = [...new Set(nombresDesdeProductos.map(n => String(n).trim()))];
@@ -81,15 +103,19 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     return ['Todas', ...unicas, ...categoriasExtra];
   }, [productosNormalizados, categorias]);
 
+  // Filtrado principal
   const productosFiltrados = useMemo(() => {
     let filtered = [...productosNormalizados];
 
+    // Filtrar por estado: si mostrarInactivos === true => mostrar solo inactivos,
+    // si false => mostrar solo activos.
     if (mostrarInactivos) {
-      filtered = filtered.filter(p => !!(p._inactive || p.deleted_at || p.disabled || p.inactivo));
+      filtered = filtered.filter(p => p._inactive === true);
     } else {
-      filtered = filtered.filter(p => !(p._inactive || p.deleted_at || p.disabled || p.inactivo));
+      filtered = filtered.filter(p => p._inactive === false);
     }
 
+    // Filtrar por categoría si se seleccionó una distinta de 'Todas'
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
@@ -98,6 +124,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
+    // Filtrar por texto (ID, nombre, categoría)
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
@@ -111,6 +138,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     return filtered;
   }, [productosNormalizados, filtroCat, filtroTxt, mostrarInactivos]);
 
+  // Preparar datos para la tabla
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
       let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
@@ -123,7 +151,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         categoriaNombre: nombreCategoria,
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 }) : (p.precio ?? '—'),
-        _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
+        _inactive: !!p._inactive
       };
     });
   }, [productosFiltrados]);
