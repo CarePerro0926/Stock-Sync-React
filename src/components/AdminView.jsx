@@ -51,7 +51,7 @@ const AdminView = ({
       case 'providers': return 'Proveedores';
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
-      case 'delete': return 'Eliminar';
+      case 'delete': return 'Gestionar estado';
       case 'usuarios': return 'Usuarios';
       default: return 'Panel Administrador';
     }
@@ -118,8 +118,26 @@ const AdminView = ({
     }
   };
 
-  // If you manage users in the same DB and want soft-delete for users,
-  // implement a similar toggleUsuario function and pass it to UsuariosView.
+  // Si implementas soft-delete para usuarios, descomenta e implementa toggleUsuario
+  /*
+  const toggleUsuario = async (userId, currentlyDisabled) => {
+    try {
+      // ejemplo: actualizar user_profiles.deleted_at
+      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({ user_id: userId, deleted_at: payload.deleted_at }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
+    } catch (err) {
+      console.error('Error toggling usuario:', err);
+      alert('Ocurrió un error al cambiar el estado del usuario.');
+    }
+  };
+  */
 
   return (
     <div className="card p-4 w-100">
@@ -144,7 +162,7 @@ const AdminView = ({
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('providers')}>Proveedores</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Gestionar estado</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('usuarios')}>Usuarios</button>
         </div>
       )}
@@ -172,7 +190,7 @@ const AdminView = ({
         </li>
         <li className="nav-item">
           <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>
-            Eliminar
+            Gestionar estado
           </button>
         </li>
         <li className="nav-item">
@@ -225,10 +243,13 @@ const AdminView = ({
           productos={productos}
           proveedores={proveedores}
           categorias={categorias}
+          // compatibilidad: DeleteTab acepta onDeleteX (legacy) o onToggleX (nuevo)
           onDeleteProducto={onDeleteProducto}
           onDeleteProveedor={onDeleteProveedor}
           onDeleteCategoria={onDeleteCategoria}
-          onToggleCategoria={toggleCategoria} // opcional: si quieres reusar toggle en DeleteTab
+          onToggleProducto={toggleProducto}
+          onToggleProveedor={toggleProveedor}
+          onToggleCategoria={toggleCategoria}
         />
       )}
 
