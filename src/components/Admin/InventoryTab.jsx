@@ -8,7 +8,7 @@ import ResponsiveTable from '../ResponsiveTable';
  * - Acepta productos en varias formas: normalizados (id, nombre, categoria_nombre, cantidad, precio)
  *   o raw (product_id, nombre, categoria, stock, etc).
  * - Normaliza internamente y evita placeholders.
- * - Muestra logs claros para depuración.
+ * - Búsqueda: si el término es solo numérico -> buscar por ID exacto.
  */
 
 const normalizeDeletedAt = (val) => {
@@ -36,7 +36,6 @@ const isPlaceholderProduct = (p) => {
 };
 
 const buildNormalized = (p) => {
-  // p puede ser ya normalizado o raw
   const raw = p?._raw ?? p ?? {};
   const idRaw = p?.id ?? p?.product_id ?? raw?.product_id ?? raw?.id ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
@@ -74,12 +73,10 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
   const [filtroTxt, setFiltroTxt] = useState('');
   const [localProductos, setLocalProductos] = useState([]);
 
-  // Sincronizar copia local con props (no mutamos la prop)
   useEffect(() => {
     setLocalProductos(Array.isArray(productos) ? productos : []);
   }, [productos]);
 
-  // Logs para depuración: muestra la forma de los primeros 3 productos
   useEffect(() => {
     console.log('INVENTORY DEBUG: productos prop length =', Array.isArray(productos) ? productos.length : 'not-array');
     if (Array.isArray(productos) && productos.length > 0) {
@@ -87,52 +84,80 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     }
   }, [productos]);
 
-  // Lista de categorías para el select (extraída de productos y del prop categorias)
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = (localProductos || [])
       .map(p => p?.categoria_nombre ?? p?.categoria ?? p?._raw?.categoria_nombre ?? p?._raw?.categoria ?? '')
       .filter(nombre => nombre && String(nombre).trim() !== '');
-
     const nombresDesdeProp = (categorias || [])
       .map(c => c?.nombre ?? c?.name ?? c?.categoria ?? c?.category_name ?? '')
       .filter(nombre => nombre && String(nombre).trim() !== '');
-
     const combined = [...nombresDesdeProductos, ...nombresDesdeProp];
     const unicas = [...new Set(combined.map(nombre => String(nombre).trim()))];
     return ['Todas', ...unicas];
   }, [localProductos, categorias]);
 
-  // Normalizar todos los productos (acepta varias formas)
   const productosNormalizados = useMemo(() => {
     const arr = (localProductos || []).map(p => buildNormalized(p));
     console.log('INVENTORY DEBUG: productos normalizados (primeros 5):', arr.slice(0, 5));
     return arr;
   }, [localProductos]);
 
-  // Filtrado: eliminar placeholders, filtrar por categoría y texto
+  // Helper: determina si el término es un ID explícito
+  const extractIdFromSearch = (raw) => {
+    if (!raw) return null;
+    const trimmed = String(raw).trim();
+    // Si tiene formato "123 - Nombre", tomar la parte antes del guion
+    if (trimmed.includes(' - ')) {
+      const maybeId = trimmed.split(' - ')[0].trim();
+      if (maybeId !== '') return maybeId;
+    }
+    // Si es solo dígitos (positivo), considerarlo ID explícito
+    if (/^\d+$/.test(trimmed)) return trimmed;
+    // Si es UUID-like (letras y guiones) también puede ser id
+    if (/^[0-9a-fA-F-]{8,}$/.test(trimmed)) return trimmed;
+    return null;
+  };
+
   const productosFiltrados = useMemo(() => {
     let filtered = productosNormalizados.filter(p => !isPlaceholderProduct(p));
 
+    // Filtrar por categoría si aplica
     if (filtroCat && filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => String(p.categoria_nombre ?? '').trim() === filtroCatStr);
     }
 
-    if (filtroTxt && filtroTxt.trim()) {
-      const term = filtroTxt.toLowerCase().trim();
-      filtered = filtered.filter(p => {
-        const idStr = String(p.id ?? '');
-        const nombreStr = String(p.nombre ?? '');
-        const catStr = String(p.categoria_nombre ?? '');
-        return idStr.toLowerCase().includes(term) || nombreStr.toLowerCase().includes(term) || catStr.toLowerCase().includes(term);
-      });
+    // Si no hay texto de búsqueda, devolver lo filtrado por categoría
+    const rawSearch = String(filtroTxt ?? '').trim();
+    if (!rawSearch) {
+      console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
+      return filtered;
     }
+
+    // Intentar extraer ID explícito
+    const explicitId = extractIdFromSearch(rawSearch);
+
+    if (explicitId !== null) {
+      // Buscar por ID exacto (coincidencia completa)
+      filtered = filtered.filter(p => String(p.id ?? '').trim() === String(explicitId).trim());
+      console.log('INVENTORY DEBUG: búsqueda por ID explícito =', explicitId, 'resultados =', filtered.length);
+      return filtered;
+    }
+
+    // Búsqueda por texto (nombre, categoría, o id parcial si no es solo número)
+    const term = rawSearch.toLowerCase();
+    filtered = filtered.filter(p => {
+      const idStr = String(p.id ?? '').toLowerCase();
+      const nombreStr = String(p.nombre ?? '').toLowerCase();
+      const catStr = String(p.categoria_nombre ?? '').toLowerCase();
+      // permitir coincidencia parcial en id, nombre o categoría (pero no en precio/cantidad)
+      return idStr.includes(term) || nombreStr.includes(term) || catStr.includes(term);
+    });
 
     console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
     return filtered;
   }, [productosNormalizados, filtroCat, filtroTxt]);
 
-  // Construir datos para la tabla
   const tableData = useMemo(() => {
     const data = productosFiltrados.map(p => ({
       id: p.id || '—',
@@ -154,13 +179,12 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  // eslint: function intentionally starts with underscore to satisfy no-unused-vars rule when not used
+  // Si quieres usar toggle desde la tabla, descomenta y pásalo a ResponsiveTable
   const _handleToggleFromRow = async (productId, currentlyDisabled) => {
     console.log('INVENTORY DEBUG: toggle requested for', productId, 'currentlyDisabled=', currentlyDisabled);
     if (typeof onToggleProducto === 'function') {
       const ok = await onToggleProducto(productId, currentlyDisabled);
       if (ok) {
-        // actualizar localmente para respuesta inmediata
         setLocalProductos(prev => prev.map(p => {
           const norm = buildNormalized(p);
           if (String(norm.id) === String(productId)) {
@@ -173,7 +197,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
         console.warn('INVENTORY DEBUG: onToggleProducto devolvió false para', productId);
       }
     } else {
-      // si no hay onToggleProducto, solo actualizar localmente
       setLocalProductos(prev => prev.map(p => {
         const norm = buildNormalized(p);
         if (String(norm.id) === String(productId)) {
