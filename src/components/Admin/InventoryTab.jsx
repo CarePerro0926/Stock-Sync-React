@@ -35,7 +35,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   // Normalizamos la lista de productos recibida para evitar falsos positivos
   const productosNormalizados = useMemo(() => {
     return (productos || []).map(normalizeProducto);
-  }, [productos]); // <-- normalizeProducto no debe estar en deps
+  }, [productos]);
 
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
