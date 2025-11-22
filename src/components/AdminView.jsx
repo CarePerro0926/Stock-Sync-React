@@ -22,26 +22,29 @@ const normalizeBool = (val, defaultValue = false) => {
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
 
-/**
- * normalizeProducto: además de normalizar deleted_at y booleanos,
- * garantiza campos mínimos para la UI (nombre, categoria_nombre, cantidad, precio)
- * y añade _inactive para filtrar de forma robusta.
- */
 const normalizeProducto = (p) => {
-  const deleted_at_raw = p?.deleted_at;
+  const idRaw = p?.id ?? p?.product_id ?? null;
+  const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
+
+  const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
+  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
-  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+
+  const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
+  const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? 'Sin Categoría';
+  const cantidad = typeof p?.cantidad === 'number' ? p.cantidad : (typeof p?.stock === 'number' ? p.stock : 0);
+  const precio = typeof p?.precio === 'number' ? p.precio : (typeof p?.precio_unitario === 'number' ? p.precio_unitario : null);
 
   return {
     ...p,
-    // campos mínimos que la UI espera
-    id: p?.id ?? null,
-    nombre: p?.nombre ?? p?.display_name ?? 'Sin nombre',
-    categoria_nombre: p?.categoria_nombre ?? p?.categoria ?? 'Sin Categoría',
-    cantidad: typeof p?.cantidad === 'number' ? p.cantidad : (p?.stock ?? 0),
-    precio: typeof p?.precio === 'number' ? p.precio : (p?.precio_unitario ?? null),
+    id,
+    nombre,
+    categoria_nombre,
+    cantidad,
+    precio,
     deleted_at: isDeleted ? deleted_at : null,
     disabled,
     inactivo,
