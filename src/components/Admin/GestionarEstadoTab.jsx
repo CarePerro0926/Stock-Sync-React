@@ -12,32 +12,32 @@ const GestionarEstadoTab = ({
   categorias: categoriasProp = [],
   usuarios: usuariosProp = [] // opcional: pasar desde AdminView
 }) => {
-  // Estados para producto
+  // Producto
   const [inputProducto, setInputProducto] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [sugerenciasProducto, setSugerenciasProducto] = useState([]);
 
-  // Estados para proveedor
+  // Proveedor
   const [inputProveedor, setInputProveedor] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
   const [sugerenciasProveedor, setSugerenciasProveedor] = useState([]);
   const [proveedores, setProveedores] = useState(proveedoresProp);
 
-  // Estados para categoría
+  // Categoría
   const [inputCategoria, setInputCategoria] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [sugerenciasCategoria, setSugerenciasCategoria] = useState([]);
   const [categorias, setCategorias] = useState(categoriasProp);
 
-  // Estados para usuario
+  // Usuario
   const [inputUsuario, setInputUsuario] = useState('');
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
   const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
-  const [usuarios, setUsuarios] = useState(usuariosProp);
+  const [usuarios, setUsuarios] = useState(usuariosProp || []);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
 
-  // Cargas iniciales (proveedores, categorías)
+  // -------------------- Cargas iniciales (proveedores, categorías) --------------------
   useEffect(() => {
     let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
@@ -72,41 +72,49 @@ const GestionarEstadoTab = ({
     return () => { mounted = false; };
   }, [categoriasProp]);
 
-  // Cargar usuarios si no vienen por props. OJO: usamos user_profiles y mapeamos user_id -> id
+  // -------------------- Cargar usuarios (normalizar display_name / user_id) --------------------
   useEffect(() => {
     let mounted = true;
     const needFetch = !usuariosProp || usuariosProp.length === 0;
+
     if (!needFetch) {
-      setUsuarios(usuariosProp);
+      // Normalizar la prop si viene desde AdminView (puede tener user_id/display_name o id/nombres)
+      const normalizedFromProp = usuariosProp.map(u => ({
+        id: String(u.user_id ?? u.id ?? ''),
+        display_name: u.display_name ?? u.displayName ?? u.nombres ?? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim(),
+        deleted_at: u.deleted_at ?? null
+      }));
+      setUsuarios(normalizedFromProp);
       return () => { mounted = false; };
     }
+
     setUsuariosLoading(true);
     setUsuariosError('');
     supabase
       .from('user_profiles')
-      .select('user_id, nombres, apellidos, deleted_at')
-      .order('nombres', { ascending: true })
+      .select('user_id, display_name, deleted_at')
+      .order('display_name', { ascending: true })
       .then(({ data, error }) => {
         if (!mounted) return;
         if (error) {
           console.error('Error al cargar usuarios:', error);
-          setUsuariosError('No fue posible cargar usuarios. Verifica RLS/Policies en user_profiles.');
+          setUsuariosError('No fue posible cargar usuarios. Revisa keys, CORS o la tabla user_profiles.');
           setUsuariosLoading(false);
           return;
         }
         const normalized = (data || []).map(u => ({
-          id: u.user_id,                         // clave que usaremos en el select
-          nombres: u.nombres || '',
-          apellidos: u.apellidos || '',
+          id: String(u.user_id),
+          display_name: u.display_name || String(u.user_id),
           deleted_at: u.deleted_at || null
         }));
         setUsuarios(normalized);
         setUsuariosLoading(false);
       });
+
     return () => { mounted = false; };
   }, [usuariosProp]);
 
-  // Utilidades
+  // -------------------- Utilidades --------------------
   const filtrarSugerencias = (texto, lista, campo) => {
     const q = String(texto || '').trim().toLowerCase();
     if (!q) return [];
@@ -115,7 +123,7 @@ const GestionarEstadoTab = ({
         String(item.id).toLowerCase().includes(q) ||
         String(item[campo] ?? '').toLowerCase().includes(q)
       )
-      .slice(0, 5);
+      .slice(0, 8);
   };
 
   const parseIdFromInput = (entrada) => {
@@ -141,7 +149,7 @@ const GestionarEstadoTab = ({
     }
   };
 
-  // Handlers producto
+  // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputProducto);
@@ -164,7 +172,6 @@ const GestionarEstadoTab = ({
     setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
   };
 
-  // Handlers proveedor
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputProveedor);
@@ -187,7 +194,6 @@ const GestionarEstadoTab = ({
     setInputProveedor(''); setProveedorSeleccionado(''); setSugerenciasProveedor([]);
   };
 
-  // Handlers categoría
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputCategoria);
@@ -212,7 +218,6 @@ const GestionarEstadoTab = ({
     setInputCategoria(''); setCategoriaSeleccionada(''); setSugerenciasCategoria([]);
   };
 
-  // Handlers usuario
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputUsuario);
@@ -220,7 +225,7 @@ const GestionarEstadoTab = ({
 
     let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
-      user = usuarios.find(u => String(u.nombres).toLowerCase() === String(inputUsuario).trim().toLowerCase());
+      user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase());
       if (user) idFinal = user.id;
     }
     if (!user) return alert('No se encontró ningún usuario con ese ID o nombre.');
@@ -235,14 +240,17 @@ const GestionarEstadoTab = ({
         table: 'user_profiles',
         id: idFinal,
         currentlyDisabled,
-        idColumn: 'user_id' // clave correcta en user_profiles
+        idColumn: 'user_id'
       });
       if (!ok) return;
     }
+
+    // actualizar estado local para reflejar cambio inmediato
+    setUsuarios(prev => prev.map(u => (String(u.id) === String(idFinal) ? { ...u, deleted_at: currentlyDisabled ? null : new Date().toISOString() } : u)));
     setInputUsuario(''); setUsuarioSeleccionado(''); setSugerenciasUsuario([]);
   };
 
-  // Render
+  // -------------------- Render --------------------
   return (
     <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
       <h5>Gestionar estado (Inhabilitar / Reactivar)</h5>
@@ -459,22 +467,18 @@ const GestionarEstadoTab = ({
                 setUsuarioSeleccionado(id);
                 if (id) {
                   const u = usuarios.find(x => String(x.id) === String(id));
-                  const nombreComp = [u?.nombres, u?.apellidos].filter(Boolean).join(' ').trim();
-                  setInputUsuario(`${u?.id} - ${nombreComp || u?.id}`);
+                  setInputUsuario(`${u?.id} - ${u?.display_name}`);
                 } else {
                   setInputUsuario('');
                 }
               }}
             >
               <option value="">—</option>
-              {usuarios.map(u => {
-                const nombreComp = [u.nombres, u.apellidos].filter(Boolean).join(' ').trim();
-                return (
-                  <option key={u.id} value={u.id}>
-                    {u.id} - {nombreComp || 'Sin nombre'}
-                  </option>
-                );
-              })}
+              {usuarios.map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.id} - {u.display_name}
+                </option>
+              ))}
             </select>
             <small className="text-muted">O escribe el ID o nombre</small>
           </div>
@@ -488,28 +492,25 @@ const GestionarEstadoTab = ({
                 const entrada = e.target.value;
                 setInputUsuario(entrada);
                 setUsuarioSeleccionado('');
-                setSugerenciasUsuario(filtrarSugerencias(entrada, usuarios, 'nombres'));
+                setSugerenciasUsuario(filtrarSugerencias(entrada, usuarios, 'display_name'));
               }}
             />
             {inputUsuario && sugerenciasUsuario.length > 0 && (
               <ul className="list-group position-absolute z-3 w-100">
-                {sugerenciasUsuario.map(u => {
-                  const nombreComp = [u.nombres, u.apellidos].filter(Boolean).join(' ').trim();
-                  return (
-                    <li
-                      key={u.id}
-                      className="list-group-item list-group-item-action"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => {
-                        setInputUsuario(`${u.id} - ${nombreComp || u.id}`);
-                        setUsuarioSeleccionado(u.id);
-                        setSugerenciasUsuario([]);
-                      }}
-                    >
-                      {u.id} - {nombreComp || 'Sin nombre'}
-                    </li>
-                  );
-                })}
+                {sugerenciasUsuario.map(u => (
+                  <li
+                    key={u.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setInputUsuario(`${u.id} - ${u.display_name}`);
+                      setUsuarioSeleccionado(u.id);
+                      setSugerenciasUsuario([]);
+                    }}
+                  >
+                    {u.id} - {u.display_name}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
