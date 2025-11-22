@@ -1,9 +1,8 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
-import '../ResponsiveTable.css';
 import ResponsiveTable from '../ResponsiveTable';
+import '../ResponsiveTable.css';
 
-// Normalizadores fuera del componente para que sean estables
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
   const s = String(val).trim().toLowerCase();
@@ -18,57 +17,61 @@ const normalizeBool = (val, defaultValue = false) => {
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
 
-const normalizeProducto = (p) => ({
-  ...p,
-  deleted_at: normalizeDeletedAt(p?.deleted_at),
-  disabled: normalizeBool(p?.disabled, false),
-  inactivo: normalizeBool(p?.inactivo, false),
-  nombre: p?.nombre ?? '',
-  categoria_nombre: p?.categoria_nombre ?? ''
-});
+const normalizeProducto = (p) => {
+  const deleted_at_raw = p?.deleted_at;
+  const deleted_at = normalizeDeletedAt(deleted_at_raw);
+  const disabled = normalizeBool(p?.disabled, false);
+  const inactivo = normalizeBool(p?.inactivo, false);
+  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+  return {
+    ...p,
+    deleted_at: isDeleted ? deleted_at : null,
+    disabled,
+    inactivo,
+    nombre: p?.nombre ?? '',
+    categoria_nombre: p?.categoria_nombre ?? '',
+    cantidad: p?.cantidad ?? 0,
+    precio: p?.precio ?? null,
+    _inactive: Boolean(isDeleted) || disabled || inactivo
+  };
+};
 
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  // Normalizamos la lista de productos recibida para evitar falsos positivos
+  // Normalizamos la lista de productos recibida para evitar inconsistencias
   const productosNormalizados = useMemo(() => {
     return (productos || []).map(normalizeProducto);
   }, [productos]);
 
   useEffect(() => {
-    console.log('--- DATOS EN INVENTORYTAB ---');
-    console.log('Productos recibidos (raw):', productos);
-    console.log('Productos normalizados:', productosNormalizados);
-    console.log('Categorías recibidas:', categorias);
-    if (productos.length > 0) {
-      console.log('Ejemplo de producto raw:', productos[0]);
-    }
-    if (productosNormalizados.length > 0) {
-      console.log('Ejemplo de producto normalizado:', productosNormalizados[0]);
-    }
-    if (categorias.length > 0) {
-      console.log('Ejemplo de categoría:', categorias[0]);
-    }
-  }, [productos, productosNormalizados, categorias]);
+    // Logs de depuración (puedes quitar estos console.log en producción)
+    console.log('InventoryTab: productos recibidos (raw):', productos);
+    console.log('InventoryTab: productos normalizados:', productosNormalizados);
+  }, [productos, productosNormalizados]);
 
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = productosNormalizados
       .map(p => p.categoria_nombre)
       .filter(nombre => nombre && String(nombre).trim() !== '');
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
-    return ['Todas', ...unicas];
-  }, [productosNormalizados]);
+    // También incluir categorías pasadas por props si no están en productos
+    const categoriasExtra = (categorias || [])
+      .map(c => (c?.nombre ? String(c.nombre).trim() : ''))
+      .filter(n => n && !unicas.includes(n));
+    return ['Todas', ...unicas, ...categoriasExtra];
+  }, [productosNormalizados, categorias]);
 
   const productosFiltrados = useMemo(() => {
     let filtered = [...productosNormalizados];
 
-    // Filtrar por estado (activo / inactivo) según checkbox
+    // Filtrar por estado (activo / inactivo) usando _inactive para mayor robustez
     if (mostrarInactivos) {
-      filtered = filtered.filter(p => !!(p.deleted_at || p.disabled || p.inactivo));
+      filtered = filtered.filter(p => !!(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     } else {
-      filtered = filtered.filter(p => !(p.deleted_at || p.disabled || p.inactivo));
+      filtered = filtered.filter(p => !(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     }
 
     // Filtrar por categoría
@@ -80,7 +83,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
-    // Filtrar por texto
+    // Filtrar por texto (ID, nombre, categoría)
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
@@ -112,8 +115,8 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         cantidad: p.cantidad ?? 0,
         precio: typeof p.precio === 'number'
           ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : p.precio ?? '—',
-        _inactive: !!(p.deleted_at || p.disabled || p.inactivo)
+          : (p.precio ?? '—'),
+        _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
       };
     });
   }, [productosFiltrados]);
@@ -125,8 +128,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     { key: 'cantidad', label: 'Stock', align: 'center' },
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
-
-  console.log("Renderizando InventoryTab con productos normalizados:", productosNormalizados);
 
   return (
     <div className="w-100">
@@ -172,12 +173,23 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
+      {/* Debug visual temporal: muestra los primeros productos y su estado.
+          Quitar en producción si no se necesita. */}
+      <div className="mb-3">
+        <div className="alert alert-secondary">
+          <strong>DEBUG</strong>
+          <div>Productos recibidos: {productos.length}</div>
+          <div style={{ maxHeight: 120, overflow: 'auto' }}>
+            <pre style={{ margin: 0 }}>
+              {JSON.stringify(productos.slice(0, 10).map(p => ({ id: p.id, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}
+            </pre>
+          </div>
+        </div>
+      </div>
+
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
         <div className="table-responsive">
-          <ResponsiveTable
-            headers={tableHeaders}
-            data={tableData}
-          />
+          <ResponsiveTable headers={tableHeaders} data={tableData} />
         </div>
       </div>
     </div>
