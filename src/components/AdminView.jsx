@@ -24,8 +24,11 @@ const normalizeBool = (val, defaultValue = false) => {
 };
 
 const normalizeProducto = (p = {}) => {
-  const idRaw = p?.product_id ?? p?.id ?? '';
+  // Mantener product_id explícito además de id
+  const productIdRaw = p?.product_id ?? p?.productId ?? null;
+  const idRaw = p?.id ?? productIdRaw ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
+  const product_id = productIdRaw === null || productIdRaw === undefined ? (p?.id ? String(p.id) : '') : String(productIdRaw);
 
   const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
@@ -56,6 +59,7 @@ const normalizeProducto = (p = {}) => {
 
   return {
     id,
+    product_id,
     nombre,
     categoria_nombre,
     cantidad,
@@ -121,6 +125,8 @@ const AdminView = ({
         let data = null;
         try { data = JSON.parse(text); } catch { data = null; }
 
+        console.log('ADMINVIEW DEBUG: fetchProductos using API, raw text:', text?.slice?.(0, 200) ?? text);
+
         if (res.ok && Array.isArray(data)) {
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
@@ -155,6 +161,7 @@ const AdminView = ({
 
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
+      // API externa si existe
       if (import.meta.env.VITE_API_URL) {
         const action = currentlyDisabled ? 'enable' : 'disable';
         const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${id}/${action}`;
@@ -174,16 +181,50 @@ const AdminView = ({
         return true;
       }
 
+      // Fallback directo a Supabase
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
 
-      // Intento por id primero, luego por product_id
-      let res1 = await supabase.from('productos').update(payload).eq('id', id).select().single().catch(() => ({ error: true }));
-      if (res1 && res1.error) {
-        res1 = await supabase.from('productos').update(payload).eq('product_id', id).select().single().catch(() => ({ error: true }));
-      }
-      if (!res1 || res1.error) throw res1 && res1.error ? res1.error : new Error('No se pudo actualizar producto en la BD');
+      // Intento 1: actualizar por id
+      let res = await supabase
+        .from('productos')
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single()
+        .catch(err => ({ error: err }));
 
-      // Forzar recarga desde la misma fuente de verdad
+      // Si fallo o no afectó filas, intentar por product_id
+      if (!res || res.error) {
+        console.warn('toggleProducto: intento por id falló, intentando por product_id', { id, res });
+        res = await supabase
+          .from('productos')
+          .update(payload)
+          .eq('product_id', id)
+          .select()
+          .single()
+          .catch(err => ({ error: err }));
+      }
+
+      if (!res || res.error) {
+        console.error('toggleProducto: no se pudo actualizar producto en la BD', res);
+        alert('No fue posible cambiar el estado del producto. Revisa permisos o formato del id.');
+        return false;
+      }
+
+      // Actualización optimista local: actualizar estado productos inmediatamente
+      setProductos(prev => {
+        return (prev || []).map(p => {
+          const pid = String(p.id ?? p.product_id ?? '');
+          const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
+          if (String(pid) === String(id) || String(rawPid) === String(id)) {
+            const newRaw = { ...(p._raw || {}), deleted_at: payload.deleted_at ?? null };
+            return normalizeProducto(newRaw);
+          }
+          return p;
+        });
+      });
+
+      // Forzar recarga desde la fuente de verdad
       await fetchProductos();
 
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
