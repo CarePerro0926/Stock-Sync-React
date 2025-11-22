@@ -103,7 +103,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
 
   const listaCategorias = getListaCategorias();
 
-  // ---------- PROVEEDORES ----------
+  // ---------- PROVEEDORES (misma UX que PRODUCTOS) ----------
   const [busquedaProv, setBusquedaProv] = useState('');
   const [sugerenciasProv, setSugerenciasProv] = useState([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
@@ -114,6 +114,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     telefono: ''
   });
 
+  // Buscar proveedor (igual que productos)
   const handleBuscarProv = (e) => {
     e.preventDefault();
     const entrada = (busquedaProv || '').trim().toLowerCase();
@@ -159,7 +160,6 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
       return;
     }
 
-    // Validaciones básicas
     if (!formProv.nombre.trim()) {
       alert('Nombre de proveedor inválido.');
       return;
@@ -194,6 +194,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     setFormProv({ nombre: '', email: '', telefono: '' });
   };
 
+  // Render
   return (
     <>
       {/* ---------- PRODUCTOS ---------- */}
@@ -236,9 +237,9 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
                       setProducto(p);
                       setFormData({
                         nombre: p.nombre || '',
-                        precio: p.precio || '',
-                        cantidad: p.cantidad || '',
-                        categoria: p.categoria_id || ''
+                        precio: p.precio ?? '',
+                        cantidad: p.cantidad ?? '',
+                        categoria: p.categoria_id ?? ''
                       });
                       setBusqueda(`${p.id} - ${p.nombre}`);
                       setSugerencias([]);
@@ -252,9 +253,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           </div>
 
           <div className="col-12 col-md-4">
-            <button type="submit" className="btn btn-outline-primary w-100">
-              Buscar
-            </button>
+            <button type="submit" className="btn btn-outline-primary w-100">Buscar</button>
           </div>
         </div>
 
@@ -280,46 +279,19 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           <div className="row g-2 mb-3">
             <div className="col-12">
               <label className="form-label">Nombre</label>
-              <input
-                name="nombre"
-                className="form-control"
-                value={formData.nombre}
-                onChange={handleChange}
-                required
-              />
+              <input name="nombre" className="form-control" value={formData.nombre} onChange={handleChange} required />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Precio</label>
-              <input
-                name="precio"
-                type="number"
-                step="0.01"
-                className="form-control"
-                value={formData.precio}
-                onChange={handleChange}
-                required
-              />
+              <input name="precio" type="number" step="0.01" className="form-control" value={formData.precio} onChange={handleChange} required />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Cantidad</label>
-              <input
-                name="cantidad"
-                type="number"
-                className="form-control"
-                value={formData.cantidad}
-                onChange={handleChange}
-                required
-              />
+              <input name="cantidad" type="number" className="form-control" value={formData.cantidad} onChange={handleChange} required />
             </div>
             <div className="col-12">
               <label className="form-label">Categoría</label>
-              <select
-                name="categoria"
-                className="form-select"
-                value={formData.categoria}
-                onChange={handleChange}
-                required
-              >
+              <select name="categoria" className="form-select" value={formData.categoria} onChange={handleChange} required>
                 <option value="">Selecciona una categoría</option>
                 {listaCategorias.map(cat => (
                   <option key={cat.id} value={cat.id}>{cat.nombre}</option>
@@ -341,7 +313,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           <div className="col-12 col-md-8 position-relative">
             <input
               className="form-control"
-              placeholder="Buscar por nombre o email"
+              placeholder="Buscar por ID, nombre o email"
               value={busquedaProv}
               onChange={(e) => {
                 const entrada = e.target.value;
@@ -377,11 +349,11 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
                         email: p.email || '',
                         telefono: p.telefono || ''
                       });
-                      setBusquedaProv(`${p.nombre} - ${p.email}`);
+                      setBusquedaProv(`${p.id} - ${p.nombre} - ${p.email}`);
                       setSugerenciasProv([]);
                     }}
                   >
-                    {p.nombre} - {p.email}
+                    {p.id} - {p.nombre} - {p.email}
                   </li>
                 ))}
               </ul>
@@ -389,9 +361,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           </div>
 
           <div className="col-12 col-md-4">
-            <button type="submit" className="btn btn-outline-primary w-100">
-              Buscar
-            </button>
+            <button type="submit" className="btn btn-outline-primary w-100">Buscar</button>
           </div>
         </div>
 
@@ -403,6 +373,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
             onChange={(e) => {
               const val = e.target.value;
               setProveedorSeleccionado(val);
+              // **Aquí cargamos el proveedor en el formulario al seleccionar**, igual que en productos
               const encontrado = proveedores.find(p => String(p.id) === String(val));
               if (encontrado) {
                 setProveedor(encontrado);
@@ -420,7 +391,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
             <option value="">—</option>
             {proveedores.map(p => (
               <option key={p.id} value={p.id}>
-                {p.nombre} - {p.email}
+                {p.id} - {p.nombre} - {p.email}
               </option>
             ))}
           </select>
@@ -432,33 +403,15 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           <div className="row g-2 mb-3">
             <div className="col-12">
               <label className="form-label">Nombre</label>
-              <input
-                name="nombre"
-                className="form-control"
-                value={formProv.nombre}
-                onChange={handleChangeProv}
-                required
-              />
+              <input name="nombre" className="form-control" value={formProv.nombre} onChange={handleChangeProv} required />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Email</label>
-              <input
-                name="email"
-                type="email"
-                className="form-control"
-                value={formProv.email}
-                onChange={handleChangeProv}
-                required
-              />
+              <input name="email" type="email" className="form-control" value={formProv.email} onChange={handleChangeProv} required />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Teléfono</label>
-              <input
-                name="telefono"
-                className="form-control"
-                value={formProv.telefono}
-                onChange={handleChangeProv}
-              />
+              <input name="telefono" className="form-control" value={formProv.telefono} onChange={handleChangeProv} />
             </div>
           </div>
           <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
