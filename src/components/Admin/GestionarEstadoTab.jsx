@@ -2,15 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
+const normalizeDeletedAt = (val) => {
+  if (val === null || val === undefined) return null;
+  const s = String(val).trim().toLowerCase();
+  if (s === '' || s === 'null' || s === 'undefined') return null;
+  return val;
+};
+const isDisabled = (deletedAt) => normalizeDeletedAt(deletedAt) !== null;
+
 const GestionarEstadoTab = ({
   onToggleProducto,
   onToggleProveedor,
   onToggleCategoria,
   onToggleUsuario,
+  onAfterToggle, // opcional: para recarga desde el padre
   productos = [],
   proveedores: proveedoresProp = [],
   categorias: categoriasProp = [],
-  usuarios: usuariosProp = [] // opcional: pasar desde AdminView
+  usuarios: usuariosProp = []
 }) => {
   // Producto
   const [inputProducto, setInputProducto] = useState('');
@@ -80,8 +89,13 @@ const GestionarEstadoTab = ({
     if (!needFetch) {
       const normalizedFromProp = usuariosProp.map(u => ({
         id: String(u.user_id ?? u.id ?? ''),
-        display_name: u.display_name ?? u.displayName ?? u.nombres ?? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim(),
-        deleted_at: u.deleted_at ?? null
+        display_name:
+          u.display_name ??
+          u.displayName ??
+          (u.nombres || u.apellidos
+            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+            : String(u.id ?? u.user_id ?? '')),
+        deleted_at: normalizeDeletedAt(u.deleted_at)
       }));
       setUsuarios(normalizedFromProp);
       return () => { mounted = false; };
@@ -104,7 +118,7 @@ const GestionarEstadoTab = ({
         const normalized = (data || []).map(u => ({
           id: String(u.user_id),
           display_name: u.display_name || String(u.user_id),
-          deleted_at: u.deleted_at || null
+          deleted_at: normalizeDeletedAt(u.deleted_at)
         }));
         setUsuarios(normalized);
         setUsuariosLoading(false);
@@ -118,45 +132,32 @@ const GestionarEstadoTab = ({
     const q = String(texto || '').trim().toLowerCase();
     if (!q) return [];
     return lista
-      .filter(item =>
-        String(item[campo] ?? '').toLowerCase().includes(q)
-      )
+      .filter(item => String(item[campo] ?? '').toLowerCase().includes(q))
       .slice(0, 8);
   };
 
-  /**
-   * parseIdFromInputGeneric
-   * - entrada: texto que puede ser "id", "id - nombre" o "nombre"
-   * - lista: array de objetos donde buscar
-   * - idField: nombre del campo id en los objetos (ej. 'id' o 'user_id')
-   * - nameField: nombre del campo de display (ej. 'nombre', 'display_name')
-   *
-   * Devuelve: id (string) si lo encuentra, o la entrada original si no se puede resolver.
-   */
   const parseIdFromInputGeneric = (entrada, lista = [], idField = 'id', nameField = 'nombre') => {
     const raw = String(entrada || '').trim();
     if (!raw) return '';
 
-    // Si viene en formato "id - nombre", extraer id antes del guion
+    // "id - nombre" -> prioriza el id
     if (raw.includes(' - ')) {
       const maybeId = raw.split(' - ')[0].trim();
       if (lista.find(item => String(item[idField]) === maybeId)) return maybeId;
-      // si no existe en la lista, devolvemos maybeId de todas formas (se validará luego)
       return maybeId;
     }
 
-    // Si la entrada coincide exactamente con un id en la lista
+    // Coincidencia exacta por id
     if (lista.find(item => String(item[idField]) === raw)) return raw;
 
-    // Buscar por nombre/display (case-insensitive) exacto
+    // Coincidencia exacta por nombre/display
     const byNameExact = lista.find(item => String(item[nameField] ?? '').toLowerCase() === raw.toLowerCase());
     if (byNameExact) return String(byNameExact[idField]);
 
-    // Buscar por nombre/display parcial (contains)
+    // Coincidencia parcial
     const byNamePartial = lista.find(item => String(item[nameField] ?? '').toLowerCase().includes(raw.toLowerCase()));
     if (byNamePartial) return String(byNamePartial[idField]);
 
-    // No se resolvió: devolver la entrada tal cual (se validará después)
     return raw;
   };
 
@@ -179,72 +180,99 @@ const GestionarEstadoTab = ({
   // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
-    // intentamos resolver id desde input o desde selección
-    let idFinal = parseIdFromInputGeneric(inputProducto, productos, 'id', 'nombre') || productoSeleccionado;
-    // si aún no hay id, intentar tomar id desde productoSeleccionado (select)
-    if (!idFinal && productoSeleccionado) idFinal = productoSeleccionado;
+
+    // Prioriza select; si está vacío, usa el input
+    let idFinal = productoSeleccionado || parseIdFromInputGeneric(inputProducto, productos, 'id', 'nombre');
+    if (!idFinal) return alert('Selecciona un producto o ingresa un ID/nombre válido.');
 
     const prod = productos.find(p => String(p.id) === String(idFinal));
     if (!prod) return alert('No se encontró ningún producto con ese ID o nombre.');
-    const currentlyDisabled = !!prod.deleted_at;
-    if (!window.confirm(currentlyDisabled ? '¿Reactivar este producto?' : '¿Inhabilitar este producto?')) return;
 
+    const currentlyDisabled = isDisabled(prod.deleted_at);
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este producto?' : '¿Inhabilitar este producto?';
+    if (!window.confirm(confirmMsg)) return;
+
+    let ok = false;
     if (typeof onToggleProducto === 'function') {
-      await onToggleProducto(idFinal, currentlyDisabled);
+      ok = await onToggleProducto(idFinal, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
-      if (!ok) return;
+      ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
     }
+
+    if (!ok) {
+      alert('No fue posible cambiar el estado del producto.');
+      return;
+    }
+
+    if (typeof onAfterToggle === 'function') {
+      try { await onAfterToggle('productos'); } catch (err) { console.error(err); }
+    }
+
     setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
   };
 
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
-    let idFinal = parseIdFromInputGeneric(inputProveedor, proveedores, 'id', 'nombre') || proveedorSeleccionado;
-    if (!idFinal && proveedorSeleccionado) idFinal = proveedorSeleccionado;
+    let idFinal = proveedorSeleccionado || parseIdFromInputGeneric(inputProveedor, proveedores, 'id', 'nombre');
+    if (!idFinal) return alert('Selecciona un proveedor o ingresa un ID/nombre válido.');
 
     const prov = proveedores.find(p => String(p.id) === String(idFinal));
     if (!prov) return alert('No se encontró ningún proveedor con ese ID o nombre.');
-    const currentlyDisabled = !!prov.deleted_at;
-    if (!window.confirm(currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?')) return;
 
+    const currentlyDisabled = isDisabled(prov.deleted_at);
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?';
+    if (!window.confirm(confirmMsg)) return;
+
+    let ok = false;
     if (typeof onToggleProveedor === 'function') {
-      await onToggleProveedor(idFinal, currentlyDisabled);
+      ok = await onToggleProveedor(idFinal, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
-      if (!ok) return;
+      ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
     }
+    if (!ok) return alert('No fue posible cambiar el estado del proveedor.');
+
+    if (typeof onAfterToggle === 'function') {
+      try { await onAfterToggle('proveedores'); } catch (err) { console.error(err); }
+    }
+
     setInputProveedor(''); setProveedorSeleccionado(''); setSugerenciasProveedor([]);
   };
 
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
-    let idFinal = parseIdFromInputGeneric(inputCategoria, categorias, 'id', 'nombre') || categoriaSeleccionada;
-    if (!idFinal && categoriaSeleccionada) idFinal = categoriaSeleccionada;
-
-    let cat = categorias.find(c => String(c.id) === String(idFinal));
-    if (!cat && inputCategoria) {
-      cat = categorias.find(c => String(c.nombre).toLowerCase() === String(inputCategoria).trim().toLowerCase());
-      if (cat) idFinal = cat.id;
+    let idFinal = categoriaSeleccionada || parseIdFromInputGeneric(inputCategoria, categorias, 'id', 'nombre');
+    if (!idFinal && inputCategoria) {
+      const catByName = categorias.find(c => String(c.nombre).toLowerCase() === String(inputCategoria).trim().toLowerCase());
+      if (catByName) idFinal = catByName.id;
     }
+    if (!idFinal) return alert('Selecciona una categoría o ingresa un nombre válido.');
+
+    const cat = categorias.find(c => String(c.id) === String(idFinal));
     if (!cat) return alert('No se encontró ninguna categoría con ese ID o nombre.');
 
-    const currentlyDisabled = !!cat.deleted_at;
-    if (!window.confirm(currentlyDisabled ? '¿Reactivar esta categoría?' : '¿Inhabilitar esta categoría?')) return;
+    const currentlyDisabled = isDisabled(cat.deleted_at);
+    const confirmMsg = currentlyDisabled ? '¿Reactivar esta categoría?' : '¿Inhabilitar esta categoría?';
+    if (!window.confirm(confirmMsg)) return;
 
+    let ok = false;
     if (typeof onToggleCategoria === 'function') {
-      await onToggleCategoria(cat.id, currentlyDisabled);
+      ok = await onToggleCategoria(cat.id, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({ table: 'categorias', id: cat.id, currentlyDisabled });
-      if (!ok) return;
+      ok = await applyToggleFallback({ table: 'categorias', id: cat.id, currentlyDisabled });
     }
+    if (!ok) return alert('No fue posible cambiar el estado de la categoría.');
+
+    if (typeof onAfterToggle === 'function') {
+      try { await onAfterToggle('categorias'); } catch (err) { console.error(err); }
+    }
+
     setInputCategoria(''); setCategoriaSeleccionada(''); setSugerenciasCategoria([]);
   };
 
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
-    let idFinal = parseIdFromInputGeneric(inputUsuario, usuarios, 'id', 'display_name') || usuarioSeleccionado;
-    if (!idFinal && usuarioSeleccionado) idFinal = usuarioSeleccionado;
+    let idFinal = usuarioSeleccionado || parseIdFromInputGeneric(inputUsuario, usuarios, 'id', 'display_name');
+    if (!idFinal) return alert('Selecciona un usuario o ingresa un nombre válido.');
 
     let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
@@ -254,22 +282,36 @@ const GestionarEstadoTab = ({
     }
     if (!user) return alert('No se encontró ningún usuario con ese nombre.');
 
-    const currentlyDisabled = !!user.deleted_at;
-    if (!window.confirm(currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?')) return;
+    const currentlyDisabled = isDisabled(user.deleted_at);
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
+    if (!window.confirm(confirmMsg)) return;
 
+    let ok = false;
     if (typeof onToggleUsuario === 'function') {
-      await onToggleUsuario(idFinal, currentlyDisabled);
+      ok = await onToggleUsuario(idFinal, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({
+      ok = await applyToggleFallback({
         table: 'user_profiles',
         id: idFinal,
         currentlyDisabled,
         idColumn: 'user_id'
       });
-      if (!ok) return;
+    }
+    if (!ok) return alert('No fue posible cambiar el estado del usuario.');
+
+    // Actualización optimista local de usuarios en esta pestaña
+    setUsuarios(prev =>
+      prev.map(u =>
+        String(u.id) === String(idFinal)
+          ? { ...u, deleted_at: currentlyDisabled ? null : new Date().toISOString() }
+          : u
+      )
+    );
+
+    if (typeof onAfterToggle === 'function') {
+      try { await onAfterToggle('usuarios'); } catch (err) { console.error(err); }
     }
 
-    setUsuarios(prev => prev.map(u => (String(u.id) === String(idFinal) ? { ...u, deleted_at: currentlyDisabled ? null : new Date().toISOString() } : u)));
     setInputUsuario(''); setUsuarioSeleccionado(''); setSugerenciasUsuario([]);
   };
 
@@ -422,8 +464,7 @@ const GestionarEstadoTab = ({
               onChange={(e) => {
                 const nombre = e.target.value;
                 setCategoriaSeleccionada(nombre);
-                if (nombre) setInputCategoria(nombre);
-                else setInputCategoria('');
+                setInputCategoria(nombre || '');
               }}
             >
               <option value="">—</option>
