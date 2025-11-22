@@ -54,6 +54,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       {/* Filtros */}
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
+          <label htmlFor="filtroCatAdmin" className="form-label mb-1">Categoría</label>
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -67,20 +68,21 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
 
         <div className="col-12 col-md-6">
+          <label htmlFor="filtroTxtAdmin" className="form-label mb-1">Buscar</label>
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar por ID, nombre o categoría..."
+            placeholder="ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Tabla para pantallas md+ */}
+      {/* Tabla en pantallas md+ */}
       <div className="d-none d-md-block" style={{ maxHeight: '300px', overflowY: 'auto' }}>
         <div className="table-responsive">
-          <table className="table">
+          <table className="table table-hover mb-0">
             <thead className="table-light">
               <tr>
                 <th>ID</th>
@@ -104,7 +106,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
                       : p.precio ?? '—'}
                   </td>
                   <td>
-                    <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
+                    <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
                       {p.deleted_at ? 'Inhabilitado' : 'Activo'}
                     </span>
                   </td>
@@ -118,77 +120,53 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Tarjetas móviles: fila horizontal desplazable (swipe) */}
+      {/* Tarjetas en móvil: apiladas verticalmente */}
       <div className="d-block d-md-none">
-        <div
-          className="mobile-cards-scroll"
-          style={{
-            display: 'flex',
-            gap: '12px',
-            overflowX: 'auto',
-            paddingBottom: '8px',
-            paddingTop: '4px',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
+        <div className="row g-3">
           {productosFiltrados.map(p => (
-            <div
-              key={p.id}
-              className="card"
-              style={{
-                minWidth: '260px',
-                maxWidth: '260px',
-                flex: '0 0 auto',
-                borderRadius: '8px',
-                boxShadow: '0 1px 6px rgba(0,0,0,0.06)'
-              }}
-            >
-              <div className="card-body">
-                <h6 className="card-title text-primary mb-2" style={{ fontSize: '1rem' }}>{p.nombre ?? 'Sin nombre'}</h6>
+            <div className="col-12" key={p.id}>
+              <div className="card shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <h6 className="card-title mb-0">{p.nombre ?? 'Sin nombre'}</h6>
+                    <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
+                      {p.deleted_at ? 'Inhabilitado' : 'Activo'}
+                    </span>
+                  </div>
 
-                <div className="d-flex justify-content-between small mb-1">
-                  <span className="text-muted">ID</span>
-                  <span className="fw-semibold">{p.id ?? '—'}</span>
-                </div>
-
-                <div className="d-flex justify-content-between small mb-1">
-                  <span className="text-muted">Categoría</span>
-                  <span className="fw-semibold">{p.categoria_nombre ?? 'Sin Categoría'}</span>
-                </div>
-
-                <div className="d-flex justify-content-between small mb-1">
-                  <span className="text-muted">Stock</span>
-                  <span className="fw-semibold">{p.cantidad ?? 0}</span>
-                </div>
-
-                <div className="d-flex justify-content-between small mb-2">
-                  <span className="text-muted">Precio</span>
-                  <span className="fw-semibold">
-                    {typeof p.precio === 'number'
-                      ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                      : p.precio ?? '—'}
-                  </span>
-                </div>
-
-                <div className="d-flex justify-content-between align-items-center">
-                  <span className="text-muted small">Estado</span>
-                  <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
-                    {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                  </span>
+                  <div className="row small text-muted">
+                    <div className="col-6 mb-1">
+                      <div>ID</div>
+                      <div className="fw-semibold text-dark">{p.id ?? '—'}</div>
+                    </div>
+                    <div className="col-6 mb-1">
+                      <div>Categoría</div>
+                      <div className="fw-semibold text-dark">{p.categoria_nombre ?? 'Sin Categoría'}</div>
+                    </div>
+                    <div className="col-6 mb-1">
+                      <div>Stock</div>
+                      <div className="fw-semibold text-dark">{p.cantidad ?? 0}</div>
+                    </div>
+                    <div className="col-6 mb-1">
+                      <div>Precio</div>
+                      <div className="fw-semibold text-dark">
+                        {typeof p.precio === 'number'
+                          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                          : p.precio ?? '—'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
 
           {productosFiltrados.length === 0 && (
-            <div className="card" style={{ minWidth: '260px', flex: '0 0 auto' }}>
-              <div className="card-body">No hay productos</div>
+            <div className="col-12">
+              <div className="card"><div className="card-body">No hay productos</div></div>
             </div>
           )}
         </div>
-
-        {/* Indicador visual opcional: padding para que la última tarjeta no quede pegada al borde */}
-        <div style={{ height: 8 }} />
       </div>
     </div>
   );
