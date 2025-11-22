@@ -152,7 +152,7 @@ const GestionarEstadoTab = ({
   /**
    * parseIdFromInputGeneric mejorado:
    * - Si la entrada tiene formato "ID - Nombre" devuelve ID.
-   * - Si la entrada es solo dígitos devuelve ID exacto.
+   * - Si la entrada es solo dígitos devuelve ID exacto (no parcial).
    * - Si la entrada coincide exactamente con algún id en la lista devuelve ese id.
    * - Si no, intenta coincidencia por nombre exacta o parcial.
    * - Nunca devuelve un ID basado en coincidencias en campos numéricos (precio/stock).
@@ -161,11 +161,10 @@ const GestionarEstadoTab = ({
     const raw = String(entrada || '').trim();
     if (!raw) return '';
 
-    // 1) Formato "ID - Nombre" -> extraer ID y devolverlo
+    // 1) Formato "ID - Nombre" -> extraer ID y devolverlo si es plausible
     if (raw.includes(' - ')) {
       const maybeId = raw.split(' - ')[0].trim();
       if (maybeId) {
-        // si existe en la lista, devolverlo; si no existe, devolverlo solo si es claramente un id (numérico o uuid-like)
         const exists = lista.find(item => String(item[idField]) === maybeId);
         if (exists) return maybeId;
         // permitir devolver maybeId solo si es un id plausible (solo dígitos o uuid-like)
