@@ -12,7 +12,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
-    const nombresDesdeProductos = productos
+    const nombresDesdeProductos = (productos || [])
       .map(p => p.categoria_nombre)
       .filter(nombre => nombre && String(nombre).trim() !== '');
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
@@ -20,7 +20,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos]);
 
   const productosFiltrados = useMemo(() => {
-    let filtered = [...productos];
+    let filtered = [...(productos || [])];
 
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
@@ -54,7 +54,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       {/* Filtros */}
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
-          <label htmlFor="filtroCatAdmin" className="form-label mb-1">Categoría</label>
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -68,18 +67,17 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
 
         <div className="col-12 col-md-6">
-          <label htmlFor="filtroTxtAdmin" className="form-label mb-1">Buscar</label>
           <input
             id="filtroTxtAdmin"
             className="form-control"
-            placeholder="ID, nombre o categoría..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Tabla en desktop/tablet */}
+      {/* Tabla para pantallas md+ */}
       <div className="d-none d-md-block" style={{ maxHeight: '300px', overflowY: 'auto' }}>
         <div className="table-responsive">
           <table className="table">
@@ -120,55 +118,77 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Tarjetas en móvil */}
+      {/* Tarjetas móviles: fila horizontal desplazable (swipe) */}
       <div className="d-block d-md-none">
-        <div className="row row-cols-1 g-3">
+        <div
+          className="mobile-cards-scroll"
+          style={{
+            display: 'flex',
+            gap: '12px',
+            overflowX: 'auto',
+            paddingBottom: '8px',
+            paddingTop: '4px',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {productosFiltrados.map(p => (
-            <div className="col" key={p.id}>
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <h6 className="card-title text-primary mb-2">{p.nombre ?? 'Sin nombre'}</h6>
+            <div
+              key={p.id}
+              className="card"
+              style={{
+                minWidth: '260px',
+                maxWidth: '260px',
+                flex: '0 0 auto',
+                borderRadius: '8px',
+                boxShadow: '0 1px 6px rgba(0,0,0,0.06)'
+              }}
+            >
+              <div className="card-body">
+                <h6 className="card-title text-primary mb-2" style={{ fontSize: '1rem' }}>{p.nombre ?? 'Sin nombre'}</h6>
 
-                  <div className="d-flex justify-content-between small mb-1">
-                    <span className="text-muted">ID</span>
-                    <span className="fw-semibold">{p.id ?? '—'}</span>
-                  </div>
+                <div className="d-flex justify-content-between small mb-1">
+                  <span className="text-muted">ID</span>
+                  <span className="fw-semibold">{p.id ?? '—'}</span>
+                </div>
 
-                  <div className="d-flex justify-content-between small mb-1">
-                    <span className="text-muted">Categoría</span>
-                    <span className="fw-semibold">{p.categoria_nombre ?? 'Sin Categoría'}</span>
-                  </div>
+                <div className="d-flex justify-content-between small mb-1">
+                  <span className="text-muted">Categoría</span>
+                  <span className="fw-semibold">{p.categoria_nombre ?? 'Sin Categoría'}</span>
+                </div>
 
-                  <div className="d-flex justify-content-between small mb-1">
-                    <span className="text-muted">Stock</span>
-                    <span className="fw-semibold">{p.cantidad ?? 0}</span>
-                  </div>
+                <div className="d-flex justify-content-between small mb-1">
+                  <span className="text-muted">Stock</span>
+                  <span className="fw-semibold">{p.cantidad ?? 0}</span>
+                </div>
 
-                  <div className="d-flex justify-content-between small mb-2">
-                    <span className="text-muted">Precio</span>
-                    <span className="fw-semibold">
-                      {typeof p.precio === 'number'
-                        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                        : p.precio ?? '—'}
-                    </span>
-                  </div>
+                <div className="d-flex justify-content-between small mb-2">
+                  <span className="text-muted">Precio</span>
+                  <span className="fw-semibold">
+                    {typeof p.precio === 'number'
+                      ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                      : p.precio ?? '—'}
+                  </span>
+                </div>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <span className="text-muted small">Estado</span>
-                    <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
-                      {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                    </span>
-                  </div>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span className="text-muted small">Estado</span>
+                  <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
+                    {p.deleted_at ? 'Inhabilitado' : 'Activo'}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
+
           {productosFiltrados.length === 0 && (
-            <div className="col">
-              <div className="card"><div className="card-body">No hay productos</div></div>
+            <div className="card" style={{ minWidth: '260px', flex: '0 0 auto' }}>
+              <div className="card-body">No hay productos</div>
             </div>
           )}
         </div>
+
+        {/* Indicador visual opcional: padding para que la última tarjeta no quede pegada al borde */}
+        <div style={{ height: 8 }} />
       </div>
     </div>
   );
