@@ -94,21 +94,30 @@ const AdminView = ({
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
-        const data = await res.json().catch(() => null);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`, {
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
+        const text = await res.text().catch(() => null);
+        let data = null;
+        try { data = JSON.parse(text); } catch { data = null; } // <-- parseErr eliminado
         if (res.ok && Array.isArray(data)) {
-          setProductos(data.map(normalizeProducto));
-          return;
+          const normalized = data.map(normalizeProducto);
+          setProductos(normalized);
+          return normalized;
         }
       }
+
       const { data, error } = await supabase
         .from('productos')
         .select('*')
         .order('nombre', { ascending: true });
       if (error) throw error;
-      setProductos((data || []).map(normalizeProducto));
+      const normalized = (data || []).map(normalizeProducto);
+      setProductos(normalized);
+      return normalized;
     } catch (err) {
       console.error('fetchProductos error:', err);
+      return null;
     }
   }, []);
 
@@ -136,8 +145,14 @@ const AdminView = ({
           alert(payload?.message || payload?.error || 'Error al cambiar el estado del producto (API).');
           return false;
         }
-        await fetchProductos();
-        console.log('toggleProducto: fetchProductos done, productos length =', productos.length);
+
+        // pequeño retardo para evitar leer una réplica anterior (opcional)
+        await new Promise(r => setTimeout(r, 250));
+
+        // Usar el valor devuelto por fetchProductos en lugar de leer la variable de estado "productos"
+        const nuevos = await fetchProductos();
+        console.log('toggleProducto: fetchProductos done, productos length =', Array.isArray(nuevos) ? nuevos.length : 'null');
+
         if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
         return true;
       }
@@ -155,6 +170,10 @@ const AdminView = ({
       );
 
       console.log('toggleProducto: local update done, productos (preview) =', productos.slice(0,5));
+      // pequeña espera y recarga para asegurar consistencia
+      await new Promise(r => setTimeout(r, 150));
+      await fetchProductos();
+
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
       return true;
     } catch (err) {
