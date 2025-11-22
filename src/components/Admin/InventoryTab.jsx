@@ -18,8 +18,7 @@ const normalizeBool = (val, defaultValue = false) => {
 };
 
 /**
- * normalizeProducto: devuelve solo los campos que la UI necesita,
- * unificando nombres y tipos, y evitando incluir campos inesperados.
+ * normalizeProducto: debe coincidir con la normalización en AdminView.
  */
 const normalizeProducto = (p = {}) => {
   const idRaw = p?.id ?? p?.product_id ?? '';
@@ -27,12 +26,25 @@ const normalizeProducto = (p = {}) => {
 
   const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
-  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
   const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? 'Sin Categoría';
-  const cantidad = typeof p?.cantidad === 'number' ? p.cantidad : (typeof p?.stock === 'number' ? p.stock : 0);
-  const precio = typeof p?.precio === 'number' ? p.precio : (typeof p?.precio_unitario === 'number' ? p.precio_unitario : null);
+
+  const cantidad = typeof p?.cantidad === 'number'
+    ? p.cantidad
+    : (typeof p?.stock === 'number' ? p.stock : 0);
+
+  let precio = null;
+  if (typeof p?.precio === 'number') {
+    precio = p.precio;
+  } else if (typeof p?.precio === 'string' && p.precio.trim() !== '') {
+    const parsed = Number(String(p.precio).replace(/\D/g, ''));
+    precio = Number.isFinite(parsed) ? parsed : null;
+  } else if (typeof p?.precio_unitario === 'number') {
+    precio = p.precio_unitario;
+  } else {
+    precio = null;
+  }
 
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
@@ -43,10 +55,11 @@ const normalizeProducto = (p = {}) => {
     categoria_nombre,
     cantidad,
     precio,
-    deleted_at: isDeleted ? deleted_at : null,
+    deleted_at: deleted_at,
     disabled,
     inactivo,
-    _inactive: Boolean(isDeleted) || disabled || inactivo
+    _inactive: Boolean(deleted_at) || disabled || inactivo,
+    _raw: p
   };
 };
 
@@ -55,7 +68,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  // Normalizamos y unificamos la estructura de los productos
   const productosNormalizados = useMemo(() => {
     return (productos || []).map(normalizeProducto);
   }, [productos]);
@@ -72,14 +84,12 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const productosFiltrados = useMemo(() => {
     let filtered = [...productosNormalizados];
 
-    // Filtrado por estado (activo / inactivo) usando _inactive para mayor robustez
     if (mostrarInactivos) {
       filtered = filtered.filter(p => !!(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     } else {
       filtered = filtered.filter(p => !(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     }
 
-    // Filtrar por categoría
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
@@ -88,7 +98,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
-    // Filtrar por texto (ID, nombre, categoría)
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
