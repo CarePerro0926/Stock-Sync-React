@@ -1,13 +1,11 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
 import '../ResponsiveTable.css';
-import ResponsiveTable from '../ResponsiveTable';
 
-// Ahora acepta onToggleProducto: (id, currentlyDisabled) => Promise
-const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => {
+const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
-  const [mostrarInactivos, setMostrarInactivos] = useState(false); // opcional: ver inactivos
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
@@ -24,7 +22,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
   }, [productos]);
 
   const productosFiltrados = useMemo(() => {
-    // Si la lista viene con deleted_at, por defecto mostramos solo activos
     let filtered = [...(productos || [])];
 
     if (!mostrarInactivos) {
@@ -55,61 +52,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
 
     return filtered;
   }, [productos, filtroCat, filtroTxt, mostrarInactivos]);
-
-  const tableData = useMemo(() => {
-    return productosFiltrados.map(p => {
-      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
-      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
-        nombreCategoria = 'Sin Categoría';
-      }
-
-      // Acción: botón que llama a onToggleProducto si está definido
-      const estaInhabilitado = !!p.deleted_at;
-      const accion = (
-        <button
-          className={`btn btn-sm ${estaInhabilitado ? 'btn-success' : 'btn-warning'}`}
-          onClick={async () => {
-            if (!onToggleProducto) {
-              alert('No hay función para inhabilitar/reactivar. Contacta al administrador.');
-              return;
-            }
-            const confirmMsg = estaInhabilitado
-              ? '¿Deseas reactivar este producto?'
-              : '¿Deseas inhabilitar este producto?';
-            if (!window.confirm(confirmMsg)) return;
-            try {
-              await onToggleProducto(p.id, estaInhabilitado);
-            } catch (err) {
-              console.error(err);
-              alert('Ocurrió un error al cambiar el estado del producto.');
-            }
-          }}
-        >
-          {estaInhabilitado ? 'Reactivar' : 'Inhabilitar'}
-        </button>
-      );
-
-      return {
-        id: p.id ?? '—',
-        nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria,
-        cantidad: p.cantidad ?? 0,
-        precio: typeof p.precio === 'number'
-          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : p.precio ?? '—',
-        accion // campo extra con el botón
-      };
-    });
-  }, [productosFiltrados, onToggleProducto]);
-
-  const tableHeaders = [
-    { key: 'id', label: 'ID' },
-    { key: 'nombre', label: 'Nombre' },
-    { key: 'categoriaNombre', label: 'Categoría' },
-    { key: 'cantidad', label: 'Stock', align: 'center' },
-    { key: 'precio', label: 'Precio Unidad', align: 'right' },
-    { key: 'accion', label: 'Acción', align: 'center' } // nueva columna
-  ];
 
   return (
     <div className="w-100">
@@ -155,12 +97,65 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
         </div>
       </div>
 
-      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <div className="table-responsive">
-          <ResponsiveTable
-            headers={tableHeaders}
-            data={tableData}
-          />
+      {/* Vista en tabla para pantallas medianas y grandes */}
+      <div className="d-none d-md-block" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Categoría</th>
+              <th>Stock</th>
+              <th>Precio Unidad</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {productosFiltrados.map(p => (
+              <tr key={p.id}>
+                <td>{p.id ?? '—'}</td>
+                <td>{p.nombre ?? 'Sin nombre'}</td>
+                <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
+                <td>{p.cantidad ?? 0}</td>
+                <td>{typeof p.precio === 'number'
+                  ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                  : p.precio ?? '—'}
+                </td>
+                <td>{p.deleted_at ? 'Inhabilitado' : 'Activo'}</td>
+              </tr>
+            ))}
+            {productosFiltrados.length === 0 && (
+              <tr><td colSpan={6}>No hay productos</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Vista en tarjetas para pantallas pequeñas */}
+      <div className="d-block d-md-none">
+        <div className="row row-cols-1 g-3">
+          {productosFiltrados.map(p => (
+            <div className="col" key={p.id}>
+              <div className="card h-100 shadow-sm">
+                <div className="card-body">
+                  <h6 className="card-title text-primary">{p.nombre ?? 'Sin nombre'}</h6>
+                  <p className="card-text mb-1"><strong>ID:</strong> {p.id ?? '—'}</p>
+                  <p className="card-text mb-1"><strong>Categoría:</strong> {p.categoria_nombre ?? 'Sin Categoría'}</p>
+                  <p className="card-text mb-1"><strong>Stock:</strong> {p.cantidad ?? 0}</p>
+                  <p className="card-text mb-1"><strong>Precio:</strong> {typeof p.precio === 'number'
+                    ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                    : p.precio ?? '—'}
+                  </p>
+                  <p className="card-text"><strong>Estado:</strong> {p.deleted_at ? 'Inhabilitado' : 'Activo'}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+          {productosFiltrados.length === 0 && (
+            <div className="col">
+              <div className="card"><div className="card-body">No hay productos</div></div>
+            </div>
+          )}
         </div>
       </div>
     </div>
