@@ -154,25 +154,26 @@ const AdminView = ({
       setUsuariosLoading(true);
       setUsuariosError('');
       try {
+        // <-- CORRECCIÓN: usar columnas reales de user_profiles (display_name) -->
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('user_id, nombres, apellidos, deleted_at')
-          .order('nombres', { ascending: true });
+          .select('user_id, display_name, deleted_at')
+          .order('display_name', { ascending: true });
 
         if (error) throw error;
         if (!mounted) return;
 
+        // Normalizamos la respuesta para usar siempre id y display_name
         const normalized = (data || []).map(u => ({
-          id: u.user_id,
-          nombres: u.nombres || '',
-          apellidos: u.apellidos || '',
-          deleted_at: u.deleted_at || null
+          id: String(u.user_id ?? u.id ?? ''),
+          display_name: u.display_name ?? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim(),
+          deleted_at: u.deleted_at ?? null
         }));
         setUsuarios(normalized);
         fetchedUsersRef.current = true;
       } catch (err) {
         console.error('Error cargando usuarios:', err);
-        setUsuariosError('No fue posible cargar usuarios. Revisa RLS/Policies o la existencia de la tabla user_profiles.');
+        setUsuariosError('No fue posible cargar usuarios. Revisa keys, CORS o la existencia de la tabla user_profiles.');
       } finally {
         if (mounted) setUsuariosLoading(false);
       }
