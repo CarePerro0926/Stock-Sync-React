@@ -23,12 +23,8 @@ const normalizeBool = (val, defaultValue = false) => {
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
 
-/**
- * normalizeProducto: mapea la estructura real de la vista
- * vista_productos_con_categoria a los campos que la UI espera.
- */
 const normalizeProducto = (p = {}) => {
-  const idRaw = p?.id ?? p?.product_id ?? '';
+  const idRaw = p?.product_id ?? p?.id ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
 
   const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
@@ -118,7 +114,6 @@ const AdminView = ({
 
   const fetchProductos = useCallback(async () => {
     try {
-      // Si hay API externa configurada, intentar primero
       if (import.meta.env.VITE_API_URL) {
         const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
@@ -129,24 +124,23 @@ const AdminView = ({
         if (res.ok && Array.isArray(data)) {
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
+          console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0,5));
           return normalized;
         }
-        // si la API responde pero no con array, continuar al fallback supabase
       }
 
-      // Fallback: Supabase view
       const { data, error } = await supabase
-        .from('vista_productos_con_categoria')
+        .from('productos')
         .select('*')
         .order('nombre', { ascending: true });
 
       if (error) throw error;
       const normalized = (data || []).map(normalizeProducto);
       setProductos(normalized);
+      console.log('ADMINVIEW DEBUG: fetchProductos (supabase productos) ->', normalized.slice(0,5));
       return normalized;
     } catch (err) {
       console.error('fetchProductos error:', err);
-      // No inyectar "producto de ejemplo": dejar la lista vacía para que la UI muestre mensaje claro
       setProductos([]);
       return null;
     }
@@ -158,15 +152,8 @@ const AdminView = ({
     }
   }, [productosProp, fetchProductos]);
 
-  /**
-   * toggleProducto:
-   * - Si hay API externa, llama al endpoint y recarga.
-   * - Si no, intenta actualizar en Supabase: primero por product_id, si falla intenta por id.
-   * - Actualiza el estado local y devuelve true/false.
-   */
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
-      // Si hay API externa, usarla (AdminView ya lo hacía)
       if (import.meta.env.VITE_API_URL) {
         const action = currentlyDisabled ? 'enable' : 'disable';
         const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${id}/${action}`;
@@ -181,46 +168,24 @@ const AdminView = ({
           alert(payload?.message || payload?.error || 'Error al cambiar el estado del producto (API).');
           return false;
         }
-
-        // pequeña espera para consistencia y recargar desde la fuente de verdad
-        await new Promise(r => setTimeout(r, 250));
-        const nuevos = await fetchProductos();
-        if (Array.isArray(nuevos)) setProductos(nuevos);
-
+        await fetchProductos();
         if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
         return true;
       }
 
-      // Fallback Supabase: intentar por product_id primero, luego por id
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
 
-      // Intento 1: product_id
-      let result = await supabase.from('productos').update(payload).eq('product_id', id).select().single().catch(() => ({ error: true }));
-      if (result && result.error) {
-        // Intento 2: id
-        result = await supabase.from('productos').update(payload).eq('id', id).select().single().catch(() => ({ error: true }));
+      // Intento por id (columna 'id' es la preferida)
+      let { error } = await supabase.from('productos').update(payload).eq('id', id).select().single();
+      if (error) {
+        // si falla por id, intentar por product_id
+        const res2 = await supabase.from('productos').update(payload).eq('product_id', id).select().single();
+        error = res2.error;
       }
+      if (error) throw error;
 
-      if (!result || result.error) {
-        // Si ambos intentos fallaron, lanzar error
-        throw result && result.error ? result.error : new Error('No se pudo actualizar producto en la BD');
-      }
-
-      // Actualizar estado local: mapear prev y reemplazar con normalizeProducto del raw actualizado
-      const updatedRaw = result.data ?? result;
-      const updatedId = String(updatedRaw.product_id ?? updatedRaw.id ?? id);
-      setProductos(prev => prev.map(p => {
-        const pid = String(p.id ?? p.product_id ?? '');
-        if (pid === updatedId) {
-          return normalizeProducto({ ...p._raw, ...updatedRaw });
-        }
-        return p;
-      }));
-
-      // pequeña espera y recarga completa para mantener consistencia entre tabs
-      await new Promise(r => setTimeout(r, 150));
-      const nuevos = await fetchProductos();
-      if (Array.isArray(nuevos)) setProductos(nuevos);
+      // Forzar recarga desde la misma fuente de verdad
+      await fetchProductos();
 
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (err) { console.error(err); } }
       return true;
