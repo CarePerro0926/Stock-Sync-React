@@ -1,3 +1,4 @@
+// src/components/UsuariosView.jsx
 import React, { useEffect, useState, useMemo } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -11,6 +12,7 @@ const UsuariosView = () => {
   const [filtroRol, setFiltroRol] = useState('todos');
   const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -20,8 +22,8 @@ const UsuariosView = () => {
         if (!response.ok) throw new Error(data.message || 'Error al obtener usuarios');
         setUsuarios(data);
       } catch (err) {
-        console.error('Error:', err.message);
-        setError(err.message);
+        console.error('Error fetching usuarios:', err);
+        setError(err.message || 'Error al obtener usuarios');
       }
     };
 
@@ -38,32 +40,77 @@ const UsuariosView = () => {
 
   const usuariosFiltrados = useMemo(() => {
     return usuarios.filter((u) => {
+      const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
+
+      if (!mostrarInactivos && estaInhabilitado) return false;
+
       const texto = busqueda.toLowerCase().trim();
       const coincideBusqueda =
-        u.nombres?.toLowerCase().includes(texto) ||
-        u.apellidos?.toLowerCase().includes(texto) ||
-        u.email?.toLowerCase().includes(texto) ||
-        u.username?.toLowerCase().includes(texto) ||
+        (u.nombres?.toLowerCase().includes(texto)) ||
+        (u.apellidos?.toLowerCase().includes(texto)) ||
+        (u.email?.toLowerCase().includes(texto)) ||
+        (u.username?.toLowerCase().includes(texto)) ||
         String(u.cedula ?? '').toLowerCase().includes(texto);
 
       const coincideRol =
-        filtroRol === 'todos' || u.role?.toLowerCase() === filtroRol;
+        filtroRol === 'todos' || (u.role?.toLowerCase() === filtroRol);
 
       return coincideBusqueda && coincideRol;
     });
-  }, [usuarios, busqueda, filtroRol]);
+  }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
-  const eliminarUsuario = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar este usuario?')) return;
+  // Función que inhabilita o reactiva al usuario (soft delete)
+  const toggleUsuario = async (id, currentlyDisabled) => {
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
+    if (!window.confirm(confirmMsg)) return;
+
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) throw new Error('Error al eliminar');
+      // Intentamos llamar endpoints REST específicos (preferible)
+      if (!currentlyDisabled) {
+        // inhabilitar
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}/disable`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'inhabilitado desde admin' })
+        });
+        if (!res.ok) throw new Error('Error al inhabilitar usuario');
+      } else {
+        // reactivar
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}/enable`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'reactivado desde admin' })
+        });
+        if (!res.ok) throw new Error('Error al reactivar usuario');
+      }
+
+      // Forzar recarga de la lista
       setRecargar(prev => !prev);
     } catch (err) {
-      alert('Error al eliminar usuario');
-      console.error(err);
+      // Registramos el error y ejecutamos el fallback
+      console.error('Error al intentar toggle (primer intento):', err);
+      try {
+        if (!currentlyDisabled) {
+          // fallback: PATCH al recurso principal con deleted_at
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deleted_at: new Date().toISOString() })
+          });
+          if (!res.ok) throw new Error('Error al inhabilitar usuario (fallback)');
+        } else {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deleted_at: null })
+          });
+          if (!res.ok) throw new Error('Error al reactivar usuario (fallback)');
+        }
+        setRecargar(prev => !prev);
+      } catch (err2) {
+        console.error('Error toggling usuario (fallback):', err2);
+        alert('Ocurrió un error al cambiar el estado del usuario.');
+      }
     }
   };
 
@@ -71,13 +118,28 @@ const UsuariosView = () => {
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
 
-      <div className="d-flex justify-content-end mb-3">
-        <button
-          className="btn btn-primary"
-          onClick={() => setMostrarModal(true)}
-        >
-          Agregar Usuario
-        </button>
+      <div className="d-flex justify-content-between mb-3">
+        <div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setMostrarModal(true)}
+          >
+            Agregar Usuario
+          </button>
+        </div>
+
+        <div className="d-flex align-items-center">
+          <div className="form-check me-3">
+            <input
+              id="chkMostrarInactivosUsers"
+              className="form-check-input"
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={(e) => setMostrarInactivos(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="chkMostrarInactivosUsers">Mostrar inactivos</label>
+          </div>
+        </div>
       </div>
 
       <div className="row g-2 mb-3">
@@ -116,38 +178,44 @@ const UsuariosView = () => {
           </div>
         ) : (
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-            {usuariosFiltrados.map((user) => (
-              <div className="col" key={user.id}>
-                <div className="card h-100 shadow-sm">
-                  <div className="card-body">
-                    <h5 className="card-title text-primary mb-3">
-                      {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
-                    </h5>
-                    <p className="card-text mb-1">
-                      <strong>Email:</strong> {user.email ?? '—'}
-                    </p>
-                    <p className="card-text mb-1">
-                      <strong>Usuario:</strong> {user.username ?? '—'}
-                    </p>
-                    <p className="card-text mb-1">
-                      <strong>Cédula:</strong> {user.cedula ?? '—'}
-                    </p>
-                    <p className="card-text">
-                      <strong>Rol:</strong>
-                      <span className={`badge ${user.role === 'administrador' ? 'bg-danger' : 'bg-success'} ms-2`}>
-                        {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
-                      </span>
-                    </p>
-                    <button
-                      className="btn btn-sm btn-outline-danger mt-3"
-                      onClick={() => eliminarUsuario(user.id)}
-                    >
-                      Eliminar
-                    </button>
+            {usuariosFiltrados.map((user) => {
+              const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
+              return (
+                <div className="col" key={user.id}>
+                  <div className="card h-100 shadow-sm">
+                    <div className="card-body">
+                      <h5 className="card-title text-primary mb-3">
+                        {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
+                      </h5>
+                      <p className="card-text mb-1">
+                        <strong>Email:</strong> {user.email ?? '—'}
+                      </p>
+                      <p className="card-text mb-1">
+                        <strong>Usuario:</strong> {user.username ?? '—'}
+                      </p>
+                      <p className="card-text mb-1">
+                        <strong>Cédula:</strong> {user.cedula ?? '—'}
+                      </p>
+                      <p className="card-text">
+                        <strong>Rol:</strong>
+                        <span className={`badge ${user.role === 'administrador' ? 'bg-danger' : 'bg-success'} ms-2`}>
+                          {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
+                        </span>
+                      </p>
+
+                      <div className="d-flex gap-2 mt-3">
+                        <button
+                          className={`btn btn-sm ${estaInhabilitado ? 'btn-success' : 'btn-warning'}`}
+                          onClick={() => toggleUsuario(user.id, estaInhabilitado)}
+                        >
+                          {estaInhabilitado ? 'Reactivar' : 'Inhabilitar'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
