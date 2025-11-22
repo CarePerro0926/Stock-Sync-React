@@ -21,7 +21,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
-    const nombresDesdeProductos = (productos || [])
+    const nombresDesdeProductos = productos
       .map(p => p.categoria_nombre)
       .filter(nombre => nombre && String(nombre).trim() !== '');
     const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
@@ -29,7 +29,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos]);
 
   const productosFiltrados = useMemo(() => {
-    let filtered = [...(productos || [])];
+    let filtered = [...productos];
 
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
@@ -86,13 +86,11 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
-    // Usamos flex-column y que el área desplazable ocupe el espacio restante del padre,
-    // así la altura del contenedor será la misma que la de UpdateTab cuando ambos estén dentro del mismo padre.
-    <div className="w-100 d-flex flex-column" style={{ height: '100%' }}>
-      <h5 className="mb-3">Inventario</h5>
+    <div className="w-100"> {/* w-100 agregado */}
+      <h5>Inventario</h5>
 
       <div className="row g-2 mb-3">
-        <div className="col-12 col-md-6">
+        <div className="col">
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -106,7 +104,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
             ))}
           </select>
         </div>
-        <div className="col-12 col-md-6">
+        <div className="col">
           <input
             id="filtroTxtAdmin"
             className="form-control"
@@ -117,66 +115,16 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Zona desplazable: ocupa el espacio restante del padre (igual comportamiento que UpdateTab) */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 6 }}>
-        {/* Desktop/tablet: tabla responsive */}
-        <div className="d-none d-md-block">
-          <div className="table-responsive">
-            <ResponsiveTable headers={tableHeaders} data={tableData} />
-          </div>
-        </div>
-
-        {/* Móvil: tarjetas apiladas (una columna) */}
-        <div className="d-block d-md-none">
-          <div className="row g-3 p-1">
-            {productosFiltrados.map(p => (
-              <div className="col-12" key={p.id}>
-                <div className="card shadow-sm">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <h6 className="card-title mb-0">{p.nombre ?? 'Sin nombre'}</h6>
-                      <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
-                        {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                      </span>
-                    </div>
-
-                    <div className="row small text-muted">
-                      <div className="col-6 mb-1">
-                        <div>ID</div>
-                        <div className="fw-semibold text-dark">{p.id ?? '—'}</div>
-                      </div>
-                      <div className="col-6 mb-1">
-                        <div>Categoría</div>
-                        <div className="fw-semibold text-dark">{p.categoria_nombre ?? 'Sin Categoría'}</div>
-                      </div>
-                      <div className="col-6 mb-1">
-                        <div>Stock</div>
-                        <div className="fw-semibold text-dark">{p.cantidad ?? 0}</div>
-                      </div>
-                      <div className="col-6 mb-1">
-                        <div>Precio</div>
-                        <div className="fw-semibold text-dark">
-                          {typeof p.precio === 'number'
-                            ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                            : p.precio ?? '—'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {productosFiltrados.length === 0 && (
-              <div className="col-12">
-                <div className="card"><div className="card-body">No hay productos</div></div>
-              </div>
-            )}
-          </div>
+      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <div className="table-responsive"> {/* envuelve en table-responsive */}
+          <ResponsiveTable
+            headers={tableHeaders}
+            data={tableData}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-export default InventoryTab;
+export default InventoryTab; 
