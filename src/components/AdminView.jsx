@@ -10,9 +10,9 @@ import UsuariosView from './UsuariosView';
 import ResponsiveTable from './ResponsiveTable';
 
 const AdminView = ({
-  productos: productosProp = [],
-  proveedores = [],
-  categorias = [],
+  productos,
+  proveedores,
+  categorias,
   vistaActiva,
   setVistaActiva,
   onAddProducto,
@@ -26,10 +26,7 @@ const AdminView = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Copia local de productos para reflejar toggles
-  const [productos, setProductos] = useState(Array.isArray(productosProp) ? productosProp : []);
-
-  // Usuarios para pestaña usuarios
+  // usuarios (se cargan desde el endpoint /api/usuarios para mantener consistencia con UsuariosView)
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
@@ -66,106 +63,72 @@ const AdminView = ({
     }
   };
 
-  // Sincroniza con props si el padre actualiza
-  useEffect(() => {
-    if (Array.isArray(productosProp) && productosProp.length > 0) {
-      setProductos(productosProp);
-    }
-  }, [productosProp]);
-
-  // Recarga productos desde API o Supabase (memoizado para cumplir exhaustive-deps)
-  const fetchProductos = useCallback(async () => {
-    try {
-      if (import.meta.env.VITE_API_URL) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
-        const data = await res.json().catch(() => null);
-        if (res.ok && Array.isArray(data)) {
-          setProductos(data);
-          return;
-        }
-      }
-      const { data, error } = await supabase.from('productos').select('*').order('nombre', { ascending: true });
-      if (error) throw error;
-      setProductos(data || []);
-    } catch (err) {
-      console.error('fetchProductos error:', err);
-    }
-  }, []);
-
-  // Cargar productos si no vienen por props
-  useEffect(() => {
-    if (!productosProp || productosProp.length === 0) {
-      fetchProductos();
-    }
-  }, [productosProp, fetchProductos]);
-
-  // Toggles con enfoque pessimistic
+  // -------------------------
+  // Funciones auxiliares para activar/desactivar el borrado lógico (productos/proveedores/categorías)
+  // -------------------------
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
-      if (import.meta.env.VITE_API_URL) {
-        const action = currentlyDisabled ? 'enable' : 'disable';
-        const apiUrl = `${import.meta.env.VITE_API_URL}/api/productos/${id}/${action}`;
-        const res = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
-        });
-        const payload = await res.json().catch(() => null);
-        if (!res.ok) {
-          console.error('API toggleProducto error:', payload);
-          alert(payload?.message || payload?.error || 'Error al cambiar el estado del producto (API).');
-          return false;
-        }
-        await fetchProductos();
-        if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-        return true;
-      }
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      const { error } = await supabase.from('productos').update(payload).eq('id', id);
+      const { error } = await supabase
+        .from('productos')
+        .update(payload)
+        .eq('id', id);
+
       if (error) throw error;
-      const now = !currentlyDisabled ? new Date().toISOString() : null;
-      setProductos(prev => prev.map(p => (String(p.id) === String(id) ? { ...p, deleted_at: now } : p)));
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-      return true;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
     } catch (err) {
       console.error('Error toggling producto:', err);
       alert('Ocurrió un error al cambiar el estado del producto.');
-      return false;
     }
   };
 
   const toggleProveedor = async (id, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      const { error } = await supabase.from('proveedores').update(payload).eq('id', id);
+      const { error } = await supabase
+        .from('proveedores')
+        .update(payload)
+        .eq('id', id);
+
       if (error) throw error;
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-      return true;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
     } catch (err) {
       console.error('Error toggling proveedor:', err);
       alert('Ocurrió un error al cambiar el estado del proveedor.');
-      return false;
     }
   };
 
   const toggleCategoria = async (id, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      const { error } = await supabase.from('categorias').update(payload).eq('id', id);
+      const { error } = await supabase
+        .from('categorias')
+        .update(payload)
+        .eq('id', id);
+
       if (error) throw error;
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-      return true;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
     } catch (err) {
       console.error('Error toggling categoria:', err);
       alert('Ocurrió un error al cambiar el estado de la categoría.');
-      return false;
     }
   };
 
+  // -------------------------
+  // toggleUsuario: preferimos usar el endpoint /api/usuarios si existe; si no, fallback a supabase
+  // -------------------------
   const toggleUsuario = async (userId, currentlyDisabled) => {
+    // Intentamos usar el endpoint del backend (coherente con UsuariosView)
     try {
       const action = currentlyDisabled ? 'enable' : 'disable';
       const apiUrl = `${import.meta.env.VITE_API_URL}/api/usuarios/${userId}/${action}`;
+
       if (import.meta.env.VITE_API_URL) {
         const res = await fetch(apiUrl, {
           method: 'PATCH',
@@ -176,14 +139,21 @@ const AdminView = ({
           const body = await res.json().catch(() => ({}));
           throw new Error(body.message || 'Error API usuarios');
         }
+
+        // recargar lista desde API para mantener consistencia
         fetchedUsersRef.current = false;
         await fetchUsuariosFromApi();
-        if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-        return true;
+        if (onUpdateSuccess) {
+          try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+        }
+        return;
       }
     } catch (err) {
       console.warn('toggleUsuario: fallo en endpoint API, intentando fallback con supabase', err);
+      // fallback: continuar abajo con supabase
     }
+
+    // Fallback con supabase (actualiza tabla 'usuarios' o 'user_profiles')
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       let { error } = await supabase.from('usuarios').update(payload).eq('id', userId);
@@ -192,15 +162,18 @@ const AdminView = ({
         if (err2) throw err2;
       }
       setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
-      if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
-      return true;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
     } catch (err) {
       console.error('Error toggling usuario (fallback supabase):', err);
       alert('Ocurrió un error al cambiar el estado del usuario.');
-      return false;
     }
   };
 
+  // -------------------------
+  // Cargar usuarios desde /api/usuarios (misma fuente que UsuariosView)
+  // -------------------------
   const fetchUsuariosFromApi = async () => {
     setUsuariosLoading(true);
     setUsuariosError('');
@@ -209,6 +182,7 @@ const AdminView = ({
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
+
         const normalized = (data || []).map(u => ({
           id: String(u.id ?? u.user_id ?? ''),
           display_name: (u.nombres || u.apellidos)
@@ -217,6 +191,7 @@ const AdminView = ({
           deleted_at: u.deleted_at ?? null,
           raw: u
         }));
+
         setUsuarios(normalized);
         fetchedUsersRef.current = true;
         setUsuariosLoading(false);
@@ -254,7 +229,9 @@ const AdminView = ({
     fetchUsuariosFromApi();
   }, []);
 
+  // -------------------------
   // Render
+  // -------------------------
   return (
     <div className="card p-4 w-100">
       <h4 className="mb-3">Panel Administrador</h4>
