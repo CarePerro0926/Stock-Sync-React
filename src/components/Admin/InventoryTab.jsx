@@ -25,13 +25,14 @@ const normalizeProducto = (p) => {
   const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
   return {
     ...p,
+    id: p?.id ?? null,
+    nombre: p?.nombre ?? p?.display_name ?? 'Sin nombre',
+    categoria_nombre: p?.categoria_nombre ?? p?.categoria ?? 'Sin Categoría',
+    cantidad: typeof p?.cantidad === 'number' ? p.cantidad : (p?.stock ?? 0),
+    precio: typeof p?.precio === 'number' ? p.precio : (p?.precio_unitario ?? null),
     deleted_at: isDeleted ? deleted_at : null,
     disabled,
     inactivo,
-    nombre: p?.nombre ?? '',
-    categoria_nombre: p?.categoria_nombre ?? '',
-    cantidad: p?.cantidad ?? 0,
-    precio: p?.precio ?? null,
     _inactive: Boolean(isDeleted) || disabled || inactivo
   };
 };
@@ -41,40 +42,30 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  // Normalizamos la lista de productos recibida para evitar inconsistencias
-  const productosNormalizados = useMemo(() => {
-    return (productos || []).map(normalizeProducto);
-  }, [productos]);
+  const productosNormalizados = useMemo(() => (productos || []).map(normalizeProducto), [productos]);
 
   useEffect(() => {
-    // Logs de depuración (puedes quitar estos console.log en producción)
+    // Logs de depuración (quitar en producción)
     console.log('InventoryTab: productos recibidos (raw):', productos);
     console.log('InventoryTab: productos normalizados:', productosNormalizados);
   }, [productos, productosNormalizados]);
 
   const listaCategoriasFiltro = useMemo(() => {
-    const nombresDesdeProductos = productosNormalizados
-      .map(p => p.categoria_nombre)
-      .filter(nombre => nombre && String(nombre).trim() !== '');
-    const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
-    // También incluir categorías pasadas por props si no están en productos
-    const categoriasExtra = (categorias || [])
-      .map(c => (c?.nombre ? String(c.nombre).trim() : ''))
-      .filter(n => n && !unicas.includes(n));
+    const nombresDesdeProductos = productosNormalizados.map(p => p.categoria_nombre).filter(Boolean);
+    const unicas = [...new Set(nombresDesdeProductos.map(n => String(n).trim()))];
+    const categoriasExtra = (categorias || []).map(c => (c?.nombre ? String(c.nombre).trim() : '')).filter(n => n && !unicas.includes(n));
     return ['Todas', ...unicas, ...categoriasExtra];
   }, [productosNormalizados, categorias]);
 
   const productosFiltrados = useMemo(() => {
     let filtered = [...productosNormalizados];
 
-    // Filtrar por estado (activo / inactivo) usando _inactive para mayor robustez
     if (mostrarInactivos) {
       filtered = filtered.filter(p => !!(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     } else {
       filtered = filtered.filter(p => !(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     }
 
-    // Filtrar por categoría
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
@@ -83,43 +74,33 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
-    // Filtrar por texto (ID, nombre, categoría)
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
         const idStr = String(p.id ?? '');
         const nombreStr = String(p.nombre ?? '');
         const catStr = String(p.categoria_nombre ?? '');
-        return (
-          idStr.toLowerCase().includes(term) ||
-          nombreStr.toLowerCase().includes(term) ||
-          catStr.toLowerCase().includes(term)
-        );
+        return idStr.toLowerCase().includes(term) || nombreStr.toLowerCase().includes(term) || catStr.toLowerCase().includes(term);
       });
     }
 
     return filtered;
   }, [productosNormalizados, filtroCat, filtroTxt, mostrarInactivos]);
 
-  const tableData = useMemo(() => {
-    return productosFiltrados.map(p => {
-      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
-      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
-        nombreCategoria = 'Sin Categoría';
-      }
-
-      return {
-        id: p.id ?? '—',
-        nombre: p.nombre ?? 'Sin nombre',
-        categoriaNombre: nombreCategoria,
-        cantidad: p.cantidad ?? 0,
-        precio: typeof p.precio === 'number'
-          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-          : (p.precio ?? '—'),
-        _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
-      };
-    });
-  }, [productosFiltrados]);
+  const tableData = useMemo(() => productosFiltrados.map(p => {
+    let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
+    if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
+      nombreCategoria = 'Sin Categoría';
+    }
+    return {
+      id: p.id ?? '—',
+      nombre: p.nombre ?? 'Sin nombre',
+      categoriaNombre: nombreCategoria,
+      cantidad: p.cantidad ?? 0,
+      precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 }) : (p.precio ?? '—'),
+      _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
+    };
+  }), [productosFiltrados]);
 
   const tableHeaders = [
     { key: 'id', label: 'ID' },
@@ -135,61 +116,41 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
 
       <div className="row g-2 mb-3">
         <div className="col-md-4 col-12">
-          <select
-            id="filtroCatAdmin"
-            className="form-select"
-            value={filtroCat}
-            onChange={e => setFiltroCat(e.target.value)}
-          >
-            {listaCategoriasFiltro.map((cat, index) => (
-              <option key={`${cat}-${index}`} value={cat}>
-                {cat}
-              </option>
-            ))}
+          <select id="filtroCatAdmin" className="form-select" value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
+            {listaCategoriasFiltro.map((cat, index) => <option key={`${cat}-${index}`} value={cat}>{cat}</option>)}
           </select>
         </div>
 
         <div className="col-md-4 col-12">
-          <input
-            id="filtroTxtAdmin"
-            className="form-control"
-            placeholder="Buscar por ID, nombre o categoría..."
-            value={filtroTxt}
-            onChange={e => setFiltroTxt(e.target.value)}
-          />
+          <input id="filtroTxtAdmin" className="form-control" placeholder="Buscar por ID, nombre o categoría..." value={filtroTxt} onChange={e => setFiltroTxt(e.target.value)} />
         </div>
 
         <div className="col-md-4 col-12 d-flex align-items-center">
           <div className="form-check ms-md-3">
-            <input
-              id="chkMostrarInactivosProd"
-              className="form-check-input"
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={e => setMostrarInactivos(e.target.checked)}
-            />
+            <input id="chkMostrarInactivosProd" className="form-check-input" type="checkbox" checked={mostrarInactivos} onChange={e => setMostrarInactivos(e.target.checked)} />
             <label className="form-check-label" htmlFor="chkMostrarInactivosProd">Mostrar inactivos</label>
           </div>
         </div>
       </div>
 
-      {/* Debug visual temporal: muestra los primeros productos y su estado.
-          Quitar en producción si no se necesita. */}
+      {/* Debug visual temporal */}
       <div className="mb-3">
         <div className="alert alert-secondary">
           <strong>DEBUG</strong>
           <div>Productos recibidos: {productos.length}</div>
           <div style={{ maxHeight: 120, overflow: 'auto' }}>
-            <pre style={{ margin: 0 }}>
-              {JSON.stringify(productos.slice(0, 10).map(p => ({ id: p.id, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}
-            </pre>
+            <pre style={{ margin: 0 }}>{JSON.stringify(productos.slice(0, 10).map(p => ({ id: p.id, nombre: p.nombre, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}</pre>
           </div>
         </div>
       </div>
 
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
         <div className="table-responsive">
-          <ResponsiveTable headers={tableHeaders} data={tableData} />
+          {tableData.length > 0 ? (
+            <ResponsiveTable headers={tableHeaders} data={tableData} />
+          ) : (
+            <div className="p-3 text-muted">No hay productos para mostrar con los filtros actuales.</div>
+          )}
         </div>
       </div>
     </div>
