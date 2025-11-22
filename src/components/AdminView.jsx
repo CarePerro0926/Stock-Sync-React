@@ -60,7 +60,7 @@ const normalizeProducto = (p = {}) => {
     categoria_nombre,
     cantidad,
     precio,
-    deleted_at: deleted_at,
+    deleted_at,
     disabled,
     inactivo,
     _inactive: Boolean(deleted_at) || disabled || inactivo,
@@ -129,6 +129,7 @@ const AdminView = ({
         }
       }
 
+      // Leer directamente la tabla 'productos' (misma tabla que actualizamos)
       const { data, error } = await supabase
         .from('productos')
         .select('*')
@@ -175,14 +176,12 @@ const AdminView = ({
 
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
 
-      // Intento por id (columna 'id' es la preferida)
-      let { error } = await supabase.from('productos').update(payload).eq('id', id).select().single();
-      if (error) {
-        // si falla por id, intentar por product_id
-        const res2 = await supabase.from('productos').update(payload).eq('product_id', id).select().single();
-        error = res2.error;
+      // Intento por id primero, luego por product_id
+      let res1 = await supabase.from('productos').update(payload).eq('id', id).select().single().catch(() => ({ error: true }));
+      if (res1 && res1.error) {
+        res1 = await supabase.from('productos').update(payload).eq('product_id', id).select().single().catch(() => ({ error: true }));
       }
-      if (error) throw error;
+      if (!res1 || res1.error) throw res1 && res1.error ? res1.error : new Error('No se pudo actualizar producto en la BD');
 
       // Forzar recarga desde la misma fuente de verdad
       await fetchProductos();
