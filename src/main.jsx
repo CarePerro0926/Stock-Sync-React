@@ -4,13 +4,15 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { BrowserRouter } from 'react-router-dom'; //  IMPORTANTE
+import { BrowserRouter } from 'react-router-dom'; // IMPORTANTE: envuelve App para routing
 
-console.log("main.jsx: Iniciando la aplicación");
+console.log('main.jsx: Iniciando la aplicación');
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const root = ReactDOM.createRoot(document.getElementById('root'));
+
+root.render(
   <React.StrictMode>
-    <BrowserRouter> {/*  ENVOLVER App */}
+    <BrowserRouter>
       <App />
     </BrowserRouter>
   </React.StrictMode>
