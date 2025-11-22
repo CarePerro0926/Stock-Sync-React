@@ -21,13 +21,13 @@ const GestionarEstadoTab = ({
   const [inputProveedor, setInputProveedor] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
   const [sugerenciasProveedor, setSugerenciasProveedor] = useState([]);
-  const [proveedores, setProveedores] = useState(proveedoresProp);
+  const [proveedores, setProveedores] = useState(proveedoresProp || []);
 
   // Categoría
   const [inputCategoria, setInputCategoria] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [sugerenciasCategoria, setSugerenciasCategoria] = useState([]);
-  const [categorias, setCategorias] = useState(categoriasProp);
+  const [categorias, setCategorias] = useState(categoriasProp || []);
 
   // Usuario
   const [inputUsuario, setInputUsuario] = useState('');
@@ -124,18 +124,40 @@ const GestionarEstadoTab = ({
       .slice(0, 8);
   };
 
-  const parseIdOrNameFromInput = (entrada) => {
-    const trimmed = String(entrada || '').trim();
-    if (!trimmed) return '';
-    // si el usuario pegó un id exacto (UUID), lo devolvemos
-    const maybeId = trimmed;
-    // si existe un usuario con ese id, retornamos id
-    if (usuarios.find(u => String(u.id) === maybeId)) return maybeId;
-    // si no, intentamos buscar por display_name exacto (case-insensitive)
-    const byName = usuarios.find(u => String(u.display_name).toLowerCase() === maybeId.toLowerCase());
-    if (byName) return byName.id;
-    // no encontramos, devolvemos la entrada tal cual (se validará luego)
-    return trimmed;
+  /**
+   * parseIdFromInputGeneric
+   * - entrada: texto que puede ser "id", "id - nombre" o "nombre"
+   * - lista: array de objetos donde buscar
+   * - idField: nombre del campo id en los objetos (ej. 'id' o 'user_id')
+   * - nameField: nombre del campo de display (ej. 'nombre', 'display_name')
+   *
+   * Devuelve: id (string) si lo encuentra, o la entrada original si no se puede resolver.
+   */
+  const parseIdFromInputGeneric = (entrada, lista = [], idField = 'id', nameField = 'nombre') => {
+    const raw = String(entrada || '').trim();
+    if (!raw) return '';
+
+    // Si viene en formato "id - nombre", extraer id antes del guion
+    if (raw.includes(' - ')) {
+      const maybeId = raw.split(' - ')[0].trim();
+      if (lista.find(item => String(item[idField]) === maybeId)) return maybeId;
+      // si no existe en la lista, devolvemos maybeId de todas formas (se validará luego)
+      return maybeId;
+    }
+
+    // Si la entrada coincide exactamente con un id en la lista
+    if (lista.find(item => String(item[idField]) === raw)) return raw;
+
+    // Buscar por nombre/display (case-insensitive) exacto
+    const byNameExact = lista.find(item => String(item[nameField] ?? '').toLowerCase() === raw.toLowerCase());
+    if (byNameExact) return String(byNameExact[idField]);
+
+    // Buscar por nombre/display parcial (contains)
+    const byNamePartial = lista.find(item => String(item[nameField] ?? '').toLowerCase().includes(raw.toLowerCase()));
+    if (byNamePartial) return String(byNamePartial[idField]);
+
+    // No se resolvió: devolver la entrada tal cual (se validará después)
+    return raw;
   };
 
   const applyToggleFallback = async ({ table, id, currentlyDisabled, idColumn = 'id' }) => {
@@ -157,12 +179,11 @@ const GestionarEstadoTab = ({
   // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
-    const entrada = parseIdOrNameFromInput(inputProducto);
-    let idFinal = entrada || productoSeleccionado;
-    if (!idFinal && inputProducto) {
-      const matchByName = productos.find(p => String(p.nombre).toLowerCase() === String(inputProducto).trim().toLowerCase());
-      if (matchByName) idFinal = matchByName.id;
-    }
+    // intentamos resolver id desde input o desde selección
+    let idFinal = parseIdFromInputGeneric(inputProducto, productos, 'id', 'nombre') || productoSeleccionado;
+    // si aún no hay id, intentar tomar id desde productoSeleccionado (select)
+    if (!idFinal && productoSeleccionado) idFinal = productoSeleccionado;
+
     const prod = productos.find(p => String(p.id) === String(idFinal));
     if (!prod) return alert('No se encontró ningún producto con ese ID o nombre.');
     const currentlyDisabled = !!prod.deleted_at;
@@ -179,12 +200,9 @@ const GestionarEstadoTab = ({
 
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
-    const entrada = parseIdOrNameFromInput(inputProveedor);
-    let idFinal = entrada || proveedorSeleccionado;
-    if (!idFinal && inputProveedor) {
-      const matchByName = proveedores.find(p => String(p.nombre).toLowerCase() === String(inputProveedor).trim().toLowerCase());
-      if (matchByName) idFinal = matchByName.id;
-    }
+    let idFinal = parseIdFromInputGeneric(inputProveedor, proveedores, 'id', 'nombre') || proveedorSeleccionado;
+    if (!idFinal && proveedorSeleccionado) idFinal = proveedorSeleccionado;
+
     const prov = proveedores.find(p => String(p.id) === String(idFinal));
     if (!prov) return alert('No se encontró ningún proveedor con ese ID o nombre.');
     const currentlyDisabled = !!prov.deleted_at;
@@ -201,8 +219,8 @@ const GestionarEstadoTab = ({
 
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
-    const entrada = parseIdOrNameFromInput(inputCategoria);
-    let idFinal = entrada || categoriaSeleccionada;
+    let idFinal = parseIdFromInputGeneric(inputCategoria, categorias, 'id', 'nombre') || categoriaSeleccionada;
+    if (!idFinal && categoriaSeleccionada) idFinal = categoriaSeleccionada;
 
     let cat = categorias.find(c => String(c.id) === String(idFinal));
     if (!cat && inputCategoria) {
@@ -225,13 +243,11 @@ const GestionarEstadoTab = ({
 
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
-    const entrada = parseIdOrNameFromInput(inputUsuario);
-    let idFinal = entrada || usuarioSeleccionado;
+    let idFinal = parseIdFromInputGeneric(inputUsuario, usuarios, 'id', 'display_name') || usuarioSeleccionado;
+    if (!idFinal && usuarioSeleccionado) idFinal = usuarioSeleccionado;
 
-    // Si entrada es display_name, parseIdOrNameFromInput ya devuelve el id si lo encuentra
     let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
-      // intentar buscar por display_name parcial o exacto
       user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase())
         || usuarios.find(u => String(u.display_name).toLowerCase().includes(String(inputUsuario).trim().toLowerCase()));
       if (user) idFinal = user.id;
