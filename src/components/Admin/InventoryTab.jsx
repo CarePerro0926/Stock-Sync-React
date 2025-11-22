@@ -7,6 +7,7 @@ import ResponsiveTable from '../ResponsiveTable';
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   useEffect(() => {
     console.log('--- DATOS EN INVENTORYTAB ---');
@@ -31,6 +32,14 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const productosFiltrados = useMemo(() => {
     let filtered = [...productos];
 
+    // Filtrar por estado (activo / inactivo) según checkbox
+    if (mostrarInactivos) {
+      filtered = filtered.filter(p => !!(p.deleted_at || p.disabled || p.inactivo));
+    } else {
+      filtered = filtered.filter(p => !(p.deleted_at || p.disabled || p.inactivo));
+    }
+
+    // Filtrar por categoría
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
@@ -39,6 +48,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
+    // Filtrar por texto
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
@@ -54,7 +64,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     }
 
     return filtered;
-  }, [productos, filtroCat, filtroTxt]);
+  }, [productos, filtroCat, filtroTxt, mostrarInactivos]);
 
   const tableData = useMemo(() => {
     return productosFiltrados.map(p => {
@@ -86,11 +96,11 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
-    <div className="w-100"> {/* w-100 agregado */}
+    <div className="w-100">
       <h5>Inventario</h5>
 
       <div className="row g-2 mb-3">
-        <div className="col">
+        <div className="col-md-4 col-12">
           <select
             id="filtroCatAdmin"
             className="form-select"
@@ -104,7 +114,8 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
             ))}
           </select>
         </div>
-        <div className="col">
+
+        <div className="col-md-4 col-12">
           <input
             id="filtroTxtAdmin"
             className="form-control"
@@ -113,10 +124,23 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
+
+        <div className="col-md-4 col-12 d-flex align-items-center">
+          <div className="form-check ms-md-3">
+            <input
+              id="chkMostrarInactivosProd"
+              className="form-check-input"
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={e => setMostrarInactivos(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="chkMostrarInactivosProd">Mostrar inactivos</label>
+          </div>
+        </div>
       </div>
 
       <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
-        <div className="table-responsive"> {/* envuelve en table-responsive */}
+        <div className="table-responsive">
           <ResponsiveTable
             headers={tableHeaders}
             data={tableData}
@@ -127,4 +151,4 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   );
 };
 
-export default InventoryTab; 
+export default InventoryTab;
