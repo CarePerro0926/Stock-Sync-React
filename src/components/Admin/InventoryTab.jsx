@@ -1,5 +1,5 @@
 // src/components/Admin/InventoryTab.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import ResponsiveTable from '../ResponsiveTable';
 import '../ResponsiveTable.css';
 
@@ -17,19 +17,32 @@ const normalizeBool = (val, defaultValue = false) => {
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
 
-const normalizeProducto = (p) => {
-  const deleted_at_raw = p?.deleted_at;
+/**
+ * normalizeProducto: devuelve solo los campos que la UI necesita,
+ * unificando nombres y tipos, y evitando incluir campos inesperados.
+ */
+const normalizeProducto = (p = {}) => {
+  const idRaw = p?.id ?? p?.product_id ?? '';
+  const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
+
+  const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
+  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+
+  const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
+  const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? 'Sin Categoría';
+  const cantidad = typeof p?.cantidad === 'number' ? p.cantidad : (typeof p?.stock === 'number' ? p.stock : 0);
+  const precio = typeof p?.precio === 'number' ? p.precio : (typeof p?.precio_unitario === 'number' ? p.precio_unitario : null);
+
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
-  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+
   return {
-    ...p,
-    id: p?.id ?? null,
-    nombre: p?.nombre ?? p?.display_name ?? 'Sin nombre',
-    categoria_nombre: p?.categoria_nombre ?? p?.categoria ?? 'Sin Categoría',
-    cantidad: typeof p?.cantidad === 'number' ? p.cantidad : (p?.stock ?? 0),
-    precio: typeof p?.precio === 'number' ? p.precio : (p?.precio_unitario ?? null),
+    id,
+    nombre,
+    categoria_nombre,
+    cantidad,
+    precio,
     deleted_at: isDeleted ? deleted_at : null,
     disabled,
     inactivo,
@@ -42,30 +55,31 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroTxt, setFiltroTxt] = useState('');
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  const productosNormalizados = useMemo(() => (productos || []).map(normalizeProducto), [productos]);
-
-  useEffect(() => {
-    // Logs de depuración (quitar en producción)
-    console.log('InventoryTab: productos recibidos (raw):', productos);
-    console.log('InventoryTab: productos normalizados:', productosNormalizados);
-  }, [productos, productosNormalizados]);
+  // Normalizamos y unificamos la estructura de los productos
+  const productosNormalizados = useMemo(() => {
+    return (productos || []).map(normalizeProducto);
+  }, [productos]);
 
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = productosNormalizados.map(p => p.categoria_nombre).filter(Boolean);
     const unicas = [...new Set(nombresDesdeProductos.map(n => String(n).trim()))];
-    const categoriasExtra = (categorias || []).map(c => (c?.nombre ? String(c.nombre).trim() : '')).filter(n => n && !unicas.includes(n));
+    const categoriasExtra = (categorias || [])
+      .map(c => (c?.nombre ? String(c.nombre).trim() : ''))
+      .filter(n => n && !unicas.includes(n));
     return ['Todas', ...unicas, ...categoriasExtra];
   }, [productosNormalizados, categorias]);
 
   const productosFiltrados = useMemo(() => {
     let filtered = [...productosNormalizados];
 
+    // Filtrado por estado (activo / inactivo) usando _inactive para mayor robustez
     if (mostrarInactivos) {
       filtered = filtered.filter(p => !!(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     } else {
       filtered = filtered.filter(p => !(p._inactive || p.deleted_at || p.disabled || p.inactivo));
     }
 
+    // Filtrar por categoría
     if (filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => {
@@ -74,6 +88,7 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
       });
     }
 
+    // Filtrar por texto (ID, nombre, categoría)
     if (filtroTxt.trim()) {
       const term = filtroTxt.toLowerCase().trim();
       filtered = filtered.filter(p => {
@@ -87,20 +102,22 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     return filtered;
   }, [productosNormalizados, filtroCat, filtroTxt, mostrarInactivos]);
 
-  const tableData = useMemo(() => productosFiltrados.map(p => {
-    let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
-    if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
-      nombreCategoria = 'Sin Categoría';
-    }
-    return {
-      id: p.id ?? '—',
-      nombre: p.nombre ?? 'Sin nombre',
-      categoriaNombre: nombreCategoria,
-      cantidad: p.cantidad ?? 0,
-      precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 }) : (p.precio ?? '—'),
-      _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
-    };
-  }), [productosFiltrados]);
+  const tableData = useMemo(() => {
+    return productosFiltrados.map(p => {
+      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
+      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
+        nombreCategoria = 'Sin Categoría';
+      }
+      return {
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
+        categoriaNombre: nombreCategoria,
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number' ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 }) : (p.precio ?? '—'),
+        _inactive: !!(p._inactive || p.deleted_at || p.disabled || p.inactivo)
+      };
+    });
+  }, [productosFiltrados]);
 
   const tableHeaders = [
     { key: 'id', label: 'ID' },
@@ -116,30 +133,53 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
 
       <div className="row g-2 mb-3">
         <div className="col-md-4 col-12">
-          <select id="filtroCatAdmin" className="form-select" value={filtroCat} onChange={e => setFiltroCat(e.target.value)}>
-            {listaCategoriasFiltro.map((cat, index) => <option key={`${cat}-${index}`} value={cat}>{cat}</option>)}
+          <select
+            id="filtroCatAdmin"
+            className="form-select"
+            value={filtroCat}
+            onChange={e => setFiltroCat(e.target.value)}
+          >
+            {listaCategoriasFiltro.map((cat, index) => (
+              <option key={`${cat}-${index}`} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="col-md-4 col-12">
-          <input id="filtroTxtAdmin" className="form-control" placeholder="Buscar por ID, nombre o categoría..." value={filtroTxt} onChange={e => setFiltroTxt(e.target.value)} />
+          <input
+            id="filtroTxtAdmin"
+            className="form-control"
+            placeholder="Buscar por ID, nombre o categoría..."
+            value={filtroTxt}
+            onChange={e => setFiltroTxt(e.target.value)}
+          />
         </div>
 
         <div className="col-md-4 col-12 d-flex align-items-center">
           <div className="form-check ms-md-3">
-            <input id="chkMostrarInactivosProd" className="form-check-input" type="checkbox" checked={mostrarInactivos} onChange={e => setMostrarInactivos(e.target.checked)} />
+            <input
+              id="chkMostrarInactivosProd"
+              className="form-check-input"
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={e => setMostrarInactivos(e.target.checked)}
+            />
             <label className="form-check-label" htmlFor="chkMostrarInactivosProd">Mostrar inactivos</label>
           </div>
         </div>
       </div>
 
-      {/* Debug visual temporal */}
+      {/* Debug visual temporal: muestra los primeros productos normalizados */}
       <div className="mb-3">
         <div className="alert alert-secondary">
           <strong>DEBUG</strong>
           <div>Productos recibidos: {productos.length}</div>
           <div style={{ maxHeight: 120, overflow: 'auto' }}>
-            <pre style={{ margin: 0 }}>{JSON.stringify(productos.slice(0, 10).map(p => ({ id: p.id, nombre: p.nombre, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}</pre>
+            <pre style={{ margin: 0 }}>
+{JSON.stringify(productosNormalizados.slice(0, 10).map(p => ({ id: p.id, nombre: p.nombre, deleted_at: p.deleted_at, _inactive: p._inactive })), null, 2)}
+            </pre>
           </div>
         </div>
       </div>
