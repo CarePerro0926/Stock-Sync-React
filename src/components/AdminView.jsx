@@ -8,9 +8,7 @@ import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
 
-/**
- * Helpers de normalización
- */
+/* Helpers */
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
   const s = String(val).trim().toLowerCase();
@@ -26,38 +24,50 @@ const normalizeBool = (val, defaultValue = false) => {
 };
 
 /**
- * normalizeProducto: normalización defensiva para que el frontend
- * reciba siempre los campos mínimos que espera la UI.
- * Convierte id a string, rellena nombre/categoría/stock/precio si faltan,
- * y calcula _inactive de forma robusta.
+ * normalizeProducto: mapea la estructura real de la vista
+ * vista_productos_con_categoria a los campos que la UI espera.
  */
 const normalizeProducto = (p = {}) => {
-  const idRaw = p?.id ?? p?.product_id ?? null;
+  const idRaw = p?.id ?? p?.product_id ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
 
   const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
-  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
   const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? 'Sin Categoría';
-  const cantidad = typeof p?.cantidad === 'number' ? p.cantidad : (typeof p?.stock === 'number' ? p.stock : 0);
-  const precio = typeof p?.precio === 'number' ? p.precio : (typeof p?.precio_unitario === 'number' ? p.precio_unitario : null);
+
+  const cantidad = typeof p?.cantidad === 'number'
+    ? p.cantidad
+    : (typeof p?.stock === 'number' ? p.stock : 0);
+
+  let precio = null;
+  if (typeof p?.precio === 'number') {
+    precio = p.precio;
+  } else if (typeof p?.precio === 'string' && p.precio.trim() !== '') {
+    const parsed = Number(String(p.precio).replace(/\D/g, ''));
+    precio = Number.isFinite(parsed) ? parsed : null;
+  } else if (typeof p?.precio_unitario === 'number') {
+    precio = p.precio_unitario;
+  } else if (typeof p?.unit_price === 'number') {
+    precio = p.unit_price;
+  } else {
+    precio = null;
+  }
 
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
 
   return {
-    // Devolvemos solo los campos que la UI necesita y mantenemos raw si hace falta
     id,
     nombre,
     categoria_nombre,
     cantidad,
     precio,
-    deleted_at: isDeleted ? deleted_at : null,
+    deleted_at: deleted_at,
     disabled,
     inactivo,
-    _inactive: Boolean(isDeleted) || disabled || inactivo,
+    _inactive: Boolean(deleted_at) || disabled || inactivo,
     _raw: p
   };
 };
@@ -106,76 +116,29 @@ const AdminView = ({
     }
   }, [productosProp]);
 
-  /**
-   * fetchProductos:
-   * - intenta la API externa (forzando no-cache con timestamp y cache:'no-store')
-   * - si la respuesta viene incompleta (p.e. items sin 'nombre'), hace fallback a la vista supabase 'vista_productos_con_categoria'
-   * - normaliza y setea productos
-   *
-   * Incluye logs de depuración para identificar respuestas incompletas.
-   */
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
         const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
-        // Log para depuración
-        console.log('[AdminView.fetchProductos] solicitando:', url);
         const res = await fetch(url, { cache: 'no-store' });
-        console.log('[AdminView.fetchProductos] status:', res.status);
-
-        // Intentamos leer el body como texto y parsearlo para evitar errores con 204/304
         const text = await res.text().catch(() => null);
         let data = null;
         try { data = JSON.parse(text); } catch { data = null; }
 
-        console.log('[AdminView.fetchProductos] parsed isArray:', Array.isArray(data), 'length:', Array.isArray(data) ? data.length : 0);
-
-        // Si la API devolvió un array y los objetos tienen los campos esperados, normalizamos y retornamos
-        if (res.ok && Array.isArray(data) && data.length > 0 && data.some(item => item && (item.nombre || item.categoria_nombre || item.cantidad || item.precio))) {
-          const normalized = data.map(normalizeProducto);
-          console.log('[AdminView.fetchProductos] usando datos API, normalized sample:', normalized.slice(0, 5));
-          setProductos(normalized);
-          return normalized;
-        }
-
-        // Si la API devolvió objetos incompletos (p.e. solo id), hacemos fallback a la vista supabase
         if (res.ok && Array.isArray(data) && data.length > 0) {
-          try {
-            const { data: viewData, error: viewErr } = await supabase
-              .from('vista_productos_con_categoria')
-              .select('*')
-              .order('nombre', { ascending: true });
-            if (!viewErr && Array.isArray(viewData) && viewData.length > 0) {
-              const normalized = viewData.map(normalizeProducto);
-              console.log('[AdminView.fetchProductos] fallback vista_productos_con_categoria used, length:', normalized.length);
-              setProductos(normalized);
-              return normalized;
-            }
-          } catch (err) {
-            // registramos el error del fallback
-            console.warn('[AdminView.fetchProductos] fallback supabase vista failed', err);
-          }
-
-          // si no hay vista, normalizamos lo que haya rellenando campos mínimos
           const normalized = data.map(normalizeProducto);
-          console.log('[AdminView.fetchProductos] API devolvió objetos incompletos; normalizando lo que haya');
           setProductos(normalized);
           return normalized;
         }
       }
 
-      // Si no hay VITE_API_URL o la llamada falló, usar supabase directamente
       const { data, error } = await supabase
         .from('vista_productos_con_categoria')
         .select('*')
         .order('nombre', { ascending: true });
 
-      if (error) {
-        console.error('[AdminView.fetchProductos] supabase error:', error);
-        throw error;
-      }
+      if (error) throw error;
       const normalized = (data || []).map(normalizeProducto);
-      console.log('[AdminView.fetchProductos] supabase normalized length:', normalized.length);
       setProductos(normalized);
       return normalized;
     } catch (err) {
@@ -190,11 +153,6 @@ const AdminView = ({
     }
   }, [productosProp, fetchProductos]);
 
-  /**
-   * toggleProducto: inhabilita/reactiva producto.
-   * - Llama al endpoint PATCH y luego fuerza recarga usando fetchProductos()
-   * - Devuelve true/false según éxito
-   */
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
       if (import.meta.env.VITE_API_URL) {
@@ -212,7 +170,6 @@ const AdminView = ({
           return false;
         }
 
-        // pequeña espera y forzar fetch fresco
         await new Promise(r => setTimeout(r, 250));
         const nuevos = await fetchProductos();
         if (Array.isArray(nuevos)) setProductos(nuevos);
@@ -221,12 +178,10 @@ const AdminView = ({
         return true;
       }
 
-      // fallback supabase directo
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('productos').update(payload).eq('id', id);
       if (error) throw error;
 
-      // optimistic update + refresh
       const now = !currentlyDisabled ? new Date().toISOString() : null;
       setProductos(prev => prev.map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p._raw, deleted_at: now }) : p)));
       await new Promise(r => setTimeout(r, 150));
