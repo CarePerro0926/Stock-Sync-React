@@ -1,11 +1,11 @@
 // src/components/AdminView.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/services/supabaseClient';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
-import DeleteTab from './Admin/GestionarEstadoTabTab';
+import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
 import ResponsiveTable from './ResponsiveTable';
 
@@ -25,6 +25,12 @@ const AdminView = ({
   onUpdateSuccess
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+
+  // usuarios (se cargan si no se pasan desde el padre)
+  const [usuarios, setUsuarios] = useState([]);
+  const [usuariosLoading, setUsuariosLoading] = useState(false);
+  const [usuariosError, setUsuariosError] = useState('');
+  const fetchedUsersRef = useRef(false);
 
   const handleClickOutside = useCallback((event) => {
     const menu = document.getElementById('adminMenu');
@@ -60,10 +66,6 @@ const AdminView = ({
   // -------------------------
   // Funciones auxiliares para activar/desactivar el borrado lógico
   // -------------------------
-  // Estas funciones establecen deleted_at = now() para deshabilitar,
-  // or deleted_at = null para reactivar. Tras la operación, llaman a
-  // onUpdateSuccess() si se proporciona, para que el proceso padre pueda recargar los datos.
-
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
@@ -118,26 +120,68 @@ const AdminView = ({
     }
   };
 
-  // Si se implementa soft-delete para usuarios, se descomenta e implementa toggleUsuario
-  /*
+  // toggleUsuario: soft-delete en user_profiles usando user_id
   const toggleUsuario = async (userId, currentlyDisabled) => {
     try {
-      // ejemplo: actualizar user_profiles.deleted_at
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase
         .from('user_profiles')
-        .upsert({ user_id: userId, deleted_at: payload.deleted_at }, { onConflict: 'user_id' });
+        .update(payload)
+        .eq('user_id', userId);
 
       if (error) throw error;
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (e) { console.error(e); }
       }
+      // actualizar lista localmente para reflejar cambio inmediato
+      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
     } catch (err) {
       console.error('Error toggling usuario:', err);
       alert('Ocurrió un error al cambiar el estado del usuario.');
     }
   };
-  */
+
+  // -------------------------
+  // Cargar usuarios si es necesario (si no se pasan desde el padre)
+  // -------------------------
+  useEffect(() => {
+    let mounted = true;
+
+    // si ya hicimos fetch, no volver a hacerlo
+    if (fetchedUsersRef.current) return () => { mounted = false; };
+
+    const fetchUsuarios = async () => {
+      setUsuariosLoading(true);
+      setUsuariosError('');
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('user_id, nombres, apellidos, deleted_at')
+          .order('nombres', { ascending: true });
+
+        if (error) throw error;
+        if (!mounted) return;
+
+        const normalized = (data || []).map(u => ({
+          id: u.user_id,
+          nombres: u.nombres || '',
+          apellidos: u.apellidos || '',
+          deleted_at: u.deleted_at || null
+        }));
+        setUsuarios(normalized);
+        fetchedUsersRef.current = true;
+      } catch (err) {
+        console.error('Error cargando usuarios:', err);
+        setUsuariosError('No fue posible cargar usuarios. Revisa RLS/Policies o la existencia de la tabla user_profiles.');
+      } finally {
+        if (mounted) setUsuariosLoading(false);
+      }
+    };
+
+    fetchUsuarios();
+
+    return () => { mounted = false; };
+  }, []); // efecto solo al montar
 
   return (
     <div className="card p-4 w-100">
@@ -204,7 +248,7 @@ const AdminView = ({
         <InventoryTab
           productos={productos}
           categorias={categorias}
-          onToggleProducto={toggleProducto}    // <-- pasa la función de inhabilitar/reactivar
+          onToggleProducto={toggleProducto}
         />
       )}
 
@@ -213,7 +257,7 @@ const AdminView = ({
           proveedores={proveedores}
           onAddProveedor={onAddProveedor}
           onDeleteProveedor={onDeleteProveedor}
-          onToggleProveedor={toggleProveedor} // <-- pasa la función de inhabilitar/reactivar
+          onToggleProveedor={toggleProveedor}
         />
       )}
 
@@ -239,23 +283,26 @@ const AdminView = ({
       )}
 
       {vistaActiva === 'delete' && (
-        <DeleteTab
+        <GestionarEstadoTab
           productos={productos}
           proveedores={proveedores}
           categorias={categorias}
-          // compatibilidad: DeleteTab acepta onDeleteX (legacy) o onToggleX (nuevo)
+          usuarios={usuarios}
+          usuariosLoading={usuariosLoading}
+          usuariosError={usuariosError}
           onDeleteProducto={onDeleteProducto}
           onDeleteProveedor={onDeleteProveedor}
           onDeleteCategoria={onDeleteCategoria}
           onToggleProducto={toggleProducto}
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
+          onToggleUsuario={toggleUsuario}
         />
       )}
 
       {vistaActiva === 'usuarios' && (
         <UsuariosView
-          // si se implementa soft-delete para usuarios, pasa aquí la función equivalente:
+          // si implementas soft-delete para usuarios, puedes pasar onToggleUsuario aquí también
           // onToggleUsuario={toggleUsuario}
         />
       )}
