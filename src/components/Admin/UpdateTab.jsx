@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
-const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess }) => {
+const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdateSuccess }) => {
   // ---------- PRODUCTOS ----------
   const [busqueda, setBusqueda] = useState('');
   const [sugerencias, setSugerencias] = useState([]);
@@ -22,15 +22,15 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
 
   const handleBuscar = (e) => {
     e.preventDefault();
-    const entrada = busqueda.trim().toLowerCase();
+    const entrada = (busqueda || '').trim().toLowerCase();
     let encontrado = productos.find(p => String(p.id).toLowerCase() === entrada);
 
     if (!encontrado) {
-      encontrado = productos.find(p => p.nombre.toLowerCase() === entrada);
+      encontrado = productos.find(p => (p.nombre || '').toLowerCase() === entrada);
     }
 
     if (!encontrado && productoSeleccionado) {
-      encontrado = productos.find(p => String(p.id) === productoSeleccionado);
+      encontrado = productos.find(p => String(p.id) === String(productoSeleccionado));
     }
 
     if (!encontrado) {
@@ -43,9 +43,9 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
     setProducto(encontrado);
     setFormData({
       nombre: encontrado.nombre || '',
-      precio: encontrado.precio || '',
-      cantidad: encontrado.cantidad || '',
-      categoria: encontrado.categoria_id || ''
+      precio: encontrado.precio ?? '',
+      cantidad: encontrado.cantidad ?? '',
+      categoria: encontrado.categoria_id ?? ''
     });
     setSugerencias([]);
   };
@@ -90,7 +90,9 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
       return;
     }
 
-    if (onUpdateSuccess) onUpdateSuccess();
+    if (onUpdateSuccess) {
+      try { onUpdateSuccess(); } catch (err) { console.error(err); }
+    }
 
     alert('Producto actualizado correctamente.');
     setBusqueda('');
@@ -108,37 +110,37 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
   const [proveedor, setProveedor] = useState(null);
   const [formProv, setFormProv] = useState({
     nombre: '',
-    correo: '',
+    email: '',
     telefono: ''
   });
 
   const handleBuscarProv = (e) => {
     e.preventDefault();
-    const entrada = busquedaProv.trim().toLowerCase();
+    const entrada = (busquedaProv || '').trim().toLowerCase();
     let encontrado = proveedores.find(p => String(p.id).toLowerCase() === entrada);
 
     if (!encontrado) {
       encontrado = proveedores.find(p => (p.nombre || '').toLowerCase() === entrada);
     }
     if (!encontrado) {
-      encontrado = proveedores.find(p => (p.correo || '').toLowerCase() === entrada);
+      encontrado = proveedores.find(p => (p.email || '').toLowerCase() === entrada);
     }
 
     if (!encontrado && proveedorSeleccionado) {
-      encontrado = proveedores.find(p => String(p.id) === proveedorSeleccionado);
+      encontrado = proveedores.find(p => String(p.id) === String(proveedorSeleccionado));
     }
 
     if (!encontrado) {
       alert('Proveedor no encontrado.');
       setProveedor(null);
-      setFormProv({ nombre: '', correo: '', telefono: '' });
+      setFormProv({ nombre: '', email: '', telefono: '' });
       return;
     }
 
     setProveedor(encontrado);
     setFormProv({
       nombre: encontrado.nombre || '',
-      correo: encontrado.correo || '',
+      email: encontrado.email || '',
       telefono: encontrado.telefono || ''
     });
     setSugerenciasProv([]);
@@ -162,8 +164,8 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
       alert('Nombre de proveedor inválido.');
       return;
     }
-    if (!formProv.correo.trim() || !/^\S+@\S+\.\S+$/.test(formProv.correo)) {
-      alert('Correo de proveedor inválido.');
+    if (!formProv.email.trim() || !/^\S+@\S+\.\S+$/.test(formProv.email)) {
+      alert('Email de proveedor inválido.');
       return;
     }
 
@@ -171,8 +173,8 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
       .from('proveedores')
       .update({
         nombre: formProv.nombre.trim(),
-        correo: formProv.correo.trim(),
-        telefono: formProv.telefono.trim()
+        email: formProv.email.trim(),
+        telefono: formProv.telefono ? formProv.telefono.trim() : null
       })
       .eq('id', proveedor.id);
 
@@ -181,13 +183,15 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
       return;
     }
 
-    if (onUpdateSuccess) onUpdateSuccess();
+    if (onUpdateSuccess) {
+      try { onUpdateSuccess(); } catch (err) { console.error(err); }
+    }
 
     alert('Proveedor actualizado correctamente.');
     setBusquedaProv('');
     setProveedorSeleccionado('');
     setProveedor(null);
-    setFormProv({ nombre: '', correo: '', telefono: '' });
+    setFormProv({ nombre: '', email: '', telefono: '' });
   };
 
   return (
@@ -206,7 +210,7 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
                 const entrada = e.target.value;
                 setBusqueda(entrada);
 
-                const texto = entrada.trim().toLowerCase();
+                const texto = (entrada || '').trim().toLowerCase();
                 if (texto.length === 0) {
                   setSugerencias([]);
                   return;
@@ -337,13 +341,13 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
           <div className="col-12 col-md-8 position-relative">
             <input
               className="form-control"
-              placeholder="Buscar por nombre o correo"
+              placeholder="Buscar por nombre o email"
               value={busquedaProv}
               onChange={(e) => {
                 const entrada = e.target.value;
                 setBusquedaProv(entrada);
 
-                const texto = entrada.trim().toLowerCase();
+                const texto = (entrada || '').trim().toLowerCase();
                 if (texto.length === 0) {
                   setSugerenciasProv([]);
                   return;
@@ -351,7 +355,7 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
 
                 const coincidencias = proveedores.filter(p =>
                   (p.nombre || '').toLowerCase().includes(texto) ||
-                  (p.correo || '').toLowerCase().includes(texto) ||
+                  (p.email || '').toLowerCase().includes(texto) ||
                   String(p.id).toLowerCase().includes(texto)
                 );
 
@@ -370,14 +374,14 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
                       setProveedor(p);
                       setFormProv({
                         nombre: p.nombre || '',
-                        correo: p.correo || '',
+                        email: p.email || '',
                         telefono: p.telefono || ''
                       });
-                      setBusquedaProv(`${p.nombre} - ${p.correo}`);
+                      setBusquedaProv(`${p.nombre} - ${p.email}`);
                       setSugerenciasProv([]);
                     }}
                   >
-                    {p.nombre} - {p.correo}
+                    {p.nombre} - {p.email}
                   </li>
                 ))}
               </ul>
@@ -396,12 +400,27 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
           <select
             className="form-select"
             value={proveedorSeleccionado}
-            onChange={(e) => setProveedorSeleccionado(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setProveedorSeleccionado(val);
+              const encontrado = proveedores.find(p => String(p.id) === String(val));
+              if (encontrado) {
+                setProveedor(encontrado);
+                setFormProv({
+                  nombre: encontrado.nombre || '',
+                  email: encontrado.email || '',
+                  telefono: encontrado.telefono || ''
+                });
+              } else {
+                setProveedor(null);
+                setFormProv({ nombre: '', email: '', telefono: '' });
+              }
+            }}
           >
             <option value="">—</option>
             {proveedores.map(p => (
               <option key={p.id} value={p.id}>
-                {p.nombre} - {p.correo}
+                {p.nombre} - {p.email}
               </option>
             ))}
           </select>
@@ -422,12 +441,12 @@ const UpdateTab = ({ productos, categorias, proveedores = [], onUpdateSuccess })
               />
             </div>
             <div className="col-12 col-md-6">
-              <label className="form-label">Correo</label>
+              <label className="form-label">Email</label>
               <input
-                name="correo"
+                name="email"
                 type="email"
                 className="form-control"
-                value={formProv.correo}
+                value={formProv.email}
                 onChange={handleChangeProv}
                 required
               />
