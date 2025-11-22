@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
-const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdateSuccess }) => {
-  // ---------- PRODUCTOS ----------
+const UpdateTab = ({ productos, categorias, proveedores, onUpdateSuccess, onUpdateProveedorSuccess }) => {
+  // ---------------------- Estado: Productos ----------------------
   const [busqueda, setBusqueda] = useState('');
   const [sugerencias, setSugerencias] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
@@ -17,20 +17,23 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
 
   const getListaCategorias = () => {
     if (!categorias || !Array.isArray(categorias)) return [];
-    return categorias.map(cat => ({ id: cat.id, nombre: cat.nombre }));
+    return categorias.map(cat => ({
+      id: cat.id,
+      nombre: cat.nombre
+    }));
   };
 
   const handleBuscar = (e) => {
-    e && e.preventDefault();
-    const entrada = (busqueda || '').trim().toLowerCase();
-    let encontrado = (productos || []).find(p => String(p.id).toLowerCase() === entrada);
+    e.preventDefault();
+    const entrada = busqueda.trim().toLowerCase();
+    let encontrado = productos.find(p => String(p.id).toLowerCase() === entrada);
 
     if (!encontrado) {
-      encontrado = (productos || []).find(p => (p.nombre || '').toLowerCase() === entrada);
+      encontrado = productos.find(p => p.nombre.toLowerCase() === entrada);
     }
 
     if (!encontrado && productoSeleccionado) {
-      encontrado = (productos || []).find(p => String(p.id) === String(productoSeleccionado));
+      encontrado = productos.find(p => String(p.id) === productoSeleccionado);
     }
 
     if (!encontrado) {
@@ -43,9 +46,9 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     setProducto(encontrado);
     setFormData({
       nombre: encontrado.nombre || '',
-      precio: encontrado.precio ?? '',
-      cantidad: encontrado.cantidad ?? '',
-      categoria: encontrado.categoria_id ?? ''
+      precio: encontrado.precio || '',
+      cantidad: encontrado.cantidad || '',
+      categoria: encontrado.categoria_id || ''
     });
     setSugerencias([]);
   };
@@ -56,7 +59,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
   };
 
   const handleSubmit = async (e) => {
-    e && e.preventDefault();
+    e.preventDefault();
 
     if (!producto || !producto.id) {
       alert('Producto no válido. Primero búscalo correctamente.');
@@ -81,7 +84,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
         nombre: formData.nombre.trim(),
         precio,
         cantidad,
-        categoria_id: formData.categoria || null
+        categoria_id: formData.categoria
       })
       .eq('id', producto.id);
 
@@ -91,7 +94,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     }
 
     if (onUpdateSuccess) {
-      try { onUpdateSuccess(); } catch (e) { console.error(e); }
+      onUpdateSuccess();
     }
 
     alert('Producto actualizado correctamente.');
@@ -103,77 +106,94 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
 
   const listaCategorias = getListaCategorias();
 
-  // ---------- PROVEEDORES (misma UX que PRODUCTOS) ----------
+  // ---------------------- Estado: Proveedores ----------------------
   const [busquedaProv, setBusquedaProv] = useState('');
   const [sugerenciasProv, setSugerenciasProv] = useState([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
   const [proveedor, setProveedor] = useState(null);
-  const [formProv, setFormProv] = useState({
+  const [formProvData, setFormProvData] = useState({
     nombre: '',
     email: '',
-    telefono: ''
+    telefono: '',
+    direccion: ''
   });
 
-  const handleBuscarProv = (e) => {
-    e && e.preventDefault();
-    const entrada = (busquedaProv || '').trim().toLowerCase();
-    let encontrado = (proveedores || []).find(p => String(p.id).toLowerCase() === entrada);
+  const getListaProveedores = () => {
+    if (!proveedores || !Array.isArray(proveedores)) return [];
+    return proveedores.map(pr => ({
+      id: pr.id,
+      nombre: pr.nombre,
+      email: pr.email || ''
+    }));
+  };
 
-    if (!encontrado) {
-      encontrado = (proveedores || []).find(p => (p.nombre || '').toLowerCase() === entrada);
-    }
-    if (!encontrado) {
-      encontrado = (proveedores || []).find(p => (p.email || '').toLowerCase() === entrada);
-    }
+  const handleBuscarProveedor = (e) => {
+    e.preventDefault();
+    const entrada = busquedaProv.trim().toLowerCase();
+    let encontrado =
+      proveedores.find(pr => String(pr.id).toLowerCase() === entrada) ||
+      proveedores.find(pr => (pr.nombre || '').toLowerCase() === entrada) ||
+      proveedores.find(pr => (pr.email || '').toLowerCase() === entrada);
 
     if (!encontrado && proveedorSeleccionado) {
-      encontrado = (proveedores || []).find(p => String(p.id) === String(proveedorSeleccionado));
+      encontrado = proveedores.find(pr => String(pr.id) === proveedorSeleccionado);
     }
 
     if (!encontrado) {
       alert('Proveedor no encontrado.');
       setProveedor(null);
-      setFormProv({ nombre: '', email: '', telefono: '' });
+      setFormProvData({ nombre: '', email: '', telefono: '', direccion: '' });
       return;
     }
 
     setProveedor(encontrado);
-    setFormProv({
+    setFormProvData({
       nombre: encontrado.nombre || '',
       email: encontrado.email || '',
-      telefono: encontrado.telefono || ''
+      telefono: encontrado.telefono || '',
+      direccion: encontrado.direccion || ''
     });
     setSugerenciasProv([]);
   };
 
-  const handleChangeProv = (e) => {
+  const handleProvChange = (e) => {
     const { name, value } = e.target;
-    setFormProv(prev => ({ ...prev, [name]: value }));
+    setFormProvData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmitProv = async (e) => {
-    e && e.preventDefault();
+  const handleSubmitProveedor = async (e) => {
+    e.preventDefault();
 
     if (!proveedor || !proveedor.id) {
       alert('Proveedor no válido. Primero búscalo correctamente.');
       return;
     }
 
-    if (!formProv.nombre.trim()) {
-      alert('Nombre de proveedor inválido.');
+    // Validaciones básicas
+    const email = (formProvData.email || '').trim();
+    const nombre = (formProvData.nombre || '').trim();
+    const telefono = (formProvData.telefono || '').trim();
+    const direccion = (formProvData.direccion || '').trim();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      alert('Email inválido.');
       return;
     }
-    if (!formProv.email.trim() || !/^\S+@\S+\.\S+$/.test(formProv.email)) {
-      alert('Email de proveedor inválido.');
+
+    // Si manejas numérico para teléfono, puedes validar:
+    if (telefono && !/^[0-9+\-\s()]{7,}$/.test(telefono)) {
+      alert('Teléfono inválido.');
       return;
     }
 
     const { error } = await supabase
       .from('proveedores')
       .update({
-        nombre: formProv.nombre.trim(),
-        email: formProv.email.trim(),
-        telefono: formProv.telefono ? formProv.telefono.trim() : null
+        nombre,
+        email,
+        telefono,
+        direccion
       })
       .eq('id', proveedor.id);
 
@@ -182,20 +202,22 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
       return;
     }
 
-    if (onUpdateSuccess) {
-      try { onUpdateSuccess(); } catch (e) { console.error(e); }
+    if (onUpdateProveedorSuccess) {
+      onUpdateProveedorSuccess();
     }
 
     alert('Proveedor actualizado correctamente.');
     setBusquedaProv('');
     setProveedorSeleccionado('');
     setProveedor(null);
-    setFormProv({ nombre: '', email: '', telefono: '' });
+    setFormProvData({ nombre: '', email: '', telefono: '', direccion: '' });
   };
+
+  const listaProveedores = getListaProveedores();
 
   return (
     <>
-      {/* ---------- PRODUCTOS ---------- */}
+      {/* ---------------------- Sección: Actualizar Producto ---------------------- */}
       <h5>Actualizar Producto</h5>
 
       <form onSubmit={handleBuscar} className="mb-4">
@@ -209,14 +231,14 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
                 const entrada = e.target.value;
                 setBusqueda(entrada);
 
-                const texto = (entrada || '').trim().toLowerCase();
+                const texto = entrada.trim().toLowerCase();
                 if (texto.length === 0) {
                   setSugerencias([]);
                   return;
                 }
 
-                const coincidencias = (productos || []).filter(p =>
-                  (p.nombre || '').toLowerCase().includes(texto) ||
+                const coincidencias = productos.filter(p =>
+                  p.nombre.toLowerCase().includes(texto) ||
                   String(p.id).toLowerCase().includes(texto)
                 );
 
@@ -235,9 +257,9 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
                       setProducto(p);
                       setFormData({
                         nombre: p.nombre || '',
-                        precio: p.precio ?? '',
-                        cantidad: p.cantidad ?? '',
-                        categoria: p.categoria_id ?? ''
+                        precio: p.precio || '',
+                        cantidad: p.cantidad || '',
+                        categoria: p.categoria_id || ''
                       });
                       setBusqueda(`${p.id} - ${p.nombre}`);
                       setSugerencias([]);
@@ -251,7 +273,9 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           </div>
 
           <div className="col-12 col-md-4">
-            <button type="submit" className="btn btn-outline-primary w-100">Buscar</button>
+            <button type="submit" className="btn btn-outline-primary w-100">
+              Buscar
+            </button>
           </div>
         </div>
 
@@ -260,26 +284,10 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           <select
             className="form-select"
             value={productoSeleccionado}
-            onChange={(e) => {
-              const val = e.target.value;
-              setProductoSeleccionado(val);
-              const encontrado = (productos || []).find(p => String(p.id) === String(val));
-              if (encontrado) {
-                setProducto(encontrado);
-                setFormData({
-                  nombre: encontrado.nombre || '',
-                  precio: encontrado.precio ?? '',
-                  cantidad: encontrado.cantidad ?? '',
-                  categoria: encontrado.categoria_id ?? ''
-                });
-              } else {
-                setProducto(null);
-                setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
-              }
-            }}
+            onChange={(e) => setProductoSeleccionado(e.target.value)}
           >
             <option value="">—</option>
-            {(productos || []).map(p => (
+            {productos.map(p => (
               <option key={p.id} value={p.id}>
                 {p.id} - {p.nombre}
               </option>
@@ -289,25 +297,54 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
       </form>
 
       {producto && (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="mb-5">
           <div className="row g-2 mb-3">
             <div className="col-12">
               <label className="form-label">Nombre</label>
-              <input name="nombre" className="form-control" value={formData.nombre} onChange={handleChange} required />
+              <input
+                name="nombre"
+                className="form-control"
+                value={formData.nombre}
+                onChange={handleChange}
+                required
+              />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Precio</label>
-              <input name="precio" type="number" step="0.01" className="form-control" value={formData.precio} onChange={handleChange} required />
+              <input
+                name="precio"
+                type="number"
+                step="0.01"
+                className="form-control"
+                value={formData.precio}
+                onChange={handleChange}
+                required
+              />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Cantidad</label>
-              <input name="cantidad" type="number" className="form-control" value={formData.cantidad} onChange={handleChange} required />
+              <input
+                name="cantidad"
+                type="number"
+                className="form-control"
+                value={formData.cantidad}
+                onChange={handleChange}
+                required
+              />
             </div>
             <div className="col-12">
               <label className="form-label">Categoría</label>
-              <select name="categoria" className="form-select" value={formData.categoria} onChange={handleChange} required>
+              <select
+                name="categoria"
+                className="form-select"
+                value={formData.categoria}
+                onChange={handleChange}
+                required
+              >
                 <option value="">Selecciona una categoría</option>
-                {listaCategorias.map(cat => (<option key={cat.id} value={cat.id}>{cat.nombre}</option>))}
+                {listaCategorias.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -317,10 +354,10 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
         </form>
       )}
 
-      {/* ---------- PROVEEDORES ---------- */}
-      <h5 className="mt-5">Actualizar Proveedor</h5>
+      {/* ---------------------- Sección: Actualizar Proveedor ---------------------- */}
+      <h5>Actualizar Proveedor</h5>
 
-      <form onSubmit={handleBuscarProv} className="mb-4">
+      <form onSubmit={handleBuscarProveedor} className="mb-4">
         <div className="row g-2 mb-2">
           <div className="col-12 col-md-8 position-relative">
             <input
@@ -331,16 +368,16 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
                 const entrada = e.target.value;
                 setBusquedaProv(entrada);
 
-                const texto = (entrada || '').trim().toLowerCase();
+                const texto = entrada.trim().toLowerCase();
                 if (texto.length === 0) {
                   setSugerenciasProv([]);
                   return;
                 }
 
-                const coincidencias = (proveedores || []).filter(p =>
-                  (p.nombre || '').toLowerCase().includes(texto) ||
-                  (p.email || '').toLowerCase().includes(texto) ||
-                  String(p.id).toLowerCase().includes(texto)
+                const coincidencias = proveedores.filter(pr =>
+                  (pr.nombre || '').toLowerCase().includes(texto) ||
+                  (pr.email || '').toLowerCase().includes(texto) ||
+                  String(pr.id).toLowerCase().includes(texto)
                 );
 
                 setSugerenciasProv(coincidencias.slice(0, 5));
@@ -349,23 +386,25 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
 
             {busquedaProv && sugerenciasProv.length > 0 && (
               <ul className="list-group position-absolute z-3 w-100">
-                {sugerenciasProv.map(p => (
+                {sugerenciasProv.map(pr => (
                   <li
-                    key={p.id}
+                    key={pr.id}
                     className="list-group-item list-group-item-action"
                     style={{ cursor: 'pointer' }}
                     onClick={() => {
-                      setProveedor(p);
-                      setFormProv({
-                        nombre: p.nombre || '',
-                        email: p.email || '',
-                        telefono: p.telefono || ''
+                      setProveedor(pr);
+                      setFormProvData({
+                        nombre: pr.nombre || '',
+                        email: pr.email || '',
+                        telefono: pr.telefono || '',
+                        direccion: pr.direccion || ''
                       });
-                      setBusquedaProv(`${p.id} - ${p.nombre} - ${p.email}`);
+                      const etiqueta = `${pr.id} - ${pr.nombre}${pr.email ? ' - ' + pr.email : ''}`;
+                      setBusquedaProv(etiqueta);
                       setSugerenciasProv([]);
                     }}
                   >
-                    {p.id} - {p.nombre} - {p.email}
+                    {pr.id} - {pr.nombre}{pr.email ? ` - ${pr.email}` : ''}
                   </li>
                 ))}
               </ul>
@@ -373,7 +412,9 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           </div>
 
           <div className="col-12 col-md-4">
-            <button type="submit" className="btn btn-outline-primary w-100">Buscar</button>
+            <button type="submit" className="btn btn-outline-primary w-100">
+              Buscar
+            </button>
           </div>
         </div>
 
@@ -382,27 +423,12 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
           <select
             className="form-select"
             value={proveedorSeleccionado}
-            onChange={(e) => {
-              const val = e.target.value;
-              setProveedorSeleccionado(val);
-              const encontrado = (proveedores || []).find(p => String(p.id) === String(val));
-              if (encontrado) {
-                setProveedor(encontrado);
-                setFormProv({
-                  nombre: encontrado.nombre || '',
-                  email: encontrado.email || '',
-                  telefono: encontrado.telefono || ''
-                });
-              } else {
-                setProveedor(null);
-                setFormProv({ nombre: '', email: '', telefono: '' });
-              }
-            }}
+            onChange={(e) => setProveedorSeleccionado(e.target.value)}
           >
             <option value="">—</option>
-            {(proveedores || []).map(p => (
-              <option key={p.id} value={p.id}>
-                {p.id} - {p.nombre} - {p.email}
+            {listaProveedores.map(pr => (
+              <option key={pr.id} value={pr.id}>
+                {pr.id} - {pr.nombre}{pr.email ? ` - ${pr.email}` : ''}
               </option>
             ))}
           </select>
@@ -410,19 +436,45 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
       </form>
 
       {proveedor && (
-        <form onSubmit={handleSubmitProv}>
+        <form onSubmit={handleSubmitProveedor}>
           <div className="row g-2 mb-3">
-            <div className="col-12">
+            <div className="col-12 col-md-6">
               <label className="form-label">Nombre</label>
-              <input name="nombre" className="form-control" value={formProv.nombre} onChange={handleChangeProv} required />
+              <input
+                name="nombre"
+                className="form-control"
+                value={formProvData.nombre}
+                onChange={handleProvChange}
+                required
+              />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Email</label>
-              <input name="email" type="email" className="form-control" value={formProv.email} onChange={handleChangeProv} required />
+              <input
+                name="email"
+                type="email"
+                className="form-control"
+                value={formProvData.email}
+                onChange={handleProvChange}
+              />
             </div>
             <div className="col-12 col-md-6">
               <label className="form-label">Teléfono</label>
-              <input name="telefono" className="form-control" value={formProv.telefono} onChange={handleChangeProv} />
+              <input
+                name="telefono"
+                className="form-control"
+                value={formProvData.telefono}
+                onChange={handleProvChange}
+              />
+            </div>
+            <div className="col-12 col-md-6">
+              <label className="form-label">Dirección</label>
+              <input
+                name="direccion"
+                className="form-control"
+                value={formProvData.direccion}
+                onChange={handleProvChange}
+              />
             </div>
           </div>
           <button type="submit" className="btn w-100 text-white" style={{ backgroundColor: '#0F2C54', borderColor: '#0F2C54' }}>
