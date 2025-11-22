@@ -58,11 +58,11 @@ const AdminView = ({
   };
 
   // -------------------------
-  // Soft-delete toggle helpers
+  // Funciones auxiliares para activar/desactivar el borrado lógico
   // -------------------------
-  // These functions set deleted_at = now() to inhabilitar,
-  // or deleted_at = null to reactivar. After success they call
-  // onUpdateSuccess() if provided so the parent can reload data.
+  // Estas funciones establecen deleted_at = now() para deshabilitar,
+  // or deleted_at = null para reactivar. Tras la operación, llaman a
+  // onUpdateSuccess() si se proporciona, para que el proceso padre pueda recargar los datos.
 
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
@@ -118,7 +118,7 @@ const AdminView = ({
     }
   };
 
-  // Si implementas soft-delete para usuarios, descomenta e implementa toggleUsuario
+  // Si se implementa soft-delete para usuarios, se descomenta e implementa toggleUsuario
   /*
   const toggleUsuario = async (userId, currentlyDisabled) => {
     try {
@@ -255,7 +255,7 @@ const AdminView = ({
 
       {vistaActiva === 'usuarios' && (
         <UsuariosView
-          // si implementas soft-delete para usuarios, pasa aquí la función equivalente:
+          // si se implementa soft-delete para usuarios, pasa aquí la función equivalente:
           // onToggleUsuario={toggleUsuario}
         />
       )}
