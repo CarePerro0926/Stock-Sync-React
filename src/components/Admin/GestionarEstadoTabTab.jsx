@@ -10,33 +10,41 @@ const GestionarEstadoTab = ({
   productos = [],
   proveedores: proveedoresProp = [],
   categorias: categoriasProp = [],
-  usuarios: usuariosProp = []
+  usuarios: usuariosProp = [] // opcional: pasar desde AdminView
 }) => {
-  // -------------------- Estados --------------------
+  // Estados para producto
   const [inputProducto, setInputProducto] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [sugerenciasProducto, setSugerenciasProducto] = useState([]);
 
+  // Estados para proveedor
   const [inputProveedor, setInputProveedor] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
   const [sugerenciasProveedor, setSugerenciasProveedor] = useState([]);
   const [proveedores, setProveedores] = useState(proveedoresProp);
 
+  // Estados para categoría
   const [inputCategoria, setInputCategoria] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [sugerenciasCategoria, setSugerenciasCategoria] = useState([]);
   const [categorias, setCategorias] = useState(categoriasProp);
 
+  // Estados para usuario
   const [inputUsuario, setInputUsuario] = useState('');
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
   const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
   const [usuarios, setUsuarios] = useState(usuariosProp);
+  const [usuariosLoading, setUsuariosLoading] = useState(false);
+  const [usuariosError, setUsuariosError] = useState('');
 
-  // -------------------- Cargas iniciales (si no vienen por props) --------------------
+  // Cargas iniciales (proveedores, categorías)
   useEffect(() => {
     let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
-      supabase.from('proveedores').select('*').order('nombre', { ascending: true })
+      supabase
+        .from('proveedores')
+        .select('*')
+        .order('nombre', { ascending: true })
         .then(({ data, error }) => {
           if (error) console.error('Error al cargar proveedores:', error);
           else if (mounted) setProveedores(data || []);
@@ -50,7 +58,10 @@ const GestionarEstadoTab = ({
   useEffect(() => {
     let mounted = true;
     if (!categoriasProp || categoriasProp.length === 0) {
-      supabase.from('categorias').select('*').order('nombre', { ascending: true })
+      supabase
+        .from('categorias')
+        .select('*')
+        .order('nombre', { ascending: true })
         .then(({ data, error }) => {
           if (error) console.error('Error al cargar categorías:', error);
           else if (mounted) setCategorias(data || []);
@@ -61,42 +72,50 @@ const GestionarEstadoTab = ({
     return () => { mounted = false; };
   }, [categoriasProp]);
 
-  // Usuarios: cargar si no vienen por props. Normalizar a { id, nombres, apellidos, deleted_at }.
+  // Cargar usuarios si no vienen por props. OJO: usamos user_profiles y mapeamos user_id -> id
   useEffect(() => {
     let mounted = true;
-    if (!usuariosProp || usuariosProp.length === 0) {
-      supabase
-        .from('user_profiles')
-        .select('user_id, nombres, apellidos, deleted_at')
-        .order('nombres', { ascending: true })
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Error al cargar usuarios:', error);
-            return;
-          }
-          const normalized = (data || []).map(u => ({
-            id: u.user_id,
-            nombres: u.nombres || '',
-            apellidos: u.apellidos || '',
-            deleted_at: u.deleted_at || null
-          }));
-          if (mounted) setUsuarios(normalized);
-        });
-    } else {
-      // si sí vienen, úsalo directamente (y asegúrate que tengan {id, nombres, apellidos, deleted_at})
+    const needFetch = !usuariosProp || usuariosProp.length === 0;
+    if (!needFetch) {
       setUsuarios(usuariosProp);
+      return () => { mounted = false; };
     }
+    setUsuariosLoading(true);
+    setUsuariosError('');
+    supabase
+      .from('user_profiles')
+      .select('user_id, nombres, apellidos, deleted_at')
+      .order('nombres', { ascending: true })
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        if (error) {
+          console.error('Error al cargar usuarios:', error);
+          setUsuariosError('No fue posible cargar usuarios. Verifica RLS/Policies en user_profiles.');
+          setUsuariosLoading(false);
+          return;
+        }
+        const normalized = (data || []).map(u => ({
+          id: u.user_id,                         // clave que usaremos en el select
+          nombres: u.nombres || '',
+          apellidos: u.apellidos || '',
+          deleted_at: u.deleted_at || null
+        }));
+        setUsuarios(normalized);
+        setUsuariosLoading(false);
+      });
     return () => { mounted = false; };
   }, [usuariosProp]);
 
-  // -------------------- Utilidades --------------------
+  // Utilidades
   const filtrarSugerencias = (texto, lista, campo) => {
     const q = String(texto || '').trim().toLowerCase();
     if (!q) return [];
-    return lista.filter(item =>
-      String(item.id).toLowerCase().includes(q) ||
-      String(item[campo] ?? '').toLowerCase().includes(q)
-    ).slice(0, 5);
+    return lista
+      .filter(item =>
+        String(item.id).toLowerCase().includes(q) ||
+        String(item[campo] ?? '').toLowerCase().includes(q)
+      )
+      .slice(0, 5);
   };
 
   const parseIdFromInput = (entrada) => {
@@ -122,7 +141,7 @@ const GestionarEstadoTab = ({
     }
   };
 
-  // -------------------- Handlers --------------------
+  // Handlers producto
   const handleToggleProducto = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputProducto);
@@ -142,12 +161,10 @@ const GestionarEstadoTab = ({
       const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
       if (!ok) return;
     }
-
-    setInputProducto('');
-    setProductoSeleccionado('');
-    setSugerenciasProducto([]);
+    setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
   };
 
+  // Handlers proveedor
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputProveedor);
@@ -167,12 +184,10 @@ const GestionarEstadoTab = ({
       const ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
       if (!ok) return;
     }
-
-    setInputProveedor('');
-    setProveedorSeleccionado('');
-    setSugerenciasProveedor([]);
+    setInputProveedor(''); setProveedorSeleccionado(''); setSugerenciasProveedor([]);
   };
 
+  // Handlers categoría
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputCategoria);
@@ -194,12 +209,10 @@ const GestionarEstadoTab = ({
       const ok = await applyToggleFallback({ table: 'categorias', id: cat.id, currentlyDisabled });
       if (!ok) return;
     }
-
-    setInputCategoria('');
-    setCategoriaSeleccionada('');
-    setSugerenciasCategoria([]);
+    setInputCategoria(''); setCategoriaSeleccionada(''); setSugerenciasCategoria([]);
   };
 
+  // Handlers usuario
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
     const entrada = parseIdFromInput(inputUsuario);
@@ -218,16 +231,18 @@ const GestionarEstadoTab = ({
     if (typeof onToggleUsuario === 'function') {
       await onToggleUsuario(idFinal, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({ table: 'user_profiles', id: idFinal, currentlyDisabled, idColumn: 'user_id' });
+      const ok = await applyToggleFallback({
+        table: 'user_profiles',
+        id: idFinal,
+        currentlyDisabled,
+        idColumn: 'user_id' // clave correcta en user_profiles
+      });
       if (!ok) return;
     }
-
-    setInputUsuario('');
-    setUsuarioSeleccionado('');
-    setSugerenciasUsuario([]);
+    setInputUsuario(''); setUsuarioSeleccionado(''); setSugerenciasUsuario([]);
   };
 
-  // -------------------- Render --------------------
+  // Render
   return (
     <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
       <h5>Gestionar estado (Inhabilitar / Reactivar)</h5>
@@ -247,9 +262,7 @@ const GestionarEstadoTab = ({
                 if (id) {
                   const p = productos.find(x => String(x.id) === String(id));
                   if (p) setInputProducto(`${p.id} - ${p.nombre}`);
-                } else {
-                  setInputProducto('');
-                }
+                } else setInputProducto('');
               }}
             >
               <option value="">—</option>
@@ -315,9 +328,7 @@ const GestionarEstadoTab = ({
                 if (id) {
                   const p = proveedores.find(x => String(x.id) === String(id));
                   if (p) setInputProveedor(`${p.id} - ${p.nombre}`);
-                } else {
-                  setInputProveedor('');
-                }
+                } else setInputProveedor('');
               }}
             >
               <option value="">—</option>
@@ -435,6 +446,8 @@ const GestionarEstadoTab = ({
       {/* Usuario */}
       <section>
         <h6>Usuario</h6>
+        {usuariosLoading && <small className="text-muted">Cargando usuarios...</small>}
+        {usuariosError && <small className="text-danger d-block">{usuariosError}</small>}
         <form onSubmit={handleToggleUsuario}>
           <div className="mb-2">
             <label className="form-label">Selecciona un usuario</label>
@@ -446,18 +459,22 @@ const GestionarEstadoTab = ({
                 setUsuarioSeleccionado(id);
                 if (id) {
                   const u = usuarios.find(x => String(x.id) === String(id));
-                  if (u) setInputUsuario(`${u.id} - ${u.nombres} ${u.apellidos}`);
+                  const nombreComp = [u?.nombres, u?.apellidos].filter(Boolean).join(' ').trim();
+                  setInputUsuario(`${u?.id} - ${nombreComp || u?.id}`);
                 } else {
                   setInputUsuario('');
                 }
               }}
             >
               <option value="">—</option>
-              {usuarios.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.id} - {u.nombres} {u.apellidos}
-                </option>
-              ))}
+              {usuarios.map(u => {
+                const nombreComp = [u.nombres, u.apellidos].filter(Boolean).join(' ').trim();
+                return (
+                  <option key={u.id} value={u.id}>
+                    {u.id} - {nombreComp || 'Sin nombre'}
+                  </option>
+                );
+              })}
             </select>
             <small className="text-muted">O escribe el ID o nombre</small>
           </div>
@@ -476,20 +493,23 @@ const GestionarEstadoTab = ({
             />
             {inputUsuario && sugerenciasUsuario.length > 0 && (
               <ul className="list-group position-absolute z-3 w-100">
-                {sugerenciasUsuario.map(u => (
-                  <li
-                    key={u.id}
-                    className="list-group-item list-group-item-action"
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      setInputUsuario(`${u.id} - ${u.nombres} ${u.apellidos}`);
-                      setUsuarioSeleccionado(u.id);
-                      setSugerenciasUsuario([]);
-                    }}
-                  >
-                    {u.id} - {u.nombres} {u.apellidos}
-                  </li>
-                ))}
+                {sugerenciasUsuario.map(u => {
+                  const nombreComp = [u.nombres, u.apellidos].filter(Boolean).join(' ').trim();
+                  return (
+                    <li
+                      key={u.id}
+                      className="list-group-item list-group-item-action"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        setInputUsuario(`${u.id} - ${nombreComp || u.id}`);
+                        setUsuarioSeleccionado(u.id);
+                        setSugerenciasUsuario([]);
+                      }}
+                    >
+                      {u.id} - {nombreComp || 'Sin nombre'}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
