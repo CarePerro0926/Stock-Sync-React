@@ -48,8 +48,8 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos, filtroCat, filtroTxt]);
 
   return (
-    <div className="w-100">
-      <h5>Inventario</h5>
+    <div className="w-100 d-flex flex-column" style={{ height: '100%' }}>
+      <h5 className="mb-3">Inventario</h5>
 
       {/* Filtros */}
       <div className="row g-2 mb-3">
@@ -79,19 +79,51 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Contenedor con desplazamiento vertical.
-          En móvil (d-block d-md-none) el contenedor es más alto para mostrar más tarjetas.
-          En desktop la tabla tiene su propio contenedor con altura menor. */}
-      <div>
-        {/* Móvil: tarjetas apiladas dentro de un contenedor alto y desplazable */}
-        <div
-          className="d-block d-md-none"
-          style={{
-            maxHeight: '520px', // altura mayor en móvil
-            overflowY: 'auto',
-            paddingRight: 6
-          }}
-        >
+      {/* Zona desplazable: ocupa el espacio restante del padre */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 6 }}>
+        {/* Desktop/tablet: tabla */}
+        <div className="d-none d-md-block">
+          <div className="table-responsive">
+            <table className="table table-hover mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Categoría</th>
+                  <th>Stock</th>
+                  <th>Precio unidad</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productosFiltrados.map(p => (
+                  <tr key={p.id}>
+                    <td>{p.id ?? '—'}</td>
+                    <td>{p.nombre ?? 'Sin nombre'}</td>
+                    <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
+                    <td>{p.cantidad ?? 0}</td>
+                    <td>
+                      {typeof p.precio === 'number'
+                        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                        : p.precio ?? '—'}
+                    </td>
+                    <td>
+                      <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
+                        {p.deleted_at ? 'Inhabilitado' : 'Activo'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {productosFiltrados.length === 0 && (
+                  <tr><td colSpan={6}>No hay productos</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Móvil: tarjetas apiladas (una columna) */}
+        <div className="d-block d-md-none">
           <div className="row g-3 p-2">
             {productosFiltrados.map(p => (
               <div className="col-12" key={p.id}>
@@ -136,54 +168,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
                 <div className="card"><div className="card-body">No hay productos</div></div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Desktop/tablet: tabla dentro de un contenedor con altura menor */}
-        <div
-          className="d-none d-md-block"
-          style={{
-            maxHeight: '320px',
-            overflowY: 'auto',
-            paddingRight: 6
-          }}
-        >
-          <div className="table-responsive">
-            <table className="table table-hover mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Stock</th>
-                  <th>Precio unidad</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productosFiltrados.map(p => (
-                  <tr key={p.id}>
-                    <td>{p.id ?? '—'}</td>
-                    <td>{p.nombre ?? 'Sin nombre'}</td>
-                    <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
-                    <td>{p.cantidad ?? 0}</td>
-                    <td>
-                      {typeof p.precio === 'number'
-                        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                        : p.precio ?? '—'}
-                    </td>
-                    <td>
-                      <span className={`badge ${p.deleted_at ? 'bg-danger text-white' : 'bg-success text-white'}`}>
-                        {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {productosFiltrados.length === 0 && (
-                  <tr><td colSpan={6}>No hay productos</td></tr>
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
