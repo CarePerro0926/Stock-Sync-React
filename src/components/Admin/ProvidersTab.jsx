@@ -1,135 +1,154 @@
-// src/components/Admin/ProvidersTab.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+// src/components/Admin/InventoryTab.jsx
+import React, { useState, useMemo, useEffect } from 'react';
+import '../ResponsiveTable.css';
+import ResponsiveTable from '../ResponsiveTable';
 
-const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
-  const [proveedores, setProveedores] = useState(proveedoresProp);
-  const [mostrarInactivos, setMostrarInactivos] = useState(false);
+// Se eliminó onDeleteProducto de la lista de props
+const InventoryTab = ({ productos = [], categorias = [] }) => {
+  const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   useEffect(() => {
-    setProveedores(proveedoresProp || []);
-  }, [proveedoresProp]);
+    console.log('--- DATOS EN INVENTORYTAB ---');
+    console.log('Productos recibidos:', productos);
+    console.log('Categorías recibidas:', categorias);
+    if (productos.length > 0) {
+      console.log('Ejemplo de producto:', productos[0]);
+    }
+    if (categorias.length > 0) {
+      console.log('Ejemplo de categoría:', categorias[0]);
+    }
+  }, [productos, categorias]);
 
-  // Lista filtrada por checkbox y por texto
-  const proveedoresFiltrados = useMemo(() => {
-    let list = [...(proveedores || [])];
+  const listaCategoriasFiltro = useMemo(() => {
+    const nombresDesdeProductos = productos
+      .map(p => p.categoria_nombre)
+      .filter(nombre => nombre && String(nombre).trim() !== '');
+    const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
+    return ['Todas', ...unicas];
+  }, [productos]);
 
-    if (!mostrarInactivos) {
-      list = list.filter(p => p.deleted_at == null);
+  const productosFiltrados = useMemo(() => {
+    let filtered = [...productos];
+
+    // Filtrar por estado (activo / inactivo) según checkbox
+    if (mostrarInactivos) {
+      filtered = filtered.filter(p => !!(p.deleted_at || p.disabled || p.inactivo));
+    } else {
+      filtered = filtered.filter(p => !(p.deleted_at || p.disabled || p.inactivo));
     }
 
-    if (filtroTxt.trim()) {
-      const term = filtroTxt.toLowerCase().trim();
-      list = list.filter(p => {
-        const idStr = String(p.id ?? '').toLowerCase();
-        const nombreStr = String(p.nombre ?? '').toLowerCase();
-        const emailStr = String(p.email ?? '').toLowerCase();
-        return idStr.includes(term) || nombreStr.includes(term) || emailStr.includes(term);
+    // Filtrar por categoría
+    if (filtroCat !== 'Todas') {
+      const filtroCatStr = String(filtroCat).trim();
+      filtered = filtered.filter(p => {
+        const nombreCategoria = p.categoria_nombre;
+        return nombreCategoria && String(nombreCategoria).trim() === filtroCatStr;
       });
     }
 
-    return list;
-  }, [proveedores, mostrarInactivos, filtroTxt]);
+    // Filtrar por texto
+    if (filtroTxt.trim()) {
+      const term = filtroTxt.toLowerCase().trim();
+      filtered = filtered.filter(p => {
+        const idStr = String(p.id ?? '');
+        const nombreStr = String(p.nombre ?? '');
+        const catStr = String(p.categoria_nombre ?? '');
+        return (
+          idStr.toLowerCase().includes(term) ||
+          nombreStr.toLowerCase().includes(term) ||
+          catStr.toLowerCase().includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [productos, filtroCat, filtroTxt, mostrarInactivos]);
+
+  const tableData = useMemo(() => {
+    return productosFiltrados.map(p => {
+      let nombreCategoria = p.categoria_nombre ? String(p.categoria_nombre).trim() : 'Sin Categoría';
+      if (!nombreCategoria || nombreCategoria === 'null' || nombreCategoria === 'undefined' || nombreCategoria === '') {
+        nombreCategoria = 'Sin Categoría';
+      }
+
+      return {
+        id: p.id ?? '—',
+        nombre: p.nombre ?? 'Sin nombre',
+        categoriaNombre: nombreCategoria,
+        cantidad: p.cantidad ?? 0,
+        precio: typeof p.precio === 'number'
+          ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+          : p.precio ?? '—'
+      };
+    });
+  }, [productosFiltrados]);
+
+  const tableHeaders = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'categoriaNombre', label: 'Categoría' },
+    { key: 'cantidad', label: 'Stock', align: 'center' },
+    { key: 'precio', label: 'Precio Unidad', align: 'right' }
+  ];
+
+  console.log("Renderizando InventoryTab con productos:", productos);
 
   return (
-    <div>
-      <h5>Proveedores</h5>
+    <div className="w-100">
+      <h5>Inventario</h5>
 
       <div className="row g-2 mb-3">
-        <div className="col">
+        <div className="col-md-4 col-12">
+          <select
+            id="filtroCatAdmin"
+            className="form-select"
+            value={filtroCat}
+            onChange={e => setFiltroCat(e.target.value)}
+          >
+            {listaCategoriasFiltro.map((cat, index) => (
+              <option key={`${cat}-${index}`} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="col-md-4 col-12">
           <input
+            id="filtroTxtAdmin"
             className="form-control"
-            placeholder="Buscar por ID, nombre o email..."
+            placeholder="Buscar por ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
 
-        <div className="col-auto d-flex align-items-center">
-          <div className="form-check">
+        <div className="col-md-4 col-12 d-flex align-items-center">
+          <div className="form-check ms-md-3">
             <input
-              id="chkMostrarInactivosProv"
+              id="chkMostrarInactivosProd"
               className="form-check-input"
               type="checkbox"
               checked={mostrarInactivos}
               onChange={e => setMostrarInactivos(e.target.checked)}
             />
-            <label className="form-check-label" htmlFor="chkMostrarInactivosProv">Mostrar inactivos</label>
+            <label className="form-check-label" htmlFor="chkMostrarInactivosProd">Mostrar inactivos</label>
           </div>
         </div>
       </div>
 
-      {/* Contenedor con la misma altura y scroll vertical */}
-      <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-        {/* Tabla para pantallas md+ (sin columna de acción) */}
-        <div className="d-none d-md-block">
-          <table className="table mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {proveedoresFiltrados.map(p => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.nombre}</td>
-                  <td>{p.email}</td>
-                  <td>{p.deleted_at ? 'Inhabilitado' : 'Activo'}</td>
-                </tr>
-              ))}
-              {proveedoresFiltrados.length === 0 && (
-                <tr><td colSpan={4}>No hay proveedores</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Tarjetas para móvil: una columna, apiladas verticalmente */}
-        <div className="d-block d-md-none">
-          <div className="row g-3 p-2">
-            {proveedoresFiltrados.map(p => (
-              <div className="col-12" key={p.id}>
-                <div className="card shadow-sm">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <div>
-                        <h6 className="card-title mb-1" style={{ fontSize: '0.95rem' }}>{p.nombre || '—'}</h6>
-                        <div className="text-muted small">{p.email || '—'}</div>
-                      </div>
-                      <div className="text-end">
-                        <div className="small text-muted">ID</div>
-                        <div className="fw-semibold">{p.id}</div>
-                      </div>
-                    </div>
-
-                    <div className="d-flex justify-content-between mt-2">
-                      <div>
-                        <div className="small text-muted">Estado</div>
-                        <div className={`fw-semibold ${p.deleted_at ? 'text-danger' : 'text-success'}`}>
-                          {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                        </div>
-                      </div>
-                      {/* Sin botón de inhabilitar/re-activar en la UI */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {proveedoresFiltrados.length === 0 && (
-              <div className="col-12">
-                <div className="card"><div className="card-body">No hay proveedores</div></div>
-              </div>
-            )}
-          </div>
+      <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+        <div className="table-responsive">
+          <ResponsiveTable
+            headers={tableHeaders}
+            data={tableData}
+          />
         </div>
       </div>
     </div>
   );
 };
 
-export default ProvidersTab;
+export default InventoryTab;
