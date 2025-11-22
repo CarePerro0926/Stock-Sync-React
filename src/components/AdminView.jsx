@@ -20,12 +20,18 @@ const normalizeBool = (val, defaultValue = false) => {
   const s = String(val).trim().toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
-const normalizeProducto = (p) => ({
-  ...p,
-  deleted_at: normalizeDeletedAt(p?.deleted_at),
-  disabled: normalizeBool(p?.disabled, false),
-  inactivo: normalizeBool(p?.inactivo, false),
-});
+const normalizeProducto = (p) => {
+  const deleted_at_raw = p?.deleted_at;
+  const deleted_at = normalizeDeletedAt(deleted_at_raw);
+  const isDeleted = !!(deleted_at && String(deleted_at).trim() !== '');
+  return {
+    ...p,
+    deleted_at: isDeleted ? deleted_at : null,
+    disabled: normalizeBool(p?.disabled, false),
+    inactivo: normalizeBool(p?.inactivo, false),
+    _inactive: Boolean(isDeleted) || normalizeBool(p?.disabled, false) || normalizeBool(p?.inactivo, false)
+  };
+};
 
 const AdminView = ({
   productos: productosProp = [],
@@ -93,11 +99,13 @@ const AdminView = ({
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
-        // Removed custom headers to avoid CORS preflight rejection on servers that don't allow Cache-Control in Access-Control-Allow-Headers
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/productos`);
+        // Force fresh fetch to avoid ETag/304 cached responses and avoid CORS preflight issues
+        const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
         const text = await res.text().catch(() => null);
         let data = null;
         try { data = JSON.parse(text); } catch { data = null; }
+        console.log('fetchProductos status:', res.status, 'items:', Array.isArray(data) ? data.length : 'null');
         if (res.ok && Array.isArray(data)) {
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
@@ -105,6 +113,7 @@ const AdminView = ({
         }
       }
 
+      // Fallback to supabase if API URL not configured or API failed
       const { data, error } = await supabase
         .from('productos')
         .select('*')
@@ -144,10 +153,10 @@ const AdminView = ({
           return false;
         }
 
-        // pequeño retardo para evitar leer una réplica anterior (opcional)
+        // small delay to allow backend to persist and replicas to sync
         await new Promise(r => setTimeout(r, 250));
 
-        // Usar el valor devuelto por fetchProductos en lugar de leer la variable de estado "productos"
+        // Force fresh fetch to get updated list
         const nuevos = await fetchProductos();
         console.log('toggleProducto: fetchProductos done, productos length =', Array.isArray(nuevos) ? nuevos.length : 'null');
 
@@ -155,20 +164,20 @@ const AdminView = ({
         return true;
       }
 
+      // Fallback: update via supabase client directly
       const payload = currentlyDisabled
         ? { deleted_at: null }
         : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('productos').update(payload).eq('id', id);
       if (error) throw error;
 
+      // optimistic local update then refresh
       const now = !currentlyDisabled ? new Date().toISOString() : null;
       setProductos(prev => prev
         .map(normalizeProducto)
         .map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p))
       );
 
-      console.log('toggleProducto: local update done, productos (preview) =', productos.slice(0,5));
-      // pequeña espera y recarga para asegurar consistencia
       await new Promise(r => setTimeout(r, 150));
       await fetchProductos();
 
