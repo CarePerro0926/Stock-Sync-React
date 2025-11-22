@@ -7,6 +7,7 @@ import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
+import ResponsiveTable from './ResponsiveTable';
 
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -99,7 +100,7 @@ const AdminView = ({
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
-        // Force fresh fetch to avoid ETag/304 cached responses and avoid CORS preflight issues
+        // Forzar lectura fresca para evitar ETag/304 y caché
         const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         const text = await res.text().catch(() => null);
@@ -113,7 +114,7 @@ const AdminView = ({
         }
       }
 
-      // Fallback to supabase if API URL not configured or API failed
+      // Fallback a supabase si no hay API o falla
       const { data, error } = await supabase
         .from('productos')
         .select('*')
@@ -153,10 +154,10 @@ const AdminView = ({
           return false;
         }
 
-        // small delay to allow backend to persist and replicas to sync
+        // pequeño retardo para evitar leer una réplica anterior (opcional)
         await new Promise(r => setTimeout(r, 250));
 
-        // Force fresh fetch to get updated list
+        // Forzar fetch fresco para obtener la lista actualizada
         const nuevos = await fetchProductos();
         console.log('toggleProducto: fetchProductos done, productos length =', Array.isArray(nuevos) ? nuevos.length : 'null');
 
@@ -164,20 +165,21 @@ const AdminView = ({
         return true;
       }
 
-      // Fallback: update via supabase client directly
+      // Fallback supabase directo
       const payload = currentlyDisabled
         ? { deleted_at: null }
         : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('productos').update(payload).eq('id', id);
       if (error) throw error;
 
-      // optimistic local update then refresh
       const now = !currentlyDisabled ? new Date().toISOString() : null;
       setProductos(prev => prev
         .map(normalizeProducto)
         .map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p))
       );
 
+      console.log('toggleProducto: local update done, productos (preview) =', productos.slice(0,5));
+      // pequeña espera y recarga para asegurar consistencia
       await new Promise(r => setTimeout(r, 150));
       await fetchProductos();
 
