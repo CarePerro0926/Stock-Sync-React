@@ -1,5 +1,6 @@
 // src/components/AdminView.jsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/services/supabaseClient';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
@@ -55,6 +56,70 @@ const AdminView = ({
       default: return 'Panel Administrador';
     }
   };
+
+  // -------------------------
+  // Soft-delete toggle helpers
+  // -------------------------
+  // These functions set deleted_at = now() to inhabilitar,
+  // or deleted_at = null to reactivar. After success they call
+  // onUpdateSuccess() if provided so the parent can reload data.
+
+  const toggleProducto = async (id, currentlyDisabled) => {
+    try {
+      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from('productos')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
+    } catch (err) {
+      console.error('Error toggling producto:', err);
+      alert('Ocurrió un error al cambiar el estado del producto.');
+    }
+  };
+
+  const toggleProveedor = async (id, currentlyDisabled) => {
+    try {
+      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from('proveedores')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
+    } catch (err) {
+      console.error('Error toggling proveedor:', err);
+      alert('Ocurrió un error al cambiar el estado del proveedor.');
+    }
+  };
+
+  const toggleCategoria = async (id, currentlyDisabled) => {
+    try {
+      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from('categorias')
+        .update(payload)
+        .eq('id', id);
+
+      if (error) throw error;
+      if (onUpdateSuccess) {
+        try { await onUpdateSuccess(); } catch (e) { console.error(e); }
+      }
+    } catch (err) {
+      console.error('Error toggling categoria:', err);
+      alert('Ocurrió un error al cambiar el estado de la categoría.');
+    }
+  };
+
+  // If you manage users in the same DB and want soft-delete for users,
+  // implement a similar toggleUsuario function and pass it to UsuariosView.
 
   return (
     <div className="card p-4 w-100">
@@ -118,11 +183,22 @@ const AdminView = ({
       </ul>
 
       {vistaActiva === 'inventory' && (
-        <InventoryTab productos={productos} categorias={categorias} onDeleteProducto={onDeleteProducto} />
+        <InventoryTab
+          productos={productos}
+          categorias={categorias}
+          onToggleProducto={toggleProducto}    // <-- pasa la función de inhabilitar/reactivar
+        />
       )}
+
       {vistaActiva === 'providers' && (
-        <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} />
+        <ProvidersTab
+          proveedores={proveedores}
+          onAddProveedor={onAddProveedor}
+          onDeleteProveedor={onDeleteProveedor}
+          onToggleProveedor={toggleProveedor} // <-- pasa la función de inhabilitar/reactivar
+        />
       )}
+
       {vistaActiva === 'add' && (
         <AddTab
           onAddProducto={onAddProducto}
@@ -133,15 +209,17 @@ const AdminView = ({
           proveedores={proveedores}
         />
       )}
+
       {vistaActiva === 'update' && (
         <UpdateTab
           productos={productos}
           categorias={categorias}
-          proveedores={proveedores}                 // <-- ahora se pasa proveedores
+          proveedores={proveedores}
           onUpdateSuccess={onUpdateSuccess}
-          onUpdateProveedorSuccess={onUpdateSuccess} // <-- opcional: reutiliza onUpdateSuccess
+          onUpdateProveedorSuccess={onUpdateSuccess}
         />
       )}
+
       {vistaActiva === 'delete' && (
         <DeleteTab
           productos={productos}
@@ -150,10 +228,15 @@ const AdminView = ({
           onDeleteProducto={onDeleteProducto}
           onDeleteProveedor={onDeleteProveedor}
           onDeleteCategoria={onDeleteCategoria}
+          onToggleCategoria={toggleCategoria} // opcional: si quieres reusar toggle en DeleteTab
         />
       )}
+
       {vistaActiva === 'usuarios' && (
-        <UsuariosView />
+        <UsuariosView
+          // si implementas soft-delete para usuarios, pasa aquí la función equivalente:
+          // onToggleUsuario={toggleUsuario}
+        />
       )}
 
       <div className="text-end mt-3">
