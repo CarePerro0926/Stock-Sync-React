@@ -22,9 +22,18 @@ const GestionarEstadoTab = ({
   categorias: categoriasProp = [],
   usuarios: usuariosProp = [] // opcional: pasar desde AdminView
 }) => {
+  // -------------------- Normalización inicial --------------------
+  // Normalizamos productos para garantizar que siempre exista `id`
+  // (tomándolo de `id` o `product_id`) y que `deleted_at` esté saneado.
+  const normalizeProductoForState = (p = {}) => ({
+    ...p,
+    id: p.id ?? p.product_id ?? String(p.product_id ?? ''),
+    deleted_at: normalizeDeletedAt(p.deleted_at)
+  });
+
   // Local copy de productos para permitir actualización optimista si el padre no recarga
   const [productos, setProductos] = useState(
-    Array.isArray(productosProp) ? productosProp.map(p => ({ ...p, deleted_at: normalizeDeletedAt(p.deleted_at) })) : []
+    Array.isArray(productosProp) ? productosProp.map(normalizeProductoForState) : []
   );
 
   // Producto
@@ -48,13 +57,15 @@ const GestionarEstadoTab = ({
   const [inputUsuario, setInputUsuario] = useState('');
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
   const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
-  const [usuarios, setUsuarios] = useState(Array.isArray(usuariosProp) ? usuariosProp.map(u => ({ ...u, deleted_at: normalizeDeletedAt(u.deleted_at) })) : []);
+  const [usuarios, setUsuarios] = useState(
+    Array.isArray(usuariosProp) ? usuariosProp.map(u => ({ ...u, deleted_at: normalizeDeletedAt(u.deleted_at) })) : []
+  );
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
 
-  // Sincronizar props entrantes con estados locales
+  // -------------------- Sincronizar props entrantes con estados locales --------------------
   useEffect(() => {
-    setProductos(Array.isArray(productosProp) ? productosProp.map(p => ({ ...p, deleted_at: normalizeDeletedAt(p.deleted_at) })) : []);
+    setProductos(Array.isArray(productosProp) ? productosProp.map(normalizeProductoForState) : []);
   }, [productosProp]);
 
   useEffect(() => {
@@ -69,7 +80,7 @@ const GestionarEstadoTab = ({
     setUsuarios(Array.isArray(usuariosProp) ? usuariosProp.map(u => ({ ...u, deleted_at: normalizeDeletedAt(u.deleted_at) })) : []);
   }, [usuariosProp]);
 
-  // Cargas iniciales (si no vienen por props)
+  // -------------------- Cargas iniciales (si no vienen por props) --------------------
   useEffect(() => {
     let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
@@ -162,13 +173,17 @@ const GestionarEstadoTab = ({
   };
 
   // Fallback que actualiza la tabla indicada vía supabase (si el padre no provee onToggle)
+  // Añadimos logging y pedimos `data` de vuelta para depuración.
   const applyToggleFallback = async ({ table, id, currentlyDisabled, idColumn = 'id' }) => {
     try {
       const newDeletedAt = currentlyDisabled ? null : new Date().toISOString();
-      const { error } = await supabase
+      console.log('applyToggleFallback ->', { table, idColumn, id, newDeletedAt });
+      const { data, error } = await supabase
         .from(table)
         .update({ deleted_at: newDeletedAt })
-        .eq(idColumn, id);
+        .eq(idColumn, id)
+        .select(); // solicitar data para inspección
+      console.log('applyToggleFallback result', { data, error });
       if (error) throw error;
       return true;
     } catch (err) {
@@ -213,7 +228,9 @@ const GestionarEstadoTab = ({
       }
     } else {
       // Fallback: actualizar en la BD local vía supabase (si no hay onToggleProducto)
-      const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
+      // IMPORTANTE: indicar idColumn correcto. Si tu tabla usa `product_id` como PK, usar 'product_id'.
+      // Si la tabla usa `id`, cambiar a 'id' o omitir el parámetro.
+      const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'product_id' });
       if (!ok) return;
     }
 
