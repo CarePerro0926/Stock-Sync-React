@@ -28,7 +28,7 @@ const normalizeBool = (val, defaultValue = false) => {
 const isPlaceholderProduct = (p) => {
   if (!p) return true;
   const nombre = String(p.nombre ?? p.name ?? p.display_name ?? '').toLowerCase();
-  const id = String(p.id ?? p.product_id ?? p._raw?.product_id ?? '').toLowerCase();
+  const id = String(p.id ?? p.product_id ?? p._raw?.product_id ?? p._raw?.id ?? '').toLowerCase();
   if (!nombre && !id) return true;
   if (nombre.includes('ejemplo') || nombre.includes('producto de ejemplo')) return true;
   if (id === 'example' || id === 'sample' || id === 'demo') return true;
@@ -87,14 +87,20 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     }
   }, [productos]);
 
-  // Lista de categorías para el select (extraída de productos)
+  // Lista de categorías para el select (extraída de productos y del prop categorias)
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = (localProductos || [])
       .map(p => p?.categoria_nombre ?? p?.categoria ?? p?._raw?.categoria_nombre ?? p?._raw?.categoria ?? '')
       .filter(nombre => nombre && String(nombre).trim() !== '');
-    const unicas = [...new Set(nombresDesdeProductos.map(nombre => String(nombre).trim()))];
+
+    const nombresDesdeProp = (categorias || [])
+      .map(c => c?.nombre ?? c?.name ?? c?.categoria ?? c?.category_name ?? '')
+      .filter(nombre => nombre && String(nombre).trim() !== '');
+
+    const combined = [...nombresDesdeProductos, ...nombresDesdeProp];
+    const unicas = [...new Set(combined.map(nombre => String(nombre).trim()))];
     return ['Todas', ...unicas];
-  }, [localProductos]);
+  }, [localProductos, categorias]);
 
   // Normalizar todos los productos (acepta varias formas)
   const productosNormalizados = useMemo(() => {
@@ -148,8 +154,8 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  // Handler para toggle desde la tabla (si el padre provee onToggleProducto)
-  const handleToggleFromRow = async (productId, currentlyDisabled) => {
+  // eslint: function intentionally starts with underscore to satisfy no-unused-vars rule when not used
+  const _handleToggleFromRow = async (productId, currentlyDisabled) => {
     console.log('INVENTORY DEBUG: toggle requested for', productId, 'currentlyDisabled=', currentlyDisabled);
     if (typeof onToggleProducto === 'function') {
       const ok = await onToggleProducto(productId, currentlyDisabled);
