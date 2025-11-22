@@ -1,12 +1,12 @@
 // src/components/AdminView.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import InventoryTab from './Admin/InventoryTab';
-import ProvidersTab from './Admin/ProvidersTab'; 
+import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import DeleteTab from './Admin/DeleteTab';
-import UsuariosView from './UsuariosView'; //  Importación nueva
-import ResponsiveTable from './ResponsiveTable'; // Mantiene el modo tarjeta
+import UsuariosView from './UsuariosView';
+import ResponsiveTable from './ResponsiveTable';
 
 const AdminView = ({
   productos,
@@ -47,7 +47,7 @@ const AdminView = ({
   const getTitle = () => {
     switch (vistaActiva) {
       case 'inventory': return 'Inventario';
-      case 'providers': return 'Proveedores'; 
+      case 'providers': return 'Proveedores';
       case 'add': return 'Agregar';
       case 'update': return 'Actualizar';
       case 'delete': return 'Eliminar';
@@ -80,7 +80,7 @@ const AdminView = ({
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('add')}>Agregar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('update')}>Actualizar</button>
           <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('delete')}>Eliminar</button>
-          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('usuarios')}>Usuarios</button> {/* ✅ Nueva opción */}
+          <button className="list-group-item list-group-item-action admin-menu-item" onClick={() => selectTab('usuarios')}>Usuarios</button>
         </div>
       )}
 
@@ -114,7 +114,7 @@ const AdminView = ({
           <button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>
             Usuarios
           </button>
-        </li> {/* Nueva pestaña */}
+        </li>
       </ul>
 
       {vistaActiva === 'inventory' && (
@@ -137,7 +137,9 @@ const AdminView = ({
         <UpdateTab
           productos={productos}
           categorias={categorias}
+          proveedores={proveedores}                 // <-- ahora se pasa proveedores
           onUpdateSuccess={onUpdateSuccess}
+          onUpdateProveedorSuccess={onUpdateSuccess} // <-- opcional: reutiliza onUpdateSuccess
         />
       )}
       {vistaActiva === 'delete' && (
@@ -151,7 +153,7 @@ const AdminView = ({
         />
       )}
       {vistaActiva === 'usuarios' && (
-        <UsuariosView /> // Renderiza la tabla de usuarios
+        <UsuariosView />
       )}
 
       <div className="text-end mt-3">
