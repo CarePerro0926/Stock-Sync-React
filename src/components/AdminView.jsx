@@ -200,6 +200,8 @@ const AdminView = ({
 
       const payload = await res.json().catch(() => null);
 
+      console.log('TOGGLE PRODUCT payload:', payload, 'status:', res.status);
+
       if (!res.ok) {
         console.error('toggleProducto API error:', { status: res.status, payload });
         // Re-sincronizar desde API para revertir optimismo si la API falló
