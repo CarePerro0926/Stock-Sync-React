@@ -7,7 +7,6 @@ import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
-import ResponsiveTable from './ResponsiveTable';
 
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -15,20 +14,34 @@ const normalizeDeletedAt = (val) => {
   if (s === '' || s === 'null' || s === 'undefined') return null;
   return val;
 };
+
 const normalizeBool = (val, defaultValue = false) => {
   if (val === null || val === undefined) return defaultValue;
   if (typeof val === 'boolean') return val;
   const s = String(val).trim().toLowerCase();
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
+
+/**
+ * normalizeProducto: además de normalizar deleted_at y booleanos,
+ * garantiza campos mínimos para la UI (nombre, categoria_nombre, cantidad, precio)
+ * y añade _inactive para filtrar de forma robusta.
+ */
 const normalizeProducto = (p) => {
   const deleted_at_raw = p?.deleted_at;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
   const disabled = normalizeBool(p?.disabled, false);
   const inactivo = normalizeBool(p?.inactivo, false);
   const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
+
   return {
     ...p,
+    // campos mínimos que la UI espera
+    id: p?.id ?? null,
+    nombre: p?.nombre ?? p?.display_name ?? 'Sin nombre',
+    categoria_nombre: p?.categoria_nombre ?? p?.categoria ?? 'Sin Categoría',
+    cantidad: typeof p?.cantidad === 'number' ? p.cantidad : (p?.stock ?? 0),
+    precio: typeof p?.precio === 'number' ? p.precio : (p?.precio_unitario ?? null),
     deleted_at: isDeleted ? deleted_at : null,
     disabled,
     inactivo,
@@ -74,42 +87,64 @@ const AdminView = ({
   const toggleMenu = () => setShowMenu(!showMenu);
   const selectTab = (tabId) => { setVistaActiva(tabId); setShowMenu(false); };
 
-  const getTitle = () => {
-    switch (vistaActiva) {
-      case 'inventory': return 'Inventario';
-      case 'providers': return 'Proveedores';
-      case 'add': return 'Agregar';
-      case 'update': return 'Actualizar';
-      case 'delete': return 'Gestionar estado';
-      case 'usuarios': return 'Usuarios';
-      default: return 'Panel Administrador';
-    }
-  };
-
   useEffect(() => {
     if (Array.isArray(productosProp) && productosProp.length > 0) {
       setProductos(productosProp.map(normalizeProducto));
     }
   }, [productosProp]);
 
+  /**
+   * fetchProductos:
+   * - intenta la API externa (forzando no-cache con timestamp y cache:'no-store')
+   * - si la respuesta viene incompleta (p.e. items sin 'nombre'), hace fallback a la vista supabase 'vista_productos_con_categoria'
+   * - normaliza y setea productos
+   */
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
-        // Forzar lectura fresca para evitar ETag/304 y caché
         const url = `${import.meta.env.VITE_API_URL}/api/productos?_=${Date.now()}`;
         const res = await fetch(url, { cache: 'no-store' });
         const text = await res.text().catch(() => null);
         let data = null;
         try { data = JSON.parse(text); } catch { data = null; }
-        if (res.ok && Array.isArray(data)) {
+
+        // Si la API devolvió un array y los objetos tienen los campos esperados, normalizamos y retornamos
+        if (res.ok && Array.isArray(data) && data.length > 0 && data.some(item => item && (item.nombre || item.categoria_nombre || item.cantidad || item.precio))) {
+          const normalized = data.map(normalizeProducto);
+          setProductos(normalized);
+          return normalized;
+        }
+
+        // Si la API devolvió objetos incompletos (p.e. solo id), hacemos fallback a la vista supabase
+        if (res.ok && Array.isArray(data) && data.length > 0) {
+          // intentar obtener datos completos desde supabase (vista con categoría)
+          try {
+            const { data: viewData, error: viewErr } = await supabase
+              .from('vista_productos_con_categoria')
+              .select('*')
+              .order('nombre', { ascending: true });
+            if (!viewErr && Array.isArray(viewData) && viewData.length > 0) {
+              const normalized = viewData.map(normalizeProducto);
+              setProductos(normalized);
+              return normalized;
+            }
+          } catch (e) {
+            console.warn('fetchProductos: fallback supabase vista failed', e);
+          }
+
+          // si no hay vista, normalizamos lo que haya rellenando campos mínimos
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
           return normalized;
         }
       }
 
-      // Fallback a supabase si no hay API o falla
-      const { data, error } = await supabase.from('productos').select('*').order('nombre', { ascending: true });
+      // Si no hay VITE_API_URL o la llamada falló, usar supabase directamente
+      const { data, error } = await supabase
+        .from('vista_productos_con_categoria')
+        .select('*')
+        .order('nombre', { ascending: true });
+
       if (error) throw error;
       const normalized = (data || []).map(normalizeProducto);
       setProductos(normalized);
@@ -126,7 +161,6 @@ const AdminView = ({
     }
   }, [productosProp, fetchProductos]);
 
-  // toggleProducto: devuelve true en éxito, false en fallo
   const toggleProducto = async (id, currentlyDisabled) => {
     try {
       if (import.meta.env.VITE_API_URL) {
@@ -144,26 +178,23 @@ const AdminView = ({
           return false;
         }
 
-        // Pequeña espera para consistencia y luego forzar fetch fresco
+        // pequeña espera y forzar fetch fresco
         await new Promise(r => setTimeout(r, 250));
         const nuevos = await fetchProductos();
-        // Si fetchProductos devolvió la lista, úsala para actualizar el estado
-        if (Array.isArray(nuevos)) {
-          setProductos(nuevos);
-        }
+        if (Array.isArray(nuevos)) setProductos(nuevos);
+
         if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
         return true;
       }
 
-      // Fallback supabase directo
+      // fallback supabase
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('productos').update(payload).eq('id', id);
       if (error) throw error;
 
-      // Optimistic update y recarga
+      // optimistic update + refresh
       const now = !currentlyDisabled ? new Date().toISOString() : null;
       setProductos(prev => prev.map(normalizeProducto).map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p)));
-
       await new Promise(r => setTimeout(r, 150));
       const nuevos = await fetchProductos();
       if (Array.isArray(nuevos)) setProductos(nuevos);
@@ -177,6 +208,8 @@ const AdminView = ({
     }
   };
 
+  // toggleProveedor, toggleCategoria, toggleUsuario, fetchUsuariosFromApi
+  // (mantener como en tu versión; no cambian para este problema)
   const toggleProveedor = async (id, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
@@ -293,7 +326,17 @@ const AdminView = ({
 
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
         <button id="btnMenuHamburguesa" className="btn btn-primary me-3" type="button" aria-label="Menú de navegación" onClick={toggleMenu}>&#9776;</button>
-        <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
+        <h5 id="adminSectionTitle" className="mb-0">{(() => {
+          switch (vistaActiva) {
+            case 'inventory': return 'Inventario';
+            case 'providers': return 'Proveedores';
+            case 'add': return 'Agregar';
+            case 'update': return 'Actualizar';
+            case 'delete': return 'Gestionar estado';
+            case 'usuarios': return 'Usuarios';
+            default: return 'Panel Administrador';
+          }
+        })()}</h5>
       </div>
 
       {showMenu && (
