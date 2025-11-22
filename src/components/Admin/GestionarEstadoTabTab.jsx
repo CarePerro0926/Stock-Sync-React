@@ -1,15 +1,18 @@
-// src/components/Admin/GestionarEstadoTabTab.jsx
+// src/components/Admin/GestionarEstadoTab.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
-const DeleteTab = ({
+const GestionarEstadoTab = ({
   onToggleProducto,
   onToggleProveedor,
   onToggleCategoria,
+  onToggleUsuario,
   productos = [],
   proveedores: proveedoresProp = [],
-  categorias: categoriasProp = []
+  categorias: categoriasProp = [],
+  usuarios: usuariosProp = []
 }) => {
+  // -------------------- Estados --------------------
   const [inputProducto, setInputProducto] = useState('');
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [sugerenciasProducto, setSugerenciasProducto] = useState([]);
@@ -24,6 +27,11 @@ const DeleteTab = ({
   const [sugerenciasCategoria, setSugerenciasCategoria] = useState([]);
   const [categorias, setCategorias] = useState(categoriasProp);
 
+  const [inputUsuario, setInputUsuario] = useState('');
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
+  const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
+
+  // -------------------- Cargas iniciales (si no vienen por props) --------------------
   useEffect(() => {
     let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
@@ -52,6 +60,7 @@ const DeleteTab = ({
     return () => { mounted = false; };
   }, [categoriasProp]);
 
+  // -------------------- Utilidades --------------------
   const filtrarSugerencias = (texto, lista, campo) => {
     const q = String(texto || '').trim().toLowerCase();
     if (!q) return [];
@@ -64,171 +73,132 @@ const DeleteTab = ({
   const parseIdFromInput = (entrada) => {
     const trimmed = String(entrada || '').trim();
     if (!trimmed) return '';
-    if (trimmed.includes(' - ')) {
-      const parts = trimmed.split(' - ');
-      return parts[0].trim();
-    }
+    if (trimmed.includes(' - ')) return trimmed.split(' - ')[0].trim();
     return trimmed;
   };
 
-  const applyToggleFallback = async ({ table, id, currentlyDisabled }) => {
+  const applyToggleFallback = async ({ table, id, currentlyDisabled, idColumn = 'id' }) => {
     try {
-      if (!id) throw new Error('ID inválido');
       const newDeletedAt = currentlyDisabled ? null : new Date().toISOString();
       const { error } = await supabase
         .from(table)
         .update({ deleted_at: newDeletedAt })
-        .eq('id', id);
+        .eq(idColumn, id);
       if (error) throw error;
       return true;
     } catch (err) {
       console.error('Fallback toggle error:', err);
+      alert('Ocurrió un error al cambiar el estado. Intenta de nuevo.');
       return false;
     }
   };
 
+  // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
-    const entradaRaw = String(inputProducto || '').trim();
-    const seleccion = productoSeleccionado;
-    let idFinal = '';
-
-    const entrada = parseIdFromInput(entradaRaw);
-
-    if (entrada) {
-      const porId = productos.find(p => String(p.id) === entrada);
-      if (porId) idFinal = porId.id;
-      else {
-        const porNombre = productos.find(p => String(p.nombre).toLowerCase() === entrada.toLowerCase());
-        if (porNombre) idFinal = porNombre.id;
-      }
-    } else if (seleccion) {
-      idFinal = seleccion;
+    const entrada = parseIdFromInput(inputProducto);
+    let idFinal = entrada || productoSeleccionado;
+    if (!idFinal && inputProducto) {
+      const matchByName = productos.find(p => String(p.nombre).toLowerCase() === String(inputProducto).trim().toLowerCase());
+      if (matchByName) idFinal = matchByName.id;
     }
-
-    if (!idFinal) {
-      alert('No se encontró ningún producto con ese ID o nombre.');
-      return;
-    }
-
-    // determinar estado actual (buscar en productos)
     const prod = productos.find(p => String(p.id) === String(idFinal));
-    const currentlyDisabled = !!(prod && prod.deleted_at);
+    if (!prod) return alert('No se encontró ningún producto con ese ID o nombre.');
+    const currentlyDisabled = !!prod.deleted_at;
+    if (!window.confirm(currentlyDisabled ? '¿Reactivar este producto?' : '¿Inhabilitar este producto?')) return;
 
-    const confirmMsg = currentlyDisabled ? '¿Reactivar este producto?' : '¿Inhabilitar este producto?';
-    if (!window.confirm(confirmMsg)) return;
-
-    // usar callback del padre si existe
     if (typeof onToggleProducto === 'function') {
       await onToggleProducto(idFinal, currentlyDisabled);
     } else {
       const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
-      if (!ok) {
-        alert('Ocurrió un error al cambiar el estado del producto.');
-        return;
-      }
+      if (!ok) return;
     }
 
     setInputProducto('');
     setProductoSeleccionado('');
     setSugerenciasProducto([]);
-    alert(currentlyDisabled ? 'Producto reactivado' : 'Producto inhabilitado');
   };
 
   const handleToggleProveedor = async (e) => {
     e.preventDefault();
-    const entradaRaw = String(inputProveedor || '').trim();
-    const seleccion = proveedorSeleccionado;
-    let idFinal = '';
-
-    const entrada = parseIdFromInput(entradaRaw);
-
-    if (entrada) {
-      const porId = proveedores.find(p => String(p.id) === entrada);
-      if (porId) idFinal = porId.id;
-      else {
-        const porNombre = proveedores.find(p => String(p.nombre).toLowerCase() === entrada.toLowerCase());
-        if (porNombre) idFinal = porNombre.id;
-      }
-    } else if (seleccion) {
-      idFinal = seleccion;
+    const entrada = parseIdFromInput(inputProveedor);
+    let idFinal = entrada || proveedorSeleccionado;
+    if (!idFinal && inputProveedor) {
+      const matchByName = proveedores.find(p => String(p.nombre).toLowerCase() === String(inputProveedor).trim().toLowerCase());
+      if (matchByName) idFinal = matchByName.id;
     }
-
-    if (!idFinal) {
-      alert('No se encontró ningún proveedor con ese ID o nombre.');
-      return;
-    }
-
     const prov = proveedores.find(p => String(p.id) === String(idFinal));
-    const currentlyDisabled = !!(prov && prov.deleted_at);
-
-    const confirmMsg = currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?';
-    if (!window.confirm(confirmMsg)) return;
+    if (!prov) return alert('No se encontró ningún proveedor con ese ID o nombre.');
+    const currentlyDisabled = !!prov.deleted_at;
+    if (!window.confirm(currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?')) return;
 
     if (typeof onToggleProveedor === 'function') {
       await onToggleProveedor(idFinal, currentlyDisabled);
     } else {
       const ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
-      if (!ok) {
-        alert('Ocurrió un error al cambiar el estado del proveedor.');
-        return;
-      }
+      if (!ok) return;
     }
 
     setInputProveedor('');
     setProveedorSeleccionado('');
     setSugerenciasProveedor([]);
-    alert(currentlyDisabled ? 'Proveedor reactivado' : 'Proveedor inhabilitado');
   };
 
   const handleToggleCategoria = async (e) => {
     e.preventDefault();
-    const entradaRaw = String(inputCategoria || '').trim();
-    const seleccion = categoriaSeleccionada;
-    let idFinal = '';
+    const entrada = parseIdFromInput(inputCategoria);
+    let idFinal = entrada || categoriaSeleccionada;
 
-    const entrada = parseIdFromInput(entradaRaw);
-
-    if (entrada) {
-      const porId = categorias.find(c => String(c.id) === entrada);
-      if (porId) idFinal = porId.id;
-      else {
-        const porNombre = categorias.find(c => String(c.nombre).toLowerCase() === entrada.toLowerCase());
-        if (porNombre) idFinal = porNombre.id;
-      }
-    } else if (seleccion) {
-      // en select guardamos nombre; buscar id por nombre
-      const porNombre = categorias.find(c => c.nombre === seleccion);
-      if (porNombre) idFinal = porNombre.id;
+    let cat = categorias.find(c => String(c.id) === String(idFinal));
+    if (!cat && inputCategoria) {
+      cat = categorias.find(c => String(c.nombre).toLowerCase() === String(inputCategoria).trim().toLowerCase());
+      if (cat) idFinal = cat.id;
     }
+    if (!cat) return alert('No se encontró ninguna categoría con ese ID o nombre.');
 
-    if (!idFinal) {
-      alert('No se encontró ninguna categoría con ese ID o nombre.');
-      return;
-    }
-
-    const cat = categorias.find(c => String(c.id) === String(idFinal));
-    const currentlyDisabled = !!(cat && cat.deleted_at);
-
-    const confirmMsg = currentlyDisabled ? '¿Reactivar esta categoría?' : '¿Inhabilitar esta categoría?';
-    if (!window.confirm(confirmMsg)) return;
+    const currentlyDisabled = !!cat.deleted_at;
+    if (!window.confirm(currentlyDisabled ? '¿Reactivar esta categoría?' : '¿Inhabilitar esta categoría?')) return;
 
     if (typeof onToggleCategoria === 'function') {
-      await onToggleCategoria(idFinal, currentlyDisabled);
+      await onToggleCategoria(cat.id, currentlyDisabled);
     } else {
-      const ok = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled });
-      if (!ok) {
-        alert('Ocurrió un error al cambiar el estado de la categoría.');
-        return;
-      }
+      const ok = await applyToggleFallback({ table: 'categorias', id: cat.id, currentlyDisabled });
+      if (!ok) return;
     }
 
     setInputCategoria('');
     setCategoriaSeleccionada('');
     setSugerenciasCategoria([]);
-    alert(currentlyDisabled ? 'Categoría reactivada' : 'Categoría inhabilitada');
   };
 
+  const handleToggleUsuario = async (e) => {
+    e.preventDefault();
+    const entrada = parseIdFromInput(inputUsuario);
+    let idFinal = entrada || usuarioSeleccionado;
+
+    let user = usuariosProp.find(u => String(u.id) === String(idFinal));
+    if (!user && inputUsuario) {
+      user = usuariosProp.find(u => String(u.nombres).toLowerCase() === String(inputUsuario).trim().toLowerCase());
+      if (user) idFinal = user.id;
+    }
+    if (!user) return alert('No se encontró ningún usuario con ese ID o nombre.');
+
+    const currentlyDisabled = !!user.deleted_at;
+    if (!window.confirm(currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?')) return;
+
+    if (typeof onToggleUsuario === 'function') {
+      await onToggleUsuario(idFinal, currentlyDisabled);
+    } else {
+      const ok = await applyToggleFallback({ table: 'user_profiles', id: idFinal, currentlyDisabled, idColumn: 'user_id' });
+      if (!ok) return;
+    }
+
+    setInputUsuario('');
+    setUsuarioSeleccionado('');
+    setSugerenciasUsuario([]);
+  };
+
+  // -------------------- Render --------------------
   return (
     <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
       <h5>Gestionar estado (Inhabilitar / Reactivar)</h5>
@@ -430,8 +400,76 @@ const DeleteTab = ({
           <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Categoría</button>
         </form>
       </section>
+
+      <hr className="my-4" />
+
+      {/* Usuario */}
+      <section>
+        <h6>Usuario</h6>
+        <form onSubmit={handleToggleUsuario}>
+          <div className="mb-2">
+            <label className="form-label">Selecciona un usuario</label>
+            <select
+              className="form-select"
+              value={usuarioSeleccionado}
+              onChange={(e) => {
+                const id = e.target.value;
+                setUsuarioSeleccionado(id);
+                if (id) {
+                  const u = usuariosProp.find(x => String(x.id) === String(id));
+                  if (u) setInputUsuario(`${u.id} - ${u.nombres} ${u.apellidos}`);
+                } else {
+                  setInputUsuario('');
+                }
+              }}
+            >
+              <option value="">—</option>
+              {usuariosProp.map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.id} - {u.nombres} {u.apellidos}
+                </option>
+              ))}
+            </select>
+            <small className="text-muted">O escribe el ID o nombre</small>
+          </div>
+
+          <div className="mb-2 position-relative">
+            <input
+              className="form-control"
+              placeholder="ID o nombre del usuario"
+              value={inputUsuario}
+              onChange={(e) => {
+                const entrada = e.target.value;
+                setInputUsuario(entrada);
+                setUsuarioSeleccionado('');
+                setSugerenciasUsuario(filtrarSugerencias(entrada, usuariosProp, 'nombres'));
+              }}
+            />
+            {inputUsuario && sugerenciasUsuario.length > 0 && (
+              <ul className="list-group position-absolute z-3 w-100">
+                {sugerenciasUsuario.map(u => (
+                  <li
+                    key={u.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setInputUsuario(`${u.id} - ${u.nombres} ${u.apellidos}`);
+                      setUsuarioSeleccionado(u.id);
+                      setSugerenciasUsuario([]);
+                    }}
+                  >
+                    {u.id} - {u.nombres} {u.apellidos}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Usuario</button>
+        </form>
+      </section>
     </div>
   );
 };
 
-export default DeleteTab;
+export default GestionarEstadoTab;
