@@ -120,14 +120,15 @@ const AdminView = ({
     }
   };
 
-  // toggleUsuario: soft-delete en user_profiles usando user_id
+  // toggleUsuario: soft-delete en la tabla correcta usando id
   const toggleUsuario = async (userId, currentlyDisabled) => {
     try {
       const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
+      // Actualizar en la tabla "usuarios" (la que contiene todos los registros)
       const { error } = await supabase
-        .from('user_profiles')
+        .from('usuarios') // usar 'usuarios' si esa es la tabla principal
         .update(payload)
-        .eq('user_id', userId);
+        .eq('id', userId);
 
       if (error) throw error;
       if (onUpdateSuccess) {
@@ -154,26 +155,29 @@ const AdminView = ({
       setUsuariosLoading(true);
       setUsuariosError('');
       try {
-        // <-- CORRECCIÓN: usar columnas reales de user_profiles (display_name) -->
+        // Leer desde la tabla "usuarios" que contiene todos los registros
         const { data, error } = await supabase
-          .from('user_profiles')
-          .select('user_id, display_name, deleted_at')
-          .order('display_name', { ascending: true });
+          .from('usuarios') // <- tabla correcta con nombres/apellidos
+          .select('id, nombres, apellidos, email, username, deleted_at')
+          .order('nombres', { ascending: true });
 
         if (error) throw error;
         if (!mounted) return;
 
         // Normalizamos la respuesta para usar siempre id y display_name
         const normalized = (data || []).map(u => ({
-          id: String(u.user_id ?? u.id ?? ''),
-          display_name: u.display_name ?? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim(),
-          deleted_at: u.deleted_at ?? null
+          id: String(u.id ?? u.user_id ?? ''),
+          display_name: (u.nombres || u.apellidos)
+            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+          deleted_at: u.deleted_at ?? null,
+          raw: u
         }));
         setUsuarios(normalized);
         fetchedUsersRef.current = true;
       } catch (err) {
         console.error('Error cargando usuarios:', err);
-        setUsuariosError('No fue posible cargar usuarios. Revisa keys, CORS o la existencia de la tabla user_profiles.');
+        setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios" o los permisos.');
       } finally {
         if (mounted) setUsuariosLoading(false);
       }
