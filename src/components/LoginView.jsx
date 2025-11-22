@@ -6,45 +6,51 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com';
-      // Si el identificador contiene '@' lo tratamos como email; si no, lo enviamos también como email vacío
-      // (ideal: backend debería aceptar username o email; aquí priorizamos email según la API)
-      const payload = {
-        email: identifier.trim(),
-        password: password.trim()
-      };
+      const id = identifier.trim();
+      const pwd = password.trim();
+
+      // Construye el payload según si el identificador parece un email
+      const payload = id.includes('@')
+        ? { email: id, password: pwd }
+        : { username: id, password: pwd };
 
       const res = await fetch(`${apiUrl}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
 
       if (!res.ok) {
-        console.warn('Login fallido:', result);
-        alert(result.message || 'Credenciales incorrectas');
+        // Muestra el mensaje del backend si existe
+        alert(result?.message || 'Credenciales incorrectas');
         return;
       }
 
+      // Normaliza datos del usuario para la sesión
       const usr = {
-        id: result.user?.id,
-        email: result.user?.email,
-        username: result.user?.username,
-        role: result.user?.role || 'cliente'
+        id: result.user?.id ?? null,
+        email: result.user?.email ?? null,
+        username: result.user?.username ?? null,
+        role: result.user?.role ?? 'cliente',
+        token: result.token ?? null,
       };
 
+      // Guarda sesión en storage y eleva al estado de la app
       sessionStorage.setItem('userSession', JSON.stringify(usr));
       onLogin(usr);
     } catch (err) {
       console.error('Error inesperado en login:', err);
-      alert('Error interno. Revisa la consola.');
+      alert('Error interno. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -60,6 +66,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           placeholder="Correo o usuario"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
+          autoComplete="username email"
           required
         />
         <input
@@ -69,6 +76,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
           required
         />
         <div className="d-flex justify-content-center gap-2 mb-2">
@@ -85,18 +93,22 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
             onClick={onShowRegister}
             id="btnShowRegister"
             className="btn btn-success"
+            disabled={loading}
           >
             Registrarse
           </button>
         </div>
       </form>
+
       <button
         onClick={onShowCatalog}
         id="btnShowCatalog"
         className="btn btn-outline-primary w-100 mb-2"
+        disabled={loading}
       >
         Ver Catálogo
       </button>
+
       <div className="text-end">
         <span
           id="btnForgot"
