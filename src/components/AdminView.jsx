@@ -10,12 +10,9 @@ import UsuariosView from './UsuariosView';
 import ResponsiveTable from './ResponsiveTable';
 
 const normalizeDeletedAt = (val) => {
-  // Trata null/undefined/'null'/'undefined'/'' como activo (null)
   if (val === null || val === undefined) return null;
   const s = String(val).trim().toLowerCase();
   if (s === '' || s === 'null' || s === 'undefined') return null;
-  // Si es fecha válida, mantenla como string ISO; si no, null
-  // Opcional: new Date(s).toISOString() si quieres asegurar formato
   return val;
 };
 const normalizeBool = (val, defaultValue = false) => {
@@ -48,12 +45,10 @@ const AdminView = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
-  // Copia local de productos para reflejar toggles (normalizados)
   const [productos, setProductos] = useState(
     Array.isArray(productosProp) ? productosProp.map(normalizeProducto) : []
   );
 
-  // Usuarios
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
@@ -90,14 +85,12 @@ const AdminView = ({
     }
   };
 
-  // Sincroniza con props si el padre actualiza
   useEffect(() => {
     if (Array.isArray(productosProp) && productosProp.length > 0) {
       setProductos(productosProp.map(normalizeProducto));
     }
   }, [productosProp]);
 
-  // Recarga productos desde API o Supabase (memoizado)
   const fetchProductos = useCallback(async () => {
     try {
       if (import.meta.env.VITE_API_URL) {
@@ -119,15 +112,15 @@ const AdminView = ({
     }
   }, []);
 
-  // Cargar productos si no vienen por props
   useEffect(() => {
     if (!productosProp || productosProp.length === 0) {
       fetchProductos();
     }
   }, [productosProp, fetchProductos]);
 
-  // Toggles con enfoque pessimistic
+  // toggleProducto: devuelve true en éxito, false en fallo
   const toggleProducto = async (id, currentlyDisabled) => {
+    console.log('toggleProducto start', { id, currentlyDisabled });
     try {
       if (import.meta.env.VITE_API_URL) {
         const action = currentlyDisabled ? 'enable' : 'disable';
@@ -144,9 +137,11 @@ const AdminView = ({
           return false;
         }
         await fetchProductos();
+        console.log('toggleProducto: fetchProductos done, productos length =', productos.length);
         if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
         return true;
       }
+
       const payload = currentlyDisabled
         ? { deleted_at: null }
         : { deleted_at: new Date().toISOString() };
@@ -159,6 +154,7 @@ const AdminView = ({
         .map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p))
       );
 
+      console.log('toggleProducto: local update done, productos (preview) =', productos.slice(0,5));
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
       return true;
     } catch (err) {
@@ -405,6 +401,9 @@ const AdminView = ({
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
           onToggleUsuario={toggleUsuario}
+          onAfterToggle={async (what) => {
+            if (what === 'productos') await fetchProductos();
+          }}
         />
       )}
 
