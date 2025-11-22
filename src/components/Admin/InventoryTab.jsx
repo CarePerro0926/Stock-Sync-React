@@ -187,8 +187,10 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
       if (ok) {
         setLocalProductos(prev => prev.map(p => {
           const norm = buildNormalized(p);
-          if (String(norm.id) === String(productId)) {
+          const rawProductId = String(p._raw?.product_id ?? p._raw?.id ?? '');
+          if (String(norm.id) === String(productId) || rawProductId === String(productId)) {
             const newRaw = { ...p._raw, deleted_at: currentlyDisabled ? null : new Date().toISOString() };
+            // mantener la estructura original pero con _raw actualizado
             return { ...p, _raw: newRaw };
           }
           return p;
@@ -199,7 +201,8 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     } else {
       setLocalProductos(prev => prev.map(p => {
         const norm = buildNormalized(p);
-        if (String(norm.id) === String(productId)) {
+        const rawProductId = String(p._raw?.product_id ?? p._raw?.id ?? '');
+        if (String(norm.id) === String(productId) || rawProductId === String(productId)) {
           const newRaw = { ...p._raw, deleted_at: currentlyDisabled ? null : new Date().toISOString() };
           return { ...p, _raw: newRaw };
         }
@@ -243,6 +246,8 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
           <ResponsiveTable
             headers={tableHeaders}
             data={tableData}
+            // Si tu ResponsiveTable soporta acciones por fila, pasa _handleToggleFromRow
+            // onRowToggle={_handleToggleFromRow}
           />
         </div>
       </div>
