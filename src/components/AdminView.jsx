@@ -24,13 +24,15 @@ const normalizeBool = (val, defaultValue = false) => {
 const normalizeProducto = (p) => {
   const deleted_at_raw = p?.deleted_at;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
-  const isDeleted = !!(deleted_at && String(deleted_at).trim() !== '');
+  const disabled = normalizeBool(p?.disabled, false);
+  const inactivo = normalizeBool(p?.inactivo, false);
+  const isDeleted = Boolean(deleted_at && String(deleted_at).trim() !== '');
   return {
     ...p,
     deleted_at: isDeleted ? deleted_at : null,
-    disabled: normalizeBool(p?.disabled, false),
-    inactivo: normalizeBool(p?.inactivo, false),
-    _inactive: Boolean(isDeleted) || normalizeBool(p?.disabled, false) || normalizeBool(p?.inactivo, false)
+    disabled,
+    inactivo,
+    _inactive: Boolean(isDeleted) || disabled || inactivo
   };
 };
 
@@ -50,11 +52,7 @@ const AdminView = ({
   onUpdateSuccess
 }) => {
   const [showMenu, setShowMenu] = useState(false);
-
-  const [productos, setProductos] = useState(
-    Array.isArray(productosProp) ? productosProp.map(normalizeProducto) : []
-  );
-
+  const [productos, setProductos] = useState(Array.isArray(productosProp) ? productosProp.map(normalizeProducto) : []);
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
@@ -74,10 +72,7 @@ const AdminView = ({
   }, [handleClickOutside]);
 
   const toggleMenu = () => setShowMenu(!showMenu);
-  const selectTab = (tabId) => {
-    setVistaActiva(tabId);
-    setShowMenu(false);
-  };
+  const selectTab = (tabId) => { setVistaActiva(tabId); setShowMenu(false); };
 
   const getTitle = () => {
     switch (vistaActiva) {
@@ -106,7 +101,6 @@ const AdminView = ({
         const text = await res.text().catch(() => null);
         let data = null;
         try { data = JSON.parse(text); } catch { data = null; }
-        console.log('fetchProductos status:', res.status, 'items:', Array.isArray(data) ? data.length : 'null');
         if (res.ok && Array.isArray(data)) {
           const normalized = data.map(normalizeProducto);
           setProductos(normalized);
@@ -115,10 +109,7 @@ const AdminView = ({
       }
 
       // Fallback a supabase si no hay API o falla
-      const { data, error } = await supabase
-        .from('productos')
-        .select('*')
-        .order('nombre', { ascending: true });
+      const { data, error } = await supabase.from('productos').select('*').order('nombre', { ascending: true });
       if (error) throw error;
       const normalized = (data || []).map(normalizeProducto);
       setProductos(normalized);
@@ -137,7 +128,6 @@ const AdminView = ({
 
   // toggleProducto: devuelve true en éxito, false en fallo
   const toggleProducto = async (id, currentlyDisabled) => {
-    console.log('toggleProducto start', { id, currentlyDisabled });
     try {
       if (import.meta.env.VITE_API_URL) {
         const action = currentlyDisabled ? 'enable' : 'disable';
@@ -154,34 +144,29 @@ const AdminView = ({
           return false;
         }
 
-        // pequeño retardo para evitar leer una réplica anterior (opcional)
+        // Pequeña espera para consistencia y luego forzar fetch fresco
         await new Promise(r => setTimeout(r, 250));
-
-        // Forzar fetch fresco para obtener la lista actualizada
         const nuevos = await fetchProductos();
-        console.log('toggleProducto: fetchProductos done, productos length =', Array.isArray(nuevos) ? nuevos.length : 'null');
-
+        // Si fetchProductos devolvió la lista, úsala para actualizar el estado
+        if (Array.isArray(nuevos)) {
+          setProductos(nuevos);
+        }
         if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
         return true;
       }
 
       // Fallback supabase directo
-      const payload = currentlyDisabled
-        ? { deleted_at: null }
-        : { deleted_at: new Date().toISOString() };
+      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
       const { error } = await supabase.from('productos').update(payload).eq('id', id);
       if (error) throw error;
 
+      // Optimistic update y recarga
       const now = !currentlyDisabled ? new Date().toISOString() : null;
-      setProductos(prev => prev
-        .map(normalizeProducto)
-        .map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p))
-      );
+      setProductos(prev => prev.map(normalizeProducto).map(p => (String(p.id) === String(id) ? normalizeProducto({ ...p, deleted_at: now }) : p)));
 
-      console.log('toggleProducto: local update done, productos (preview) =', productos.slice(0,5));
-      // pequeña espera y recarga para asegurar consistencia
       await new Promise(r => setTimeout(r, 150));
-      await fetchProductos();
+      const nuevos = await fetchProductos();
+      if (Array.isArray(nuevos)) setProductos(nuevos);
 
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
       return true;
@@ -249,9 +234,7 @@ const AdminView = ({
         const { error: err2 } = await supabase.from('user_profiles').update(payload).eq('user_id', userId);
         if (err2) throw err2;
       }
-      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId)
-        ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at }
-        : u)));
+      setUsuarios(prev => prev.map(u => (String(u.id) === String(userId) ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at } : u)));
       if (onUpdateSuccess) { try { await onUpdateSuccess(); } catch (e) { console.error(e); } }
       return true;
     } catch (err) {
@@ -271,9 +254,7 @@ const AdminView = ({
         if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
         const normalized = (data || []).map(u => ({
           id: String(u.id ?? u.user_id ?? ''),
-          display_name: (u.nombres || u.apellidos)
-            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
-            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+          display_name: (u.nombres || u.apellidos) ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim() : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
           deleted_at: normalizeDeletedAt(u.deleted_at),
           raw: u
         }));
@@ -283,22 +264,14 @@ const AdminView = ({
         return;
       }
 
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nombres, apellidos, email, username, deleted_at')
-        .order('nombres', { ascending: true });
-
+      const { data, error } = await supabase.from('usuarios').select('id, nombres, apellidos, email, username, deleted_at').order('nombres', { ascending: true });
       if (error) throw error;
-
       const normalized = (data || []).map(u => ({
         id: String(u.id ?? u.user_id ?? ''),
-        display_name: (u.nombres || u.apellidos)
-          ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
-          : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+        display_name: (u.nombres || u.apellidos) ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim() : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
         deleted_at: normalizeDeletedAt(u.deleted_at),
         raw: u
       }));
-
       setUsuarios(normalized);
       fetchedUsersRef.current = true;
     } catch (err) {
@@ -314,21 +287,12 @@ const AdminView = ({
     fetchUsuariosFromApi();
   }, []);
 
-  // Render
   return (
     <div className="card p-4 w-100">
       <h4 className="mb-3">Panel Administrador</h4>
 
       <div id="adminMobileHeader" className="d-flex align-items-center mb-3 d-md-none">
-        <button
-          id="btnMenuHamburguesa"
-          className="btn btn-primary me-3"
-          type="button"
-          aria-label="Menú de navegación"
-          onClick={toggleMenu}
-        >
-          &#9776;
-        </button>
+        <button id="btnMenuHamburguesa" className="btn btn-primary me-3" type="button" aria-label="Menú de navegación" onClick={toggleMenu}>&#9776;</button>
         <h5 id="adminSectionTitle" className="mb-0">{getTitle()}</h5>
       </div>
 
@@ -344,75 +308,21 @@ const AdminView = ({
       )}
 
       <ul id="adminTabs" className="nav nav-tabs mb-3 d-none d-md-flex">
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>
-            Inventario
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>
-            Proveedores
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>
-            Agregar
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>
-            Actualizar
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>
-            Gestionar estado
-          </button>
-        </li>
-        <li className="nav-item">
-          <button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>
-            Usuarios
-          </button>
-        </li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'inventory' ? 'active' : ''}`} onClick={() => selectTab('inventory')}>Inventario</button></li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'providers' ? 'active' : ''}`} onClick={() => selectTab('providers')}>Proveedores</button></li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'add' ? 'active' : ''}`} onClick={() => selectTab('add')}>Agregar</button></li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'update' ? 'active' : ''}`} onClick={() => selectTab('update')}>Actualizar</button></li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'delete' ? 'active' : ''}`} onClick={() => selectTab('delete')}>Gestionar estado</button></li>
+        <li className="nav-item"><button className={`nav-link ${vistaActiva === 'usuarios' ? 'active' : ''}`} onClick={() => selectTab('usuarios')}>Usuarios</button></li>
       </ul>
 
-      {vistaActiva === 'inventory' && (
-        <InventoryTab
-          productos={productos}
-          categorias={categorias}
-          onToggleProducto={toggleProducto}
-        />
-      )}
+      {vistaActiva === 'inventory' && <InventoryTab productos={productos} categorias={categorias} onToggleProducto={toggleProducto} />}
 
-      {vistaActiva === 'providers' && (
-        <ProvidersTab
-          proveedores={proveedores}
-          onAddProveedor={onAddProveedor}
-          onDeleteProveedor={onDeleteProveedor}
-          onToggleProveedor={toggleProveedor}
-        />
-      )}
+      {vistaActiva === 'providers' && <ProvidersTab proveedores={proveedores} onAddProveedor={onAddProveedor} onDeleteProveedor={onDeleteProveedor} onToggleProveedor={toggleProveedor} />}
 
-      {vistaActiva === 'add' && (
-        <AddTab
-          onAddProducto={onAddProducto}
-          onAddCategoria={onAddCategoria}
-          onAddProveedor={onAddProveedor}
-          categorias={categorias}
-          productos={productos}
-          proveedores={proveedores}
-        />
-      )}
+      {vistaActiva === 'add' && <AddTab onAddProducto={onAddProducto} onAddCategoria={onAddCategoria} onAddProveedor={onAddProveedor} categorias={categorias} productos={productos} proveedores={proveedores} />}
 
-      {vistaActiva === 'update' && (
-        <UpdateTab
-          productos={productos}
-          categorias={categorias}
-          proveedores={proveedores}
-          onUpdateSuccess={onUpdateSuccess}
-          onUpdateProveedorSuccess={onUpdateSuccess}
-        />
-      )}
+      {vistaActiva === 'update' && <UpdateTab productos={productos} categorias={categorias} proveedores={proveedores} onUpdateSuccess={onUpdateSuccess} onUpdateProveedorSuccess={onUpdateSuccess} />}
 
       {vistaActiva === 'delete' && (
         <GestionarEstadoTab
@@ -429,20 +339,14 @@ const AdminView = ({
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
           onToggleUsuario={toggleUsuario}
-          onAfterToggle={async (what) => {
-            if (what === 'productos') await fetchProductos();
-          }}
+          onAfterToggle={async (what) => { if (what === 'productos') await fetchProductos(); }}
         />
       )}
 
-      {vistaActiva === 'usuarios' && (
-        <UsuariosView />
-      )}
+      {vistaActiva === 'usuarios' && <UsuariosView />}
 
       <div className="text-end mt-3">
-        <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">
-          Cerrar Sesión
-        </button>
+        <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
       </div>
     </div>
   );
