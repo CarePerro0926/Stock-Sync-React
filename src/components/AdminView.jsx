@@ -227,7 +227,6 @@ const AdminView = ({
   useEffect(() => {
     if (fetchedUsersRef.current) return;
     fetchUsuariosFromApi();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // -------------------------
