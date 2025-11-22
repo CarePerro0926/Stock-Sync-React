@@ -149,25 +149,60 @@ const GestionarEstadoTab = ({
       .slice(0, 8);
   };
 
+  /**
+   * parseIdFromInputGeneric mejorado:
+   * - Si la entrada tiene formato "ID - Nombre" devuelve ID.
+   * - Si la entrada es solo dígitos devuelve ID exacto.
+   * - Si la entrada coincide exactamente con algún id en la lista devuelve ese id.
+   * - Si no, intenta coincidencia por nombre exacta o parcial.
+   * - Nunca devuelve un ID basado en coincidencias en campos numéricos (precio/stock).
+   */
   const parseIdFromInputGeneric = (entrada, lista = [], idField = 'id', nameField = 'nombre') => {
     const raw = String(entrada || '').trim();
     if (!raw) return '';
 
+    // 1) Formato "ID - Nombre" -> extraer ID y devolverlo
     if (raw.includes(' - ')) {
       const maybeId = raw.split(' - ')[0].trim();
-      if (lista.find(item => String(item[idField]) === maybeId)) return maybeId;
-      return maybeId;
+      if (maybeId) {
+        // si existe en la lista, devolverlo; si no existe, devolverlo solo si es claramente un id (numérico o uuid-like)
+        const exists = lista.find(item => String(item[idField]) === maybeId);
+        if (exists) return maybeId;
+        // permitir devolver maybeId solo si es un id plausible (solo dígitos o uuid-like)
+        if (/^\d+$/.test(maybeId) || /^[0-9a-fA-F-]{8,}$/.test(maybeId)) return maybeId;
+        // si no es plausible, continuar con búsqueda por nombre
+      }
     }
 
-    if (lista.find(item => String(item[idField]) === raw)) return raw;
+    // 2) Si la entrada es solo dígitos -> buscar ID exacto (no parcial)
+    if (/^\d+$/.test(raw)) {
+      const foundById = lista.find(item => String(item[idField]) === raw);
+      if (foundById) return String(foundById[idField]);
+      // si no se encuentra por id exacto, no intentar coincidencias parciales con otros campos
+      return '';
+    }
 
+    // 3) Si la entrada parece un UUID o id alfanumérico largo -> buscar ID exacto
+    if (/^[0-9a-fA-F-]{8,}$/.test(raw)) {
+      const foundById = lista.find(item => String(item[idField]) === raw);
+      if (foundById) return String(foundById[idField]);
+      return '';
+    }
+
+    // 4) Buscar por nombre exacto (case-insensitive)
     const byNameExact = lista.find(item => String(item[nameField] ?? '').toLowerCase() === raw.toLowerCase());
     if (byNameExact) return String(byNameExact[idField]);
 
+    // 5) Buscar por nombre parcial (case-insensitive)
     const byNamePartial = lista.find(item => String(item[nameField] ?? '').toLowerCase().includes(raw.toLowerCase()));
     if (byNamePartial) return String(byNamePartial[idField]);
 
-    return raw;
+    // 6) Fallback: si raw coincide exactamente con algún id en la lista (por seguridad)
+    const byIdExact = lista.find(item => String(item[idField]) === raw);
+    if (byIdExact) return String(byIdExact[idField]);
+
+    // No se encontró un id confiable
+    return '';
   };
 
   // Fallback que actualiza la tabla indicada vía supabase (si el padre no provee onToggle)
