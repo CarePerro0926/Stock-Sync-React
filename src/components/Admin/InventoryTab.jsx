@@ -1,6 +1,5 @@
 // src/components/Admin/InventoryTab.jsx
 import React, { useState, useMemo, useEffect } from 'react';
-import './InventoryTab.css'; // CSS específico para responsividad
 
 const InventoryTab = ({ productos = [], categorias = [] }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
@@ -10,8 +9,6 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
     console.log('--- DATOS EN INVENTORYTAB ---');
     console.log('Productos recibidos:', productos);
     console.log('Categorías recibidas:', categorias);
-    if (productos.length > 0) console.log('Ejemplo de producto:', productos[0]);
-    if (categorias.length > 0) console.log('Ejemplo de categoría:', categorias[0]);
   }, [productos, categorias]);
 
   const listaCategoriasFiltro = useMemo(() => {
@@ -51,31 +48,30 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
   }, [productos, filtroCat, filtroTxt]);
 
   return (
-    <div className="inventory w-100">
-      <h5 className="inventory-title">Inventario</h5>
+    <div className="w-100">
+      <h5>Inventario</h5>
 
-      <div className="inventory-filters">
-        <div className="filter-item">
-          <label htmlFor="filtroCatAdmin" className="filter-label">Categoría</label>
+      {/* Filtros */}
+      <div className="row g-2 mb-3">
+        <div className="col-12 col-md-6">
+          <label htmlFor="filtroCatAdmin" className="form-label mb-1">Categoría</label>
           <select
             id="filtroCatAdmin"
-            className="filter-select"
+            className="form-select"
             value={filtroCat}
             onChange={e => setFiltroCat(e.target.value)}
           >
             {listaCategoriasFiltro.map((cat, index) => (
-              <option key={`${cat}-${index}`} value={cat}>
-                {cat}
-              </option>
+              <option key={`${cat}-${index}`} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
 
-        <div className="filter-item">
-          <label htmlFor="filtroTxtAdmin" className="filter-label">Buscar</label>
+        <div className="col-12 col-md-6">
+          <label htmlFor="filtroTxtAdmin" className="form-label mb-1">Buscar</label>
           <input
             id="filtroTxtAdmin"
-            className="filter-input"
+            className="form-control"
             placeholder="ID, nombre o categoría..."
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
@@ -83,79 +79,96 @@ const InventoryTab = ({ productos = [], categorias = [] }) => {
         </div>
       </div>
 
-      {/* Tabla (web/desktop) */}
-      <div className="inventory-table-container">
-        <table className="inventory-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Stock</th>
-              <th>Precio unidad</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productosFiltrados.map(p => (
-              <tr key={p.id}>
-                <td>{p.id ?? '—'}</td>
-                <td>{p.nombre ?? 'Sin nombre'}</td>
-                <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
-                <td>{p.cantidad ?? 0}</td>
-                <td>
-                  {typeof p.precio === 'number'
-                    ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                    : p.precio ?? '—'}
-                </td>
-                <td>{p.deleted_at ? 'Inhabilitado' : 'Activo'}</td>
+      {/* Tabla en desktop/tablet */}
+      <div className="d-none d-md-block" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+        <div className="table-responsive">
+          <table className="table">
+            <thead className="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Stock</th>
+                <th>Precio unidad</th>
+                <th>Estado</th>
               </tr>
-            ))}
-            {productosFiltrados.length === 0 && (
-              <tr><td colSpan={6}>No hay productos</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {productosFiltrados.map(p => (
+                <tr key={p.id}>
+                  <td>{p.id ?? '—'}</td>
+                  <td>{p.nombre ?? 'Sin nombre'}</td>
+                  <td>{p.categoria_nombre ?? 'Sin Categoría'}</td>
+                  <td>{p.cantidad ?? 0}</td>
+                  <td>
+                    {typeof p.precio === 'number'
+                      ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                      : p.precio ?? '—'}
+                  </td>
+                  <td>
+                    <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
+                      {p.deleted_at ? 'Inhabilitado' : 'Activo'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {productosFiltrados.length === 0 && (
+                <tr><td colSpan={6}>No hay productos</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Tarjetas (móvil) */}
-      <div className="inventory-cards">
-        {productosFiltrados.map(p => (
-          <div className="card" key={p.id}>
-            <div className="card-body">
-              <h6 className="card-title">{p.nombre ?? 'Sin nombre'}</h6>
-              <div className="card-row">
-                <span className="card-label">ID:</span>
-                <span className="card-value">{p.id ?? '—'}</span>
-              </div>
-              <div className="card-row">
-                <span className="card-label">Categoría:</span>
-                <span className="card-value">{p.categoria_nombre ?? 'Sin Categoría'}</span>
-              </div>
-              <div className="card-row">
-                <span className="card-label">Stock:</span>
-                <span className="card-value">{p.cantidad ?? 0}</span>
-              </div>
-              <div className="card-row">
-                <span className="card-label">Precio:</span>
-                <span className="card-value">
-                  {typeof p.precio === 'number'
-                    ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
-                    : p.precio ?? '—'}
-                </span>
-              </div>
-              <div className="card-row">
-                <span className="card-label">Estado:</span>
-                <span className={`card-badge ${p.deleted_at ? 'badge-off' : 'badge-on'}`}>
-                  {p.deleted_at ? 'Inhabilitado' : 'Activo'}
-                </span>
+      {/* Tarjetas en móvil */}
+      <div className="d-block d-md-none">
+        <div className="row row-cols-1 g-3">
+          {productosFiltrados.map(p => (
+            <div className="col" key={p.id}>
+              <div className="card h-100 shadow-sm">
+                <div className="card-body">
+                  <h6 className="card-title text-primary mb-2">{p.nombre ?? 'Sin nombre'}</h6>
+
+                  <div className="d-flex justify-content-between small mb-1">
+                    <span className="text-muted">ID</span>
+                    <span className="fw-semibold">{p.id ?? '—'}</span>
+                  </div>
+
+                  <div className="d-flex justify-content-between small mb-1">
+                    <span className="text-muted">Categoría</span>
+                    <span className="fw-semibold">{p.categoria_nombre ?? 'Sin Categoría'}</span>
+                  </div>
+
+                  <div className="d-flex justify-content-between small mb-1">
+                    <span className="text-muted">Stock</span>
+                    <span className="fw-semibold">{p.cantidad ?? 0}</span>
+                  </div>
+
+                  <div className="d-flex justify-content-between small mb-2">
+                    <span className="text-muted">Precio</span>
+                    <span className="fw-semibold">
+                      {typeof p.precio === 'number'
+                        ? p.precio.toLocaleString('es-CO', { minimumFractionDigits: 0 })
+                        : p.precio ?? '—'}
+                    </span>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="text-muted small">Estado</span>
+                    <span className={`badge ${p.deleted_at ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}`}>
+                      {p.deleted_at ? 'Inhabilitado' : 'Activo'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        {productosFiltrados.length === 0 && (
-          <div className="card"><div className="card-body">No hay productos</div></div>
-        )}
+          ))}
+          {productosFiltrados.length === 0 && (
+            <div className="col">
+              <div className="card"><div className="card-body">No hay productos</div></div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
