@@ -17,9 +17,12 @@ const UsuariosView = () => {
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.message || 'Error al obtener usuarios');
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          const msg = data?.message || data?.error || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
         setUsuarios(Array.isArray(data) ? data : []);
         setError(null);
       } catch (fetchError) {
@@ -61,76 +64,54 @@ const UsuariosView = () => {
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
   /**
-   * toggleUsuario: intenta varios endpoints/fallbacks para inhabilitar/reactivar usuarios.
-   * - Primero intenta PATCH /api/usuarios/:id/disable o /enable (según acción).
-   * - Si falla, intenta PATCH /api/usuarios/:id con { disabled: true/false }.
-   * - Si sigue fallando, intenta PATCH /api/usuarios/:id con { deleted_at: timestamp/null }.
-   * - Actualiza el estado local (usuarios) al finalizar con éxito para evitar recarga inmediata.
+   * toggleUsuario: realiza un único PATCH al recurso principal con { disabled: true/false }.
+   * Si el servidor devuelve error, muestra el mensaje devuelto por el servidor (si existe)
+   * y registra la respuesta en consola para depuración.
    */
   const toggleUsuario = async (id, currentlyDisabled) => {
     const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
     if (!window.confirm(confirmMsg)) return;
 
-    const base = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}`;
+    const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}`;
+    const body = { disabled: !currentlyDisabled };
 
-    const tryPatch = async (url, body) => {
-      try {
-        const res = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        let parsed = null;
-        try { parsed = await res.json(); } catch { /* no json */ }
-        if (res.ok) return { ok: true, status: res.status, body: parsed };
-        const msg = parsed?.message || parsed?.error || `HTTP ${res.status}`;
-        return { ok: false, status: res.status, errorMessage: msg, body: parsed };
-      } catch (networkError) {
-        return { ok: false, status: 0, errorMessage: networkError.message || String(networkError) };
+    try {
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      // Intentamos parsear JSON de respuesta (si lo hay)
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        // Mostrar mensaje claro al usuario y log para depuración
+        const serverMsg = payload?.message || payload?.error || `HTTP ${res.status}`;
+        console.error('Error al inhabilitar/reactivar usuario:', { status: res.status, payload });
+        alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
+        return;
       }
-    };
 
-    const attempts = [
-      { url: `${base}/${currentlyDisabled ? 'enable' : 'disable'}`, body: { reason: currentlyDisabled ? 'reactivado desde admin' : 'inhabilitado desde admin' } },
-      { url: base, body: { disabled: !currentlyDisabled } },
-      { url: base, body: { deleted_at: !currentlyDisabled ? new Date().toISOString() : null } }
-    ];
+      // Éxito: actualizamos estado local para reflejar el cambio sin forzar recarga inmediata
+      setUsuarios(prev =>
+        prev.map(u => {
+          if (String(u.id) !== String(id)) return u;
+          return {
+            ...u,
+            disabled: !currentlyDisabled,
+            // si tu API usa deleted_at en lugar de disabled, puedes ajustar aquí
+            deleted_at: !currentlyDisabled ? new Date().toISOString() : null
+          };
+        })
+      );
 
-    let success = false;
-    let lastError = null;
-
-    for (const attempt of attempts) {
-      const result = await tryPatch(attempt.url, attempt.body);
-      if (result.ok) {
-        success = true;
-        break;
-      } else {
-        lastError = result;
-      }
+      // Opcional: forzar recarga para obtener datos frescos del servidor
+      setRecargar(prev => !prev);
+    } catch (networkError) {
+      console.error('Error de red al cambiar estado del usuario:', networkError);
+      alert('Error de red al cambiar el estado del usuario. Revisa la consola para más detalles.');
     }
-
-    if (!success) {
-      console.error('Error al intentar toggle (todos los intentos):', lastError);
-      alert('Ocurrió un error al cambiar el estado del usuario. Revisa la consola para más detalles.');
-      return;
-    }
-
-    // Actualizamos el estado localmente para reflejar el cambio
-    setUsuarios(prev =>
-      prev.map(u => {
-        if (String(u.id) !== String(id)) return u;
-        const newDeletedAt = !currentlyDisabled ? new Date().toISOString() : null;
-        const newDisabled = !currentlyDisabled;
-        return {
-          ...u,
-          deleted_at: newDeletedAt,
-          disabled: newDisabled
-        };
-      })
-    );
-
-    // Forzar recarga si quieres datos frescos del servidor
-    setRecargar(prev => !prev);
   };
 
   return (
@@ -190,7 +171,7 @@ const UsuariosView = () => {
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      <div className="usuarios-scroll-container">
+      <div className="usuarios-scroll-container" style={{ maxHeight: '600px', overflowY: 'auto' }}>
         {usuariosFiltrados.length === 0 ? (
           <div className="text-center p-4">
             <p>No se encontraron usuarios que coincidan con los filtros.</p>
