@@ -44,11 +44,19 @@ const UsuariosView = () => {
   }, [usuarios]);
 
   const usuariosFiltrados = useMemo(() => {
+    const texto = (busqueda || '').toLowerCase().trim();
+
     return usuarios.filter((u) => {
       const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
-      if (!mostrarInactivos && estaInhabilitado) return false;
 
-      const texto = (busqueda || '').toLowerCase().trim();
+      // Si mostrarInactivos === true -> mostrar SOLO inactivos
+      // Si mostrarInactivos === false -> mostrar SOLO activos
+      if (mostrarInactivos) {
+        if (!estaInhabilitado) return false;
+      } else {
+        if (estaInhabilitado) return false;
+      }
+
       const coincideBusqueda =
         (u.nombres?.toLowerCase().includes(texto)) ||
         (u.apellidos?.toLowerCase().includes(texto)) ||
@@ -57,6 +65,7 @@ const UsuariosView = () => {
         String(u.cedula ?? '').toLowerCase().includes(texto);
 
       const coincideRol = filtroRol === 'todos' || (u.role?.toLowerCase() === filtroRol);
+
       return coincideBusqueda && coincideRol;
     });
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
