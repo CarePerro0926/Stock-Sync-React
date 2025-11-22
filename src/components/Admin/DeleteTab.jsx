@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
 const DeleteTab = ({
-  onDeleteProducto,
-  onDeleteProveedor,
-  onDeleteCategoria,
+  onToggleProducto,
+  onToggleProveedor,
+  onToggleCategoria,
   productos = [],
   proveedores: proveedoresProp = [],
   categorias: categoriasProp = []
@@ -27,10 +27,11 @@ const DeleteTab = ({
   useEffect(() => {
     let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
-      supabase.from('proveedores').select('*').then(({ data, error }) => {
-        if (error) console.error('Error al cargar proveedores:', error);
-        else if (mounted) setProveedores(data || []);
-      });
+      supabase.from('proveedores').select('*').order('nombre', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error('Error al cargar proveedores:', error);
+          else if (mounted) setProveedores(data || []);
+        });
     } else {
       setProveedores(proveedoresProp);
     }
@@ -40,10 +41,11 @@ const DeleteTab = ({
   useEffect(() => {
     let mounted = true;
     if (!categoriasProp || categoriasProp.length === 0) {
-      supabase.from('categorias').select('*').then(({ data, error }) => {
-        if (error) console.error('Error al cargar categorías:', error);
-        else if (mounted) setCategorias(data || []);
-      });
+      supabase.from('categorias').select('*').order('nombre', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error('Error al cargar categorías:', error);
+          else if (mounted) setCategorias(data || []);
+        });
     } else {
       setCategorias(categoriasProp);
     }
@@ -55,7 +57,7 @@ const DeleteTab = ({
     if (!q) return [];
     return lista.filter(item =>
       String(item.id).toLowerCase().includes(q) ||
-      String(item[campo]).toLowerCase().includes(q)
+      String(item[campo] ?? '').toLowerCase().includes(q)
     ).slice(0, 5);
   };
 
@@ -69,7 +71,23 @@ const DeleteTab = ({
     return trimmed;
   };
 
-  const handleDeleteProducto = (e) => {
+  const applyToggleFallback = async ({ table, id, currentlyDisabled }) => {
+    try {
+      if (!id) throw new Error('ID inválido');
+      const newDeletedAt = currentlyDisabled ? null : new Date().toISOString();
+      const { error } = await supabase
+        .from(table)
+        .update({ deleted_at: newDeletedAt })
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Fallback toggle error:', err);
+      return false;
+    }
+  };
+
+  const handleToggleProducto = async (e) => {
     e.preventDefault();
     const entradaRaw = String(inputProducto || '').trim();
     const seleccion = productoSeleccionado;
@@ -93,14 +111,31 @@ const DeleteTab = ({
       return;
     }
 
-    if (onDeleteProducto) onDeleteProducto(idFinal);
+    // determinar estado actual (buscar en productos)
+    const prod = productos.find(p => String(p.id) === String(idFinal));
+    const currentlyDisabled = !!(prod && prod.deleted_at);
+
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este producto?' : '¿Inhabilitar este producto?';
+    if (!window.confirm(confirmMsg)) return;
+
+    // usar callback del padre si existe
+    if (typeof onToggleProducto === 'function') {
+      await onToggleProducto(idFinal, currentlyDisabled);
+    } else {
+      const ok = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled });
+      if (!ok) {
+        alert('Ocurrió un error al cambiar el estado del producto.');
+        return;
+      }
+    }
+
     setInputProducto('');
     setProductoSeleccionado('');
     setSugerenciasProducto([]);
-    alert('Producto eliminado');
+    alert(currentlyDisabled ? 'Producto reactivado' : 'Producto inhabilitado');
   };
 
-  const handleDeleteProveedor = (e) => {
+  const handleToggleProveedor = async (e) => {
     e.preventDefault();
     const entradaRaw = String(inputProveedor || '').trim();
     const seleccion = proveedorSeleccionado;
@@ -124,240 +159,277 @@ const DeleteTab = ({
       return;
     }
 
-    if (onDeleteProveedor) onDeleteProveedor(idFinal);
+    const prov = proveedores.find(p => String(p.id) === String(idFinal));
+    const currentlyDisabled = !!(prov && prov.deleted_at);
+
+    const confirmMsg = currentlyDisabled ? '¿Reactivar este proveedor?' : '¿Inhabilitar este proveedor?';
+    if (!window.confirm(confirmMsg)) return;
+
+    if (typeof onToggleProveedor === 'function') {
+      await onToggleProveedor(idFinal, currentlyDisabled);
+    } else {
+      const ok = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled });
+      if (!ok) {
+        alert('Ocurrió un error al cambiar el estado del proveedor.');
+        return;
+      }
+    }
+
     setInputProveedor('');
     setProveedorSeleccionado('');
     setSugerenciasProveedor([]);
-    alert('Proveedor eliminado');
+    alert(currentlyDisabled ? 'Proveedor reactivado' : 'Proveedor inhabilitado');
   };
 
-  const handleDeleteCategoria = (e) => {
+  const handleToggleCategoria = async (e) => {
     e.preventDefault();
     const entradaRaw = String(inputCategoria || '').trim();
     const seleccion = categoriaSeleccionada;
-    let nombreFinal = '';
+    let idFinal = '';
 
     const entrada = parseIdFromInput(entradaRaw);
 
     if (entrada) {
       const porId = categorias.find(c => String(c.id) === entrada);
-      if (porId) nombreFinal = porId.nombre;
+      if (porId) idFinal = porId.id;
       else {
         const porNombre = categorias.find(c => String(c.nombre).toLowerCase() === entrada.toLowerCase());
-        if (porNombre) nombreFinal = porNombre.nombre;
+        if (porNombre) idFinal = porNombre.id;
       }
     } else if (seleccion) {
-      nombreFinal = seleccion;
+      // en select guardamos nombre; buscar id por nombre
+      const porNombre = categorias.find(c => c.nombre === seleccion);
+      if (porNombre) idFinal = porNombre.id;
     }
 
-    if (!nombreFinal) {
+    if (!idFinal) {
       alert('No se encontró ninguna categoría con ese ID o nombre.');
       return;
     }
 
-    if (onDeleteCategoria) onDeleteCategoria(nombreFinal);
+    const cat = categorias.find(c => String(c.id) === String(idFinal));
+    const currentlyDisabled = !!(cat && cat.deleted_at);
+
+    const confirmMsg = currentlyDisabled ? '¿Reactivar esta categoría?' : '¿Inhabilitar esta categoría?';
+    if (!window.confirm(confirmMsg)) return;
+
+    if (typeof onToggleCategoria === 'function') {
+      await onToggleCategoria(idFinal, currentlyDisabled);
+    } else {
+      const ok = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled });
+      if (!ok) {
+        alert('Ocurrió un error al cambiar el estado de la categoría.');
+        return;
+      }
+    }
+
     setInputCategoria('');
     setCategoriaSeleccionada('');
     setSugerenciasCategoria([]);
-    alert('Categoría eliminada');
+    alert(currentlyDisabled ? 'Categoría reactivada' : 'Categoría inhabilitada');
   };
 
   return (
     <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
-      {/* -------------------- Eliminar Producto -------------------- */}
-      <h5>Eliminar Producto</h5>
-      <form onSubmit={handleDeleteProducto}>
-        <div className="mb-2 position-relative">
-          <label className="form-label">Selecciona un producto</label>
-          <select
-            className="form-select"
-            value={productoSeleccionado}
-            onChange={(e) => {
-              const id = e.target.value;
-              setProductoSeleccionado(id);
-              if (id) {
-                const p = productos.find(x => String(x.id) === String(id));
-                if (p) setInputProducto(`${p.id} - ${p.nombre}`);
-              } else {
-                setInputProducto('');
-              }
-            }}
-          >
-            <option value="">—</option>
-            {productos.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.id} - {p.nombre}
-              </option>
-            ))}
-          </select>
-          <small className="text-muted">Puedes seleccionar o escribir el ID o nombre.</small>
-        </div>
+      <h5>Gestionar estado (Inhabilitar / Reactivar)</h5>
 
-        <div className="mb-2 position-relative">
-          <label className="form-label">O escribe el ID o nombre</label>
-          <input
-            className="form-control"
-            placeholder="ID o nombre del producto"
-            value={inputProducto}
-            onChange={(e) => {
-              const entrada = e.target.value;
-              setInputProducto(entrada);
-              setProductoSeleccionado('');
-              setSugerenciasProducto(filtrarSugerencias(entrada, productos, 'nombre'));
-            }}
-          />
-          {inputProducto && sugerenciasProducto.length > 0 && (
-            <ul className="list-group position-absolute z-3 w-100">
-              {sugerenciasProducto.map(p => (
-                <li
-                  key={p.id}
-                  className="list-group-item list-group-item-action"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    setInputProducto(`${p.id} - ${p.nombre}`);
-                    setProductoSeleccionado(p.id);
-                    setSugerenciasProducto([]);
-                  }}
-                >
+      {/* Producto */}
+      <section className="mt-3">
+        <h6>Producto</h6>
+        <form onSubmit={handleToggleProducto}>
+          <div className="mb-2">
+            <label className="form-label">Selecciona un producto</label>
+            <select
+              className="form-select"
+              value={productoSeleccionado}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProductoSeleccionado(id);
+                if (id) {
+                  const p = productos.find(x => String(x.id) === String(id));
+                  if (p) setInputProducto(`${p.id} - ${p.nombre}`);
+                } else {
+                  setInputProducto('');
+                }
+              }}
+            >
+              <option value="">—</option>
+              {productos.map(p => (
+                <option key={p.id} value={p.id}>
                   {p.id} - {p.nombre}
-                </li>
+                </option>
               ))}
-            </ul>
-          )}
-        </div>
+            </select>
+            <small className="text-muted">O escribe el ID o nombre</small>
+          </div>
 
-        <button type="submit" className="btn btn-danger w-100">Eliminar Producto</button>
-      </form>
+          <div className="mb-2 position-relative">
+            <input
+              className="form-control"
+              placeholder="ID o nombre del producto"
+              value={inputProducto}
+              onChange={(e) => {
+                const entrada = e.target.value;
+                setInputProducto(entrada);
+                setProductoSeleccionado('');
+                setSugerenciasProducto(filtrarSugerencias(entrada, productos, 'nombre'));
+              }}
+            />
+            {inputProducto && sugerenciasProducto.length > 0 && (
+              <ul className="list-group position-absolute z-3 w-100">
+                {sugerenciasProducto.map(p => (
+                  <li
+                    key={p.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setInputProducto(`${p.id} - ${p.nombre}`);
+                      setProductoSeleccionado(p.id);
+                      setSugerenciasProducto([]);
+                    }}
+                  >
+                    {p.id} - {p.nombre}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Producto</button>
+        </form>
+      </section>
 
       <hr className="my-4" />
 
-      {/* -------------------- Eliminar Proveedor -------------------- */}
-      <h5>Eliminar Proveedor</h5>
-      <form onSubmit={handleDeleteProveedor}>
-        <div className="mb-2 position-relative">
-          <label className="form-label">Selecciona un proveedor</label>
-          <select
-            className="form-select"
-            value={proveedorSeleccionado}
-            onChange={(e) => {
-              const id = e.target.value;
-              setProveedorSeleccionado(id);
-              if (id) {
-                const p = proveedores.find(x => String(x.id) === String(id));
-                if (p) setInputProveedor(`${p.id} - ${p.nombre}`);
-              } else {
-                setInputProveedor('');
-              }
-            }}
-          >
-            <option value="">—</option>
-            {proveedores.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.id} - {p.nombre}
-              </option>
-            ))}
-          </select>
-          <small className="text-muted">Puedes seleccionar o escribir el ID o nombre.</small>
-        </div>
-
-        <div className="mb-2 position-relative">
-          <label className="form-label">O escribe el ID o nombre</label>
-          <input
-            className="form-control"
-            placeholder="ID o nombre del proveedor"
-            value={inputProveedor}
-            onChange={(e) => {
-              const entrada = e.target.value;
-              setInputProveedor(entrada);
-              setProveedorSeleccionado('');
-              setSugerenciasProveedor(filtrarSugerencias(entrada, proveedores, 'nombre'));
-            }}
-          />
-          {inputProveedor && sugerenciasProveedor.length > 0 && (
-            <ul className="list-group position-absolute z-3 w-100">
-              {sugerenciasProveedor.map(p => (
-                <li
-                  key={p.id}
-                  className="list-group-item list-group-item-action"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    setInputProveedor(`${p.id} - ${p.nombre}`);
-                    setProveedorSeleccionado(p.id);
-                    setSugerenciasProveedor([]);
-                  }}
-                >
+      {/* Proveedor */}
+      <section>
+        <h6>Proveedor</h6>
+        <form onSubmit={handleToggleProveedor}>
+          <div className="mb-2">
+            <label className="form-label">Selecciona un proveedor</label>
+            <select
+              className="form-select"
+              value={proveedorSeleccionado}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProveedorSeleccionado(id);
+                if (id) {
+                  const p = proveedores.find(x => String(x.id) === String(id));
+                  if (p) setInputProveedor(`${p.id} - ${p.nombre}`);
+                } else {
+                  setInputProveedor('');
+                }
+              }}
+            >
+              <option value="">—</option>
+              {proveedores.map(p => (
+                <option key={p.id} value={p.id}>
                   {p.id} - {p.nombre}
-                </li>
+                </option>
               ))}
-            </ul>
-          )}
-        </div>
+            </select>
+            <small className="text-muted">O escribe el ID o nombre</small>
+          </div>
 
-        <button type="submit" className="btn btn-danger w-100">Eliminar Proveedor</button>
-      </form>
+          <div className="mb-2 position-relative">
+            <input
+              className="form-control"
+              placeholder="ID o nombre del proveedor"
+              value={inputProveedor}
+              onChange={(e) => {
+                const entrada = e.target.value;
+                setInputProveedor(entrada);
+                setProveedorSeleccionado('');
+                setSugerenciasProveedor(filtrarSugerencias(entrada, proveedores, 'nombre'));
+              }}
+            />
+            {inputProveedor && sugerenciasProveedor.length > 0 && (
+              <ul className="list-group position-absolute z-3 w-100">
+                {sugerenciasProveedor.map(p => (
+                  <li
+                    key={p.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setInputProveedor(`${p.id} - ${p.nombre}`);
+                      setProveedorSeleccionado(p.id);
+                      setSugerenciasProveedor([]);
+                    }}
+                  >
+                    {p.id} - {p.nombre}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Proveedor</button>
+        </form>
+      </section>
 
       <hr className="my-4" />
 
-      {/* -------------------- Eliminar Categoría -------------------- */}
-      <h5>Eliminar Categoría</h5>
-      <form onSubmit={handleDeleteCategoria}>
-        <div className="mb-2 position-relative">
-          <label className="form-label">Selecciona una categoría</label>
-          <select
-            className="form-select"
-            value={categoriaSeleccionada}
-            onChange={(e) => {
-              const nombre = e.target.value;
-              setCategoriaSeleccionada(nombre);
-              if (nombre) setInputCategoria(nombre);
-              else setInputCategoria('');
-            }}
-          >
-            <option value="">—</option>
-            {categorias.map(c => (
-              <option key={c.id} value={c.nombre}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-          <small className="text-muted">Puedes seleccionar o escribir el nombre directamente.</small>
-        </div>
-
-        <div className="mb-2 position-relative">
-          <label className="form-label">O escribe el nombre</label>
-          <input
-            className="form-control"
-            placeholder="Nombre de la categoría"
-            value={inputCategoria}
-            onChange={(e) => {
-              const entrada = e.target.value;
-              setInputCategoria(entrada);
-              setCategoriaSeleccionada('');
-              setSugerenciasCategoria(filtrarSugerencias(entrada, categorias, 'nombre'));
-            }}
-          />
-          {inputCategoria && sugerenciasCategoria.length > 0 && (
-            <ul className="list-group position-absolute z-3 w-100">
-              {sugerenciasCategoria.map(c => (
-                <li
-                  key={c.id}
-                  className="list-group-item list-group-item-action"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    setInputCategoria(c.nombre);
-                    setCategoriaSeleccionada(c.nombre);
-                    setSugerenciasCategoria([]);
-                  }}
-                >
-                  {c.id} - {c.nombre}
-                </li>
+      {/* Categoría */}
+      <section>
+        <h6>Categoría</h6>
+        <form onSubmit={handleToggleCategoria}>
+          <div className="mb-2">
+            <label className="form-label">Selecciona una categoría</label>
+            <select
+              className="form-select"
+              value={categoriaSeleccionada}
+              onChange={(e) => {
+                const nombre = e.target.value;
+                setCategoriaSeleccionada(nombre);
+                if (nombre) setInputCategoria(nombre);
+                else setInputCategoria('');
+              }}
+            >
+              <option value="">—</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.nombre}>
+                  {c.nombre}
+                </option>
               ))}
-            </ul>
-          )}
-        </div>
+            </select>
+            <small className="text-muted">O escribe el nombre</small>
+          </div>
 
-        <button type="submit" className="btn btn-danger w-100">Eliminar Categoría</button>
-      </form>
+          <div className="mb-2 position-relative">
+            <input
+              className="form-control"
+              placeholder="Nombre de la categoría"
+              value={inputCategoria}
+              onChange={(e) => {
+                const entrada = e.target.value;
+                setInputCategoria(entrada);
+                setCategoriaSeleccionada('');
+                setSugerenciasCategoria(filtrarSugerencias(entrada, categorias, 'nombre'));
+              }}
+            />
+            {inputCategoria && sugerenciasCategoria.length > 0 && (
+              <ul className="list-group position-absolute z-3 w-100">
+                {sugerenciasCategoria.map(c => (
+                  <li
+                    key={c.id}
+                    className="list-group-item list-group-item-action"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setInputCategoria(c.nombre);
+                      setCategoriaSeleccionada(c.nombre);
+                      setSugerenciasCategoria([]);
+                    }}
+                  >
+                    {c.id} - {c.nombre}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Categoría</button>
+        </form>
+      </section>
     </div>
   );
 };
