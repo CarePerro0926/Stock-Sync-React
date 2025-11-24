@@ -506,7 +506,7 @@ const GestionarEstadoTab = ({
             )}
           </div>
 
-          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Producto</button>
+          <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Producto</button>
         </form>
       </section>
 
