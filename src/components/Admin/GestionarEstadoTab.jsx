@@ -572,7 +572,7 @@ const GestionarEstadoTab = ({
             )}
           </div>
 
-          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Proveedor</button>
+          <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Proveedor</button>
         </form>
       </section>
 
@@ -636,7 +636,7 @@ const GestionarEstadoTab = ({
             )}
           </div>
 
-          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Categoría</button>
+          <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Categoría</button>
         </form>
       </section>
 
@@ -706,7 +706,7 @@ const GestionarEstadoTab = ({
             )}
           </div>
 
-          <button type="submit" className="btn btn-warning w-100">Inhabilitar / Reactivar Usuario</button>
+          <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Usuario</button>
         </form>
       </section>
     </div>
