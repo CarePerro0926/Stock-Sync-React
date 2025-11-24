@@ -184,6 +184,59 @@ const AdminView = ({
   }, [productosProp, fetchProductos]);
 
   /**
+   * fetchUsuariosFromApi - carga usuarios con API o Supabase
+   * ✅ MOVIDO AQUÍ: debe declararse ANTES de toggleUsuario
+   */
+  const fetchUsuariosFromApi = useCallback(async () => {
+    setUsuariosLoading(true);
+    setUsuariosError('');
+    try {
+      if (API_BASE) {
+        const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
+        const normalized = (data || []).map(u => ({
+          id: String(u.id ?? u.user_id ?? ''),
+          display_name: (u.nombres || u.apellidos)
+            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+          deleted_at: normalizeDeletedAt(u.deleted_at),
+          raw: u
+        }));
+        setUsuarios(normalized);
+        fetchedUsersRef.current = true;
+        setUsuariosLoading(false);
+        return;
+      }
+
+      // Fallback: Supabase directo
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nombres, apellidos, email, username, deleted_at')
+        .order('nombres', { ascending: true });
+
+      if (error) throw error;
+
+      const normalized = (data || []).map(u => ({
+        id: String(u.id ?? u.user_id ?? ''),
+        display_name: (u.nombres || u.apellidos)
+          ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
+          : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
+        deleted_at: normalizeDeletedAt(u.deleted_at),
+        raw: u
+      }));
+
+      setUsuarios(normalized);
+      fetchedUsersRef.current = true;
+    } catch (err) {
+      console.error('Error cargando usuarios:', err);
+      setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios", el endpoint /api/usuarios o los permisos.');
+    } finally {
+      setUsuariosLoading(false);
+    }
+  }, []);
+
+  /**
    * toggleProducto - PATCH /api/productos/:id/disable|enable
    * Envío de x-admin-token y reversión si falla
    */
@@ -301,6 +354,7 @@ const AdminView = ({
 
   /**
    * toggleUsuario - API con headers admin, fallback a Supabase
+   * ✅ Ahora fetchUsuariosFromApi YA está definida
    */
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
     // Primero intenta por API
@@ -351,58 +405,6 @@ const AdminView = ({
       return false;
     }
   }, [fetchUsuariosFromApi, onUpdateSuccess]);
-
-  /**
-   * fetchUsuariosFromApi - carga usuarios con API o Supabase
-   */
-  const fetchUsuariosFromApi = useCallback(async () => {
-    setUsuariosLoading(true);
-    setUsuariosError('');
-    try {
-      if (API_BASE) {
-        const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
-        const normalized = (data || []).map(u => ({
-          id: String(u.id ?? u.user_id ?? ''),
-          display_name: (u.nombres || u.apellidos)
-            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
-            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
-          deleted_at: normalizeDeletedAt(u.deleted_at),
-          raw: u
-        }));
-        setUsuarios(normalized);
-        fetchedUsersRef.current = true;
-        setUsuariosLoading(false);
-        return;
-      }
-
-      // Fallback: Supabase directo
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nombres, apellidos, email, username, deleted_at')
-        .order('nombres', { ascending: true });
-
-      if (error) throw error;
-
-      const normalized = (data || []).map(u => ({
-        id: String(u.id ?? u.user_id ?? ''),
-        display_name: (u.nombres || u.apellidos)
-          ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
-          : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
-        deleted_at: normalizeDeletedAt(u.deleted_at),
-        raw: u
-      }));
-
-      setUsuarios(normalized);
-      fetchedUsersRef.current = true;
-    } catch (err) {
-      console.error('Error cargando usuarios:', err);
-      setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios", el endpoint /api/usuarios o los permisos.');
-    } finally {
-      setUsuariosLoading(false);
-    }
-  }, []);
 
   /* Cargar usuarios al montar */
   useEffect(() => {
