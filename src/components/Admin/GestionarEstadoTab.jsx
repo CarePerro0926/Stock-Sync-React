@@ -487,7 +487,7 @@ const GestionarEstadoTab = ({
               }}
             />
             {inputProducto && sugerenciasProducto.length > 0 && (
-              <ul className="list-group position-absolute z-3 w-100">
+              <ul className="list-group position-absolute z-3">
                 {sugerenciasProducto.map(p => (
                   <li
                     key={p.id}
