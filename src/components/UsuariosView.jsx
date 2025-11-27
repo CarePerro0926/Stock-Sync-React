@@ -18,6 +18,7 @@ const UsuariosView = () => {
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
+        // Asegúrate de que VITE_API_URL esté definida y apunte al backend correcto
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await res.json().catch(() => null);
         if (!res.ok) {
@@ -71,11 +72,27 @@ const UsuariosView = () => {
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
   // Helper para hacer PATCH a las rutas enable/disable
+  // AHORA INCLUYE EL HEADER DE AUTORIZACIÓN
   const doPatch = async (url, body) => {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      // Obtener el token JWT del lugar donde lo guardes (por ejemplo, localStorage)
+      // Ajusta la clave ('token', 'jwt', etc.) según como lo guardes tú
+      const token = localStorage.getItem('token'); // o donde lo tengas almacenado
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        console.warn('No se encontró token JWT para la solicitud PATCH.');
+        // Opcional: Puedes decidir lanzar un error aquí si el token es obligatorio
+        // throw new Error('No se encontró token de autenticación.');
+      }
+
       const res = await fetch(url, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers, // Usar los headers construidos arriba
         body: JSON.stringify(body)
       });
       const payload = await res.json().catch(() => null);
@@ -85,7 +102,8 @@ const UsuariosView = () => {
     }
   };
 
-  // toggleUsuario ahora usa las rutas que tu backend expone: /disable y /enable
+  // toggleUsuario ahora usa las rutas que tu backend expone: /api/usuarios/:id/(disable|enable)
+  // y envía el token JWT en el header Authorization.
   const toggleUsuario = async (id, currentlyDisabled) => {
     const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
     if (!window.confirm(confirmMsg)) return;
@@ -93,14 +111,18 @@ const UsuariosView = () => {
     setTogglingIds(prev => new Set(prev).add(id));
 
     const action = currentlyDisabled ? 'enable' : 'disable';
+    // Asegúrate de que VITE_API_URL esté definida y apunte al backend correcto
     const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}/${action}`;
 
-    // El backend en server.js ignora el body para estas rutas, pero enviamos un reason opcional
+    // El backend ignora el body, pero lo enviamos por si acaso
     const result = await doPatch(url, { reason: currentlyDisabled ? 'reactivado desde admin' : 'inhabilitado desde admin' });
 
     if (!result.ok) {
-      // Manejo específico para 404 y otros errores
-      if (result.status === 404) {
+      if (result.status === 401) {
+          // Manejar específicamente el error 401 (Unauthorized)
+          console.error('No autorizado para inhabilitar/reactivar usuario:', result);
+          alert('No autorizado. Asegúrate de iniciar sesión como administrador.');
+      } else if (result.status === 404) {
         console.error('Ruta no encontrada al intentar PATCH usuario:', result);
         alert('Ruta no encontrada en la API al intentar cambiar el estado del usuario (404). Revisa la configuración del backend.');
       } else {
