@@ -13,12 +13,10 @@ const UsuariosView = () => {
   const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
-  const [togglingIds, setTogglingIds] = useState(new Set());
 
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
-        // Asegúrate de que VITE_API_URL esté definida y apunte al backend correcto
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await res.json().catch(() => null);
         if (!res.ok) {
@@ -71,91 +69,6 @@ const UsuariosView = () => {
     });
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
-  // Helper para hacer PATCH a las rutas enable/disable
-  // AHORA INCLUYE EL HEADER DE AUTORIZACIÓN
-  const doPatch = async (url, body) => {
-    try {
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-
-      // Obtener el token JWT del lugar donde lo guardes (por ejemplo, localStorage)
-      // Ajusta la clave ('token', 'jwt', etc.) según como lo guardes tú
-      const token = localStorage.getItem('token'); // o donde lo tengas almacenado
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      } else {
-        console.warn('No se encontró token JWT para la solicitud PATCH.');
-        // Opcional: Puedes decidir lanzar un error aquí si el token es obligatorio
-        // throw new Error('No se encontró token de autenticación.');
-      }
-
-      const res = await fetch(url, {
-        method: 'PATCH',
-        headers: headers, // Usar los headers construidos arriba
-        body: JSON.stringify(body)
-      });
-      const payload = await res.json().catch(() => null);
-      return { ok: res.ok, status: res.status, payload };
-    } catch (networkError) {
-      return { ok: false, status: 0, payload: { error: networkError.message || String(networkError) } };
-    }
-  };
-
-  // toggleUsuario ahora usa las rutas que tu backend expone: /api/usuarios/:id/(disable|enable)
-  // y envía el token JWT en el header Authorization.
-  const toggleUsuario = async (id, currentlyDisabled) => {
-    const confirmMsg = currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
-    if (!window.confirm(confirmMsg)) return;
-
-    setTogglingIds(prev => new Set(prev).add(id));
-
-    const action = currentlyDisabled ? 'enable' : 'disable';
-    // Asegúrate de que VITE_API_URL esté definida y apunte al backend correcto
-    const url = `${import.meta.env.VITE_API_URL}/api/usuarios/${id}/${action}`;
-
-    // El backend ignora el body, pero lo enviamos por si acaso
-    const result = await doPatch(url, { reason: currentlyDisabled ? 'reactivado desde admin' : 'inhabilitado desde admin' });
-
-    if (!result.ok) {
-      if (result.status === 401) {
-          // Manejar específicamente el error 401 (Unauthorized)
-          console.error('No autorizado para inhabilitar/reactivar usuario:', result);
-          alert('No autorizado. Asegúrate de iniciar sesión como administrador.');
-      } else if (result.status === 404) {
-        console.error('Ruta no encontrada al intentar PATCH usuario:', result);
-        alert('Ruta no encontrada en la API al intentar cambiar el estado del usuario (404). Revisa la configuración del backend.');
-      } else {
-        const serverMsg = result.payload?.message || result.payload?.error || `HTTP ${result.status}`;
-        console.error('Error al inhabilitar/reactivar usuario:', result);
-        alert(`No se pudo cambiar el estado del usuario: ${serverMsg}`);
-      }
-      setTogglingIds(prev => {
-        const copy = new Set(prev); copy.delete(id); return copy;
-      });
-      return;
-    }
-
-    // Éxito: actualizar estado localmente (marcamos deleted_at o lo limpiamos)
-    setUsuarios(prev =>
-      prev.map(u => {
-        if (String(u.id) !== String(id)) return u;
-        return {
-          ...u,
-          deleted_at: !currentlyDisabled ? new Date().toISOString() : null,
-          disabled: !currentlyDisabled
-        };
-      })
-    );
-
-    setTogglingIds(prev => {
-      const copy = new Set(prev); copy.delete(id); return copy;
-    });
-
-    // Opcional: forzar recarga para sincronizar con servidor
-    setRecargar(prev => !prev);
-  };
-
   return (
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
@@ -206,8 +119,6 @@ const UsuariosView = () => {
         ) : (
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => {
-              const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
-              const isToggling = togglingIds.has(user.id);
               return (
                 <div className="col" key={user.id}>
                   <div className="card h-100 shadow-sm">
@@ -222,16 +133,9 @@ const UsuariosView = () => {
                           {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
                         </span>
                       </p>
-
-                      <div className="d-flex gap-2 mt-3">
-                        <button
-                          className={`btn btn-sm ${estaInhabilitado ? 'btn-success' : 'btn-warning'}`}
-                          onClick={() => toggleUsuario(user.id, estaInhabilitado)}
-                          disabled={isToggling}
-                        >
-                          {isToggling ? 'Procesando...' : (estaInhabilitado ? 'Reactivar' : 'Inhabilitar')}
-                        </button>
-                      </div>
+                      
+                      {/* Aquí estaba el botón de inhabilitar/reactivar, ha sido eliminado */}
+                      
                     </div>
                   </div>
                 </div>
