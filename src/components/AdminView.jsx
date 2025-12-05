@@ -37,7 +37,8 @@ const normalizeProducto = (p = {}) => {
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
-  const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? 'Sin Categoría';
+  // ✅ CORREGIDO: usar categoria_nombre o categoria o category_name, pero no cambiarlo por "Sin Categoría" si viene vacío
+  const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
 
   const cantidad = typeof p?.cantidad === 'number'
     ? p.cantidad
@@ -64,7 +65,7 @@ const normalizeProducto = (p = {}) => {
     id,
     product_id,
     nombre,
-    categoria_nombre,
+    categoria_nombre, // ✅ CORREGIDO: ahora se mantiene el valor original
     cantidad,
     precio,
     deleted_at,
@@ -95,10 +96,8 @@ const AdminView = ({
   vistaActiva,
   setVistaActiva,
   onAddProducto,
-  onDeleteProducto,
   onAddProveedor,
   onAddCategoria,
-  onDeleteCategoria,
   onDeleteProveedor,
   onLogout,
   onUpdateSuccess
@@ -137,7 +136,7 @@ const AdminView = ({
   }, [productosProp]);
 
   /**
-   * fetchProductos - siempre por API
+   * fetchProductos - SIEMPRE incluye activos + inactivos
    * Valida respuesta y normaliza
    */
   const fetchProductos = useCallback(async () => {
@@ -148,6 +147,7 @@ const AdminView = ({
         return null;
       }
 
+      // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
       const url = `${API_BASE}/api/productos?_=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
       const text = await res.text().catch(() => null);
@@ -185,13 +185,14 @@ const AdminView = ({
 
   /**
    * fetchUsuariosFromApi - carga usuarios con API o Supabase
-   * ✅ MOVIDO AQUÍ: debe declararse ANTES de toggleUsuario
+   * SIEMPRE incluye activos + inactivos
    */
   const fetchUsuariosFromApi = useCallback(async () => {
     setUsuariosLoading(true);
     setUsuariosError('');
     try {
       if (API_BASE) {
+        // ⚠️ Asegúrate de que /api/usuarios DEVUELVA todos los registros (activos + inactivos)
         const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
@@ -209,7 +210,7 @@ const AdminView = ({
         return;
       }
 
-      // Fallback: Supabase directo
+      // Fallback: Supabase directo — SIN FILTRO por deleted_at
       const { data, error } = await supabase
         .from('usuarios')
         .select('id, nombres, apellidos, email, username, deleted_at')
@@ -238,7 +239,6 @@ const AdminView = ({
 
   /**
    * toggleProducto - PATCH /api/productos/:id/disable|enable
-   * Envío de x-admin-token y reversión si falla
    */
   const toggleProducto = useCallback(async (id, currentlyDisabled) => {
     try {
@@ -354,7 +354,6 @@ const AdminView = ({
 
   /**
    * toggleUsuario - API con headers admin, fallback a Supabase
-   * ✅ Ahora fetchUsuariosFromApi YA está definida
    */
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
     // Primero intenta por API
@@ -372,7 +371,7 @@ const AdminView = ({
           throw new Error(body.message || 'Error API usuarios');
         }
         fetchedUsersRef.current = false;
-        await fetchUsuariosFromApi();
+        await fetchUsuariosFromApi(); // ✅ Recargar usuarios globales al cambiar estado
         if (onUpdateSuccess) {
           try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
         }
@@ -508,12 +507,9 @@ const AdminView = ({
           productos={productos}
           proveedores={proveedores}
           categorias={categorias}
-          usuarios={usuarios}
+          usuarios={usuarios} // ✅ Lista global de usuarios (activos + inactivos)
           usuariosLoading={usuariosLoading}
           usuariosError={usuariosError}
-          onDeleteProducto={onDeleteProducto}
-          onDeleteProveedor={onDeleteProveedor}
-          onDeleteCategoria={onDeleteCategoria}
           onToggleProducto={toggleProducto}
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
@@ -530,7 +526,7 @@ const AdminView = ({
         />
       )}
 
-      {vistaActiva === 'usuarios' && <UsuariosView />}
+      {vistaActiva === 'usuarios' && <UsuariosView />} {/* ✅ Ahora NO recibe props, funciona independiente */}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
