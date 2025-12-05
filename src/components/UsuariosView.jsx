@@ -4,6 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './ResponsiveTable.css';
 import RegisterView from './RegisterView';
+
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
@@ -12,6 +13,7 @@ const UsuariosView = () => {
   const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
+
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -30,6 +32,15 @@ const UsuariosView = () => {
     };
     fetchUsuarios();
   }, [recargar]);
+
+  // Depuración: Ver qué usuarios se cargan
+  useEffect(() => {
+    console.log("Usuarios cargados en UsuariosView:", usuarios);
+    const inactivos = usuarios.filter(u => !!(u.deleted_at || u.disabled || u.inactivo));
+    console.log("Cantidad de usuarios inactivos cargados:", inactivos.length);
+    console.log("Usuarios inactivos:", inactivos);
+  }, [usuarios]);
+
   const listaRolesFiltro = useMemo(() => {
     const roles = usuarios
       .map(u => u.role)
@@ -37,27 +48,42 @@ const UsuariosView = () => {
     const unicos = [...new Set(roles.map(role => String(role).trim()))];
     return ['todos', ...unicos];
   }, [usuarios]);
+
   const usuariosFiltrados = useMemo(() => {
     const texto = (busqueda || '').toLowerCase().trim();
-    return usuarios.filter((u) => {
+    const resultado = usuarios.filter((u) => {
+      // ✅ Verificar si el usuario está inhabilitado
       const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
-      // Si mostrarInactivos === true -> mostrar SOLO inactivos
-      // Si mostrarInactivos === false -> mostrar SOLO activos
+
+      // ✅ Aplicar filtro de "Mostrar inactivos"
       if (mostrarInactivos) {
+        // Si checkbox está activado, mostrar SOLO inactivos
         if (!estaInhabilitado) return false;
       } else {
+        // Si checkbox está desactivado, mostrar SOLO activos
         if (estaInhabilitado) return false;
       }
+
+      // ✅ Aplicar filtros de búsqueda y rol
       const coincideBusqueda =
         (u.nombres?.toLowerCase().includes(texto)) ||
         (u.apellidos?.toLowerCase().includes(texto)) ||
         (u.email?.toLowerCase().includes(texto)) ||
         (u.username?.toLowerCase().includes(texto)) ||
         String(u.cedula ?? '').toLowerCase().includes(texto);
+
       const coincideRol = filtroRol === 'todos' || (u.role?.toLowerCase() === filtroRol);
+
       return coincideBusqueda && coincideRol;
     });
+
+    // ✅ Depuración: Ver cuántos usuarios pasan el filtro
+    console.log("Usuarios filtrados (con mostrarInactivos =", mostrarInactivos, "):", resultado.length);
+    console.log("Usuarios filtrados:", resultado);
+
+    return resultado;
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
+
   return (
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
@@ -103,11 +129,15 @@ const UsuariosView = () => {
         ) : (
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => {
+              const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
               return (
                 <div className="col" key={user.id}>
                   <div className="card h-100 shadow-sm">
                     <div className="card-body">
-                      <h5 className="card-title text-primary mb-3">{user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}</h5>
+                      <h5 className="card-title text-primary mb-3">
+                        {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
+                        {estaInhabilitado && <span className="badge bg-warning ms-2">Inactivo</span>} {/* ✅ Opcional: mostrar estado */}
+                      </h5>
                       <p className="card-text mb-1"><strong>Email:</strong> {user.email ?? '—'}</p>
                       <p className="card-text mb-1"><strong>Usuario:</strong> {user.username ?? '—'}</p>
                       <p className="card-text mb-1"><strong>Cédula:</strong> {user.cedula ?? '—'}</p>
@@ -117,7 +147,6 @@ const UsuariosView = () => {
                           {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
                         </span>
                       </p>
-                      {/* Aquí estaba el botón de inhabilitar/reactivar, ha sido eliminado */}
                     </div>
                   </div>
                 </div>
@@ -144,4 +173,5 @@ const UsuariosView = () => {
     </div>
   );
 };
+
 export default UsuariosView;
