@@ -12,10 +12,9 @@ const UsuariosView = ({
 }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
-  const [recargar, setRecargar] = useState(false); // ✅ Estado local para recargar
+  const [recargar, setRecargar] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
@@ -30,7 +29,6 @@ const UsuariosView = ({
     }
 
     const fetchUsuarios = async () => {
-      setLoading(true);
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
         const data = await res.json().catch(() => null);
@@ -43,8 +41,6 @@ const UsuariosView = ({
       } catch (fetchError) {
         console.error('Error fetching usuarios:', fetchError);
         setError(fetchError.message || 'Error al obtener usuarios');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -84,6 +80,8 @@ const UsuariosView = ({
       const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
 
       // Aplicar filtro de "Mostrar inactivos" solo en esta pestaña
+      // Si mostrarInactivos === true -> mostrar SOLO inactivos
+      // Si mostrarInactivos === false -> mostrar SOLO activos
       if (mostrarInactivos) {
         if (!estaInhabilitado) return false;
       } else {
@@ -142,7 +140,14 @@ const UsuariosView = ({
         </div>
       </div>
       {error && <div className="alert alert-danger">{error}</div>}
-      {loading && !usuariosProp && <div className="text-center p-4">Cargando usuarios...</div>}
+      {/* Mostrar mensaje de carga si se está usando la lista local y está vacía */}
+      {!usuariosProp && usuarios.length === 0 && !error && (
+        <div className="text-center p-4">Cargando usuarios...</div>
+      )}
+      {/* Mostrar mensaje si la lista de usuarios (local o prop) está vacía */}
+      {usuariosFuente.length === 0 && !error && (
+        <div className="text-center p-4">No hay usuarios registrados.</div>
+      )}
       <div className="usuarios-scroll-container" style={{ maxHeight: '600px', overflowY: 'auto' }}>
         {usuariosFiltrados.length === 0 ? (
           <div className="text-center p-4"><p>No se encontraron usuarios que coincidan con los filtros.</p></div>
