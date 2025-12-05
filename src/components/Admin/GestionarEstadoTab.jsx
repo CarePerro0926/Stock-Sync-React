@@ -1,7 +1,6 @@
 // src/components/Admin/GestionarEstadoTab.jsx
 import React, { useState, useEffect } from 'react';
-// Asumimos que fetch o axios están disponibles globalmente o se importan aquí si es necesario
-// import axios from 'axios'; // Opción con axios
+import { supabase } from '@/services/supabaseClient';
 
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -16,7 +15,7 @@ const GestionarEstadoTab = ({
   onToggleProducto,
   onToggleProveedor,
   onToggleCategoria,
-  onToggleUsuario, // <--- Esta prop ES obligatoria ahora para usuarios
+  onToggleUsuario,
   onAfterToggle,
   productos: productosProp = [],
   proveedores: proveedoresProp = [],
@@ -52,7 +51,7 @@ const GestionarEstadoTab = ({
   const [sugerenciasCategoria, setSugerenciasCategoria] = useState([]);
   const [categorias, setCategorias] = useState(Array.isArray(categoriasProp) ? categoriasProp : []);
 
-  // Usuario (Ahora solo se maneja vía API)
+  // Usuario
   const [inputUsuario, setInputUsuario] = useState('');
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('');
   const [sugerenciasUsuario, setSugerenciasUsuario] = useState([]);
@@ -75,98 +74,71 @@ const GestionarEstadoTab = ({
     setCategorias(Array.isArray(categoriasProp) ? categoriasProp : []);
   }, [categoriasProp]);
 
-  // Sincronizar usuarios desde props (opcional)
   useEffect(() => {
-    if (usuariosProp && Array.isArray(usuariosProp)) {
-      setUsuarios(usuariosProp.map(u => ({ ...u, deleted_at: normalizeDeletedAt(u.deleted_at) })));
-    }
+    setUsuarios(Array.isArray(usuariosProp) ? usuariosProp.map(u => ({ ...u, deleted_at: normalizeDeletedAt(u.deleted_at) })) : []);
   }, [usuariosProp]);
 
   // -------------------- Cargas iniciales (si no vienen por props) --------------------
   useEffect(() => {
-    let Mounted = true; // Cambiado a mayúscula para evitar error de ESLint
+    let mounted = true;
     if (!proveedoresProp || proveedoresProp.length === 0) {
-      // Lógica para proveedores si no vienen por props (puede ser vía API o Supabase)
-      // Ejemplo con Supabase (ajusta según AdminView):
-      // import { supabase } from '@/services/supabaseClient';
-      // supabase
-      //   .from('proveedores')
-      //   .select('*')
-      //   .order('nombre', { ascending: true })
-      //   .then(({ data, error }) => {
-      //     if (error) console.error('Error al cargar proveedores:', error);
-      //     else if (Mounted) setProveedores(data || []);
-      //   });
+      supabase
+        .from('proveedores')
+        .select('*')
+        .order('nombre', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error('Error al cargar proveedores:', error);
+          else if (mounted) setProveedores(data || []);
+        });
     }
-    return () => { Mounted = false; };
+    return () => { mounted = false; };
   }, [proveedoresProp]);
 
   useEffect(() => {
-    let Mounted = true; // Cambiado a mayúscula para evitar error de ESLint
+    let mounted = true;
     if (!categoriasProp || categoriasProp.length === 0) {
-      // Lógica para categorias si no vienen por props (puede ser vía API o Supabase)
-      // Ejemplo con Supabase (ajusta según AdminView):
-      // import { supabase } from '@/services/supabaseClient';
-      // supabase
-      //   .from('categorias')
-      //   .select('*')
-      //   .order('nombre', { ascending: true })
-      //   .then(({ data, error }) => {
-      //     if (error) console.error('Error al cargar categorías:', error);
-      //     else if (Mounted) setCategorias(data || []);
-      //   });
+      supabase
+        .from('categorias')
+        .select('*')
+        .order('nombre', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error('Error al cargar categorías:', error);
+          else if (mounted) setCategorias(data || []);
+        });
     }
-    return () => { Mounted = false; };
+    return () => { mounted = false; };
   }, [categoriasProp]);
 
-  // Carga inicial de USUARIOS desde la API (o props)
   useEffect(() => {
-    let Mounted = true; // Cambiado a mayúscula para evitar error de ESLint
+    let mounted = true;
     const needFetch = !usuariosProp || usuariosProp.length === 0;
-    if (!needFetch) return () => { Mounted = false; };
+    if (!needFetch) return () => { mounted = false; };
 
-    const fetchUsuarios = async () => {
-      setUsuariosLoading(true);
-      setUsuariosError('');
+    setUsuariosLoading(true);
+    setUsuariosError('');
+    supabase
+      .from('user_profiles')
+      .select('user_id, display_name, deleted_at')
+      .order('display_name', { ascending: true })
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        if (error) {
+          console.error('Error al cargar usuarios:', error);
+          setUsuariosError('No fue posible cargar usuarios. Revisa keys, CORS o la tabla user_profiles.');
+          setUsuariosLoading(false);
+          return;
+        }
+        const normalized = (data || []).map(u => ({
+          id: String(u.user_id),
+          display_name: u.display_name || String(u.user_id),
+          deleted_at: normalizeDeletedAt(u.deleted_at)
+        }));
+        setUsuarios(normalized);
+        setUsuariosLoading(false);
+      });
 
-      try {
-        // Asumimos que AdminView ya cargó la lista inicial de usuarios vía API
-        // y la pasó como prop. Si no, aquí iría la llamada a GET /api/usuarios.
-        // Por ahora, solo mostramos un mensaje si no hay datos.
-        console.warn("GestionarEstadoTab: usuarios no cargados por props. AdminView debería manejar esto.");
-        // Si necesitas cargar aquí, descomenta y ajusta:
-        // const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:10000'; // ESLint no reconoce process.env, pero es común en React.
-        // const includeInactivos = true; // Siempre traer inactivos para gestionar estado
-        // const url = `${API_BASE_URL}/api/usuarios?include_inactivos=${includeInactivos}`;
-        // const token = localStorage.getItem('token'); // O desde tu contexto de autenticación
-        // const headers = { 'Content-Type': 'application/json' };
-        // if (token) headers['Authorization'] = `Bearer ${token}`;
-        // const response = await fetch(url, { headers });
-        // if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        // const data = await response.json();
-        // if (Array.isArray(data)) {
-        //   const normalized = data.map(u => ({
-        //     id: u.id,
-        //     display_name: u.username || u.email || u.nombres || u.id,
-        //     deleted_at: normalizeDeletedAt(u.deleted_at),
-        //     ...u
-        //   }));
-        //   if (Mounted) setUsuarios(normalized);
-        // } else {
-        //   if (Mounted) setUsuarios([]);
-        // }
-      } catch (err) {
-        console.error('Error fetching usuarios via API:', err);
-        if (Mounted) setUsuariosError('No fue posible cargar usuarios desde la API.');
-      } finally {
-        if (Mounted) setUsuariosLoading(false);
-      }
-    };
-
-    fetchUsuarios();
-    return () => { Mounted = false; };
-  }, [usuariosProp]); // Remueve getAuthToken de la dependencia si lo usas como variable global o importación
-
+    return () => { mounted = false; };
+  }, [usuariosProp]);
 
   // -------------------- Utilidades --------------------
   /**
@@ -179,6 +151,7 @@ const GestionarEstadoTab = ({
   const filtrarSugerencias = (texto, lista, campo, idField = 'id') => {
     const raw = String(texto || '').trim();
     if (!raw) return [];
+
     // Si tiene formato "ID - Nombre", extraer ID y priorizar búsqueda por ID exacto
     if (raw.includes(' - ')) {
       const maybeId = raw.split(' - ')[0].trim();
@@ -188,12 +161,14 @@ const GestionarEstadoTab = ({
         // si no existe exacto, no caer en búsqueda por nombre con ese fragmento
       }
     }
+
     // Si el usuario escribió solo dígitos, buscar por ID exacto (no por nombre)
     if (/^\d+$/.test(raw)) {
       return lista
         .filter(item => String(item[idField] ?? item.id ?? '').trim() === raw)
         .slice(0, 8);
     }
+
     // Búsqueda por nombre parcial (case-insensitive)
     const qLower = raw.toLowerCase();
     return lista
@@ -212,6 +187,7 @@ const GestionarEstadoTab = ({
   const parseIdFromInputGeneric = (entrada, lista = [], idField = 'id', nameField = 'nombre') => {
     const raw = String(entrada || '').trim();
     if (!raw) return '';
+
     // 1) Formato "ID - Nombre" -> extraer ID y devolverlo si es plausible
     if (raw.includes(' - ')) {
       const maybeId = raw.split(' - ')[0].trim();
@@ -223,6 +199,7 @@ const GestionarEstadoTab = ({
         // si no es plausible, continuar con búsqueda por nombre
       }
     }
+
     // 2) Si la entrada es solo dígitos -> buscar ID exacto (no parcial)
     if (/^\d+$/.test(raw)) {
       const foundById = lista.find(item => String(item[idField]) === raw);
@@ -230,23 +207,49 @@ const GestionarEstadoTab = ({
       // si no se encuentra por id exacto, no intentar coincidencias parciales con otros campos
       return '';
     }
+
     // 3) Si la entrada parece un UUID o id alfanumérico largo -> buscar ID exacto
     if (/^[0-9a-fA-F-]{8,}$/.test(raw)) {
       const foundById = lista.find(item => String(item[idField]) === raw);
       if (foundById) return String(foundById[idField]);
       return '';
     }
+
     // 4) Buscar por nombre exacto (case-insensitive)
     const byNameExact = lista.find(item => String(item[nameField] ?? '').toLowerCase() === raw.toLowerCase());
     if (byNameExact) return String(byNameExact[idField]);
+
     // 5) Buscar por nombre parcial (case-insensitive)
     const byNamePartial = lista.find(item => String(item[nameField] ?? '').toLowerCase().includes(raw.toLowerCase()));
     if (byNamePartial) return String(byNamePartial[idField]);
+
     // 6) Fallback: si raw coincide exactamente con algún id en la lista (por seguridad)
     const byIdExact = lista.find(item => String(item[idField]) === raw);
     if (byIdExact) return String(byIdExact[idField]);
+
     // No se encontró un id confiable
     return '';
+  };
+
+  // Fallback que actualiza la tabla indicada vía supabase (si el padre no provee onToggle)
+  const applyToggleFallback = async ({ table, id, currentlyDisabled, idColumn = 'id' }) => {
+    try {
+      const newDeletedAt = currentlyDisabled ? null : new Date().toISOString();
+      console.log('applyToggleFallback ->', { table, idColumn, id, newDeletedAt });
+      const { data, error } = await supabase
+        .from(table)
+        .update({ deleted_at: newDeletedAt })
+        .eq(idColumn, id)
+        .select()
+        .single();
+      console.log('applyToggleFallback result', { data, error });
+      if (error) throw error;
+      return data || null;
+    } catch (err) {
+      console.error('Fallback toggle error:', err);
+      alert('Ocurrió un error al cambiar el estado. Intenta de nuevo.');
+      return null;
+    }
   };
 
   // Actualiza localmente la lista de productos (optimista)
@@ -255,15 +258,10 @@ const GestionarEstadoTab = ({
     setProductos(prev => prev.map(p => (String(p.id) === String(id) ? { ...p, deleted_at: now } : p)));
   };
 
-  // Actualiza localmente la lista de usuarios (optimista)
-  const applyLocalToggleUsuario = (id, currentlyDisabled) => {
-    const now = !currentlyDisabled ? null : new Date().toISOString(); // Si estaba deshabilitado, ahora se habilita (deleted_at = null)
-    setUsuarios(prev => prev.map(u => (String(u.id) === String(id) ? { ...u, deleted_at: now } : u)));
-  };
-
   // -------------------- Handlers --------------------
   const handleToggleProducto = async (e) => {
     e.preventDefault();
+
     // resolver id: prioriza select, luego input
     let idFinal = productoSeleccionado || parseIdFromInputGeneric(inputProducto, productos, 'id', 'nombre');
     if (!idFinal) return alert('Selecciona un producto o ingresa un ID/nombre válido.');
@@ -298,24 +296,27 @@ const GestionarEstadoTab = ({
 
     // Si no hay onToggleProducto, usar fallback directo a Supabase y devolver la fila actualizada al padre
     // Intentar por product_id primero, si no funciona intentar por id
-    // let updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'product_id' });
-    // if (!updatedRow) {
-    //   // intentar con id
-    //   updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'id' });
-    //   if (!updatedRow) return; // ya mostró alerta en applyToggleFallback
-    // }
-    // // Actualización optimista local
-    // applyLocalToggleProducto(idFinal, currentlyDisabled);
-    // // Notificar al padre con la fila actualizada (si existe)
-    // if (typeof onAfterToggle === 'function') {
-    //   try {
-    //     await onAfterToggle('productos', updatedRow ? { id: updatedRow.product_id ?? updatedRow.id, deleted_at: updatedRow.deleted_at } : null);
-    //   } catch (err) {
-    //     console.error('onAfterToggle error:', err);
-    //   }
-    // }
-    // // limpiar inputs
-    // setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
+    let updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'product_id' });
+    if (!updatedRow) {
+      // intentar con id
+      updatedRow = await applyToggleFallback({ table: 'productos', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updatedRow) return; // ya mostró alerta en applyToggleFallback
+    }
+
+    // Actualización optimista local
+    applyLocalToggleProducto(idFinal, currentlyDisabled);
+
+    // Notificar al padre con la fila actualizada (si existe)
+    if (typeof onAfterToggle === 'function') {
+      try {
+        await onAfterToggle('productos', updatedRow ? { id: updatedRow.product_id ?? updatedRow.id, deleted_at: updatedRow.deleted_at } : null);
+      } catch (err) {
+        console.error('onAfterToggle error:', err);
+      }
+    }
+
+    // limpiar inputs
+    setInputProducto(''); setProductoSeleccionado(''); setSugerenciasProducto([]);
   };
 
   const handleToggleProveedor = async (e) => {
@@ -339,8 +340,8 @@ const GestionarEstadoTab = ({
         return;
       }
     } else {
-      // const updated = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled, idColumn: 'id' });
-      // if (!updated) return;
+      const updated = await applyToggleFallback({ table: 'proveedores', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updated) return;
     }
 
     // Actualización optimista local
@@ -361,11 +362,9 @@ const GestionarEstadoTab = ({
 
     let cat = categorias.find(c => String(c.id) === String(idFinal));
     if (!cat && inputCategoria) {
-      cat = categorias.find(c => String(c.nombre).toLowerCase() === String(inputCategoria).trim().toLowerCase())
-        || categorias.find(c => String(c.nombre).toLowerCase().includes(String(inputCategoria).trim().toLowerCase()));
+      cat = categorias.find(c => String(c.nombre).toLowerCase() === String(inputCategoria).trim().toLowerCase());
       if (cat) idFinal = cat.id;
     }
-
     if (!cat) return alert('No se encontró ninguna categoría con ese ID o nombre.');
 
     const currentlyDisabled = isDisabled(cat.deleted_at);
@@ -381,8 +380,8 @@ const GestionarEstadoTab = ({
         return;
       }
     } else {
-      // const updated = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled, idColumn: 'id' });
-      // if (!updated) return;
+      const updated = await applyToggleFallback({ table: 'categorias', id: idFinal, currentlyDisabled, idColumn: 'id' });
+      if (!updated) return;
     }
 
     const now = !currentlyDisabled ? new Date().toISOString() : null;
@@ -395,67 +394,51 @@ const GestionarEstadoTab = ({
     setInputCategoria(''); setCategoriaSeleccionada(''); setSugerenciasCategoria([]);
   };
 
-  // HANDLER PARA USUARIO - AHORA SOLO USA onToggleUsuario (la función de AdminView)
   const handleToggleUsuario = async (e) => {
     e.preventDefault();
-
-    // resolver id: prioriza select, luego input
     let idFinal = parseIdFromInputGeneric(inputUsuario, usuarios, 'id', 'display_name') || usuarioSeleccionado;
     if (!idFinal && usuarioSeleccionado) idFinal = usuarioSeleccionado;
 
     let user = usuarios.find(u => String(u.id) === String(idFinal));
     if (!user && inputUsuario) {
-      // Buscar por display_name si no se encontró por ID
-      user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase());
+      user = usuarios.find(u => String(u.display_name).toLowerCase() === String(inputUsuario).trim().toLowerCase())
+        || usuarios.find(u => String(u.display_name).toLowerCase().includes(String(inputUsuario).trim().toLowerCase()));
       if (user) idFinal = user.id;
     }
-
-    if (!user) {
-      alert('No se encontró ningún usuario con ese nombre o ID.');
-      return;
-    }
+    if (!user) return alert('No se encontró ningún usuario con ese nombre.');
 
     const currentlyDisabled = isDisabled(user.deleted_at);
     if (!window.confirm(currentlyDisabled ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?')) return;
 
-    // VALIDAR que onToggleUsuario esté definida
-    if (typeof onToggleUsuario !== 'function') {
-        console.error("GestionarEstadoTab: onToggleUsuario no está definida. AdminView debe proporcionar esta función.");
-        alert("Error: No se puede gestionar el estado del usuario. Contacta al administrador.");
-        return;
-    }
-
-    try {
-      // Llamar a la función proporcionada por AdminView
-      const ok = await onToggleUsuario(idFinal, currentlyDisabled);
-      if (!ok) {
-        alert('No fue posible cambiar el estado del usuario.');
+    if (typeof onToggleUsuario === 'function') {
+      try {
+        const ok = await onToggleUsuario(idFinal, currentlyDisabled);
+        if (!ok) { alert('No fue posible cambiar el estado del usuario.'); return; }
+      } catch (err) {
+        console.error('onToggleUsuario error:', err);
+        alert('Error al cambiar el estado del usuario.');
         return;
       }
-
-      // Actualización optimista local
-      applyLocalToggleUsuario(idFinal, currentlyDisabled);
-
-      // Notificar al padre para recargar datos si es necesario
-      if (typeof onAfterToggle === 'function') {
-        try {
-          await onAfterToggle('usuarios'); // Esto debería recargar la lista de usuarios en AdminView
-        } catch (err) {
-          console.error('onAfterToggle usuarios error:', err);
-        }
-      }
-
-      // Limpiar inputs
-      setInputUsuario('');
-      setUsuarioSeleccionado('');
-      setSugerenciasUsuario([]);
-
-    } catch (err) {
-      console.error('Error al cambiar estado del usuario via AdminView handler:', err);
-      alert(`Ocurrió un error al comunicarse con el servidor: ${err.message}`);
+    } else {
+      const updated = await applyToggleFallback({
+        table: 'user_profiles',
+        id: idFinal,
+        currentlyDisabled,
+        idColumn: 'user_id'
+      });
+      if (!updated) return;
     }
+
+    // Actualización optimista local
+    const now = !currentlyDisabled ? new Date().toISOString() : null;
+    setUsuarios(prev => prev.map(u => (String(u.id) === String(idFinal) ? { ...u, deleted_at: now } : u)));
+
+    if (typeof onAfterToggle === 'function') {
+      try { await onAfterToggle('usuarios'); } catch (err) { console.error('onAfterToggle usuarios error:', err); }
+    }
+
+    setInputUsuario(''); setUsuarioSeleccionado(''); setSugerenciasUsuario([]);
   };
-
 
   // -------------------- Render --------------------
   return (
@@ -489,6 +472,7 @@ const GestionarEstadoTab = ({
             </select>
             <small className="text-muted">O escribe el ID o nombre</small>
           </div>
+
           <div className="mb-2 position-relative">
             <input
               className="form-control"
@@ -521,9 +505,11 @@ const GestionarEstadoTab = ({
               </ul>
             )}
           </div>
+
           <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Producto</button>
         </form>
       </section>
+
       <hr className="my-4" />
 
       {/* Proveedor */}
@@ -553,6 +539,7 @@ const GestionarEstadoTab = ({
             </select>
             <small className="text-muted">O escribe el ID o nombre</small>
           </div>
+
           <div className="mb-2 position-relative">
             <input
               className="form-control"
@@ -584,9 +571,11 @@ const GestionarEstadoTab = ({
               </ul>
             )}
           </div>
+
           <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Proveedor</button>
         </form>
       </section>
+
       <hr className="my-4" />
 
       {/* Categoría */}
@@ -614,6 +603,7 @@ const GestionarEstadoTab = ({
             </select>
             <small className="text-muted">O escribe el nombre</small>
           </div>
+
           <div className="mb-2 position-relative">
             <input
               className="form-control"
@@ -645,12 +635,14 @@ const GestionarEstadoTab = ({
               </ul>
             )}
           </div>
+
           <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Categoría</button>
         </form>
       </section>
+
       <hr className="my-4" />
 
-      {/* Usuario - Ahora solo llama a onToggleUsuario */}
+      {/* Usuario */}
       <section>
         <h6>Usuario</h6>
         {usuariosLoading && <small className="text-muted">Cargando usuarios...</small>}
@@ -675,12 +667,13 @@ const GestionarEstadoTab = ({
               <option value="">—</option>
               {usuarios.map(u => (
                 <option key={u.id} value={u.id}>
-                  {u.display_name} ({isDisabled(u.deleted_at) ? 'Inactivo' : 'Activo'})
+                  {u.display_name}
                 </option>
               ))}
             </select>
             <small className="text-muted">O escribe el nombre del usuario</small>
           </div>
+
           <div className="mb-2 position-relative">
             <input
               className="form-control"
@@ -706,12 +699,13 @@ const GestionarEstadoTab = ({
                       setSugerenciasUsuario([]);
                     }}
                   >
-                    {u.display_name} ({isDisabled(u.deleted_at) ? 'Inactivo' : 'Activo'})
+                    {u.display_name}
                   </li>
                 ))}
               </ul>
             )}
           </div>
+
           <button type="submit" className="btn btn-warning">Inhabilitar / Reactivar Usuario</button>
         </form>
       </section>
