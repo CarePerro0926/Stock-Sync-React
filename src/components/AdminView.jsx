@@ -95,9 +95,11 @@ const AdminView = ({
   vistaActiva,
   setVistaActiva,
   onAddProducto,
+  onDeleteProducto,
   onAddProveedor,
   onAddCategoria,
-  onDeleteProveedor, // se mantiene porque se usa en ProvidersTab
+  onDeleteCategoria,
+  onDeleteProveedor,
   onLogout,
   onUpdateSuccess
 }) => {
@@ -135,7 +137,7 @@ const AdminView = ({
   }, [productosProp]);
 
   /**
-   * fetchProductos - SIEMPRE incluye activos + inactivos
+   * fetchProductos - siempre por API
    * Valida respuesta y normaliza
    */
   const fetchProductos = useCallback(async () => {
@@ -146,7 +148,6 @@ const AdminView = ({
         return null;
       }
 
-      // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
       const url = `${API_BASE}/api/productos?_=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
       const text = await res.text().catch(() => null);
@@ -184,14 +185,13 @@ const AdminView = ({
 
   /**
    * fetchUsuariosFromApi - carga usuarios con API o Supabase
-   * SIEMPRE incluye activos + inactivos
+   * ✅ MOVIDO AQUÍ: debe declararse ANTES de toggleUsuario
    */
   const fetchUsuariosFromApi = useCallback(async () => {
     setUsuariosLoading(true);
     setUsuariosError('');
     try {
       if (API_BASE) {
-        // ⚠️ Asegúrate de que /api/usuarios DEVUELVA todos los registros
         const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
@@ -209,7 +209,7 @@ const AdminView = ({
         return;
       }
 
-      // Fallback: Supabase directo — SIN FILTRO por deleted_at
+      // Fallback: Supabase directo
       const { data, error } = await supabase
         .from('usuarios')
         .select('id, nombres, apellidos, email, username, deleted_at')
@@ -238,6 +238,7 @@ const AdminView = ({
 
   /**
    * toggleProducto - PATCH /api/productos/:id/disable|enable
+   * Envío de x-admin-token y reversión si falla
    */
   const toggleProducto = useCallback(async (id, currentlyDisabled) => {
     try {
@@ -353,6 +354,7 @@ const AdminView = ({
 
   /**
    * toggleUsuario - API con headers admin, fallback a Supabase
+   * ✅ Ahora fetchUsuariosFromApi YA está definida
    */
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
     // Primero intenta por API
@@ -503,12 +505,15 @@ const AdminView = ({
 
       {vistaActiva === 'delete' && (
         <GestionarEstadoTab
-          productos={productos} // ✅ Incluye activos + inactivos
-          proveedores={proveedores} // ✅ Asegúrate de que la prop original también incluya inactivos
-          categorias={categorias} // ✅ Igual aquí
-          usuarios={usuarios} // ✅ Ya incluye inactivos gracias a fetchUsuariosFromApi
+          productos={productos}
+          proveedores={proveedores}
+          categorias={categorias}
+          usuarios={usuarios}
           usuariosLoading={usuariosLoading}
           usuariosError={usuariosError}
+          onDeleteProducto={onDeleteProducto}
+          onDeleteProveedor={onDeleteProveedor}
+          onDeleteCategoria={onDeleteCategoria}
           onToggleProducto={toggleProducto}
           onToggleProveedor={toggleProveedor}
           onToggleCategoria={toggleCategoria}
