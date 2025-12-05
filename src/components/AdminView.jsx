@@ -107,6 +107,7 @@ const AdminView = ({
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
+  const [recargarUsuariosView, setRecargarUsuariosView] = useState(0); // ✅ Nuevo estado para forzar recarga
   const fetchedUsersRef = useRef(false);
 
   /* Cierre de menú mobile al hacer click fuera */
@@ -354,6 +355,7 @@ const AdminView = ({
 
   /**
    * toggleUsuario - API con headers admin, fallback a Supabase
+   * ✅ AHORA tambien fuerza recarga en UsuariosView
    */
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
     // Primero intenta por API
@@ -372,6 +374,7 @@ const AdminView = ({
         }
         fetchedUsersRef.current = false;
         await fetchUsuariosFromApi(); // ✅ Recargar usuarios globales al cambiar estado
+        setRecargarUsuariosView(prev => prev + 1); // ✅ Forzar recarga en UsuariosView
         if (onUpdateSuccess) {
           try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
         }
@@ -394,6 +397,7 @@ const AdminView = ({
           ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at }
           : u
       )));
+      setRecargarUsuariosView(prev => prev + 1); // ✅ Forzar recarga en UsuariosView
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
       }
@@ -526,7 +530,7 @@ const AdminView = ({
         />
       )}
 
-      {vistaActiva === 'usuarios' && <UsuariosView />} {/* ✅ Ahora NO recibe props, funciona independiente */}
+      {vistaActiva === 'usuarios' && <UsuariosView key={recargarUsuariosView} />} {/* ✅ Pasa key para forzar recarga */}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
