@@ -97,7 +97,7 @@ const AdminView = ({
   onAddProducto,
   onAddProveedor,
   onAddCategoria,
-  onDeleteProveedor, // se mantiene porque se usa en ProvidersTab
+  onDeleteProveedor,
   onLogout,
   onUpdateSuccess
 }) => {
@@ -525,7 +525,13 @@ const AdminView = ({
         />
       )}
 
-      {vistaActiva === 'usuarios' && <UsuariosView />}
+      {vistaActiva === 'usuarios' && (
+        <UsuariosView
+          usuarios={usuarios} // ✅ Pasar lista global
+          onToggleUsuario={toggleUsuario} // ✅ Permitir toggle desde aquí también
+          onReloadUsuarios={fetchUsuariosFromApi} // ✅ Opcional: recargar lista si se cambia desde aquí
+        />
+      )}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
