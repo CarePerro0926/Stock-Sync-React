@@ -1,55 +1,26 @@
 // src/components/UsuariosView.jsx
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './ResponsiveTable.css';
 import RegisterView from './RegisterView';
 
-const UsuariosView = () => {
-  const [usuarios, setUsuarios] = useState([]);
-  const [error, setError] = useState(null);
+const UsuariosView = ({
+  usuarios = [], // ✅ Recibido como prop desde AdminView
+  onToggleUsuario, // ✅ Opcional: permitir inhabilitar/reactivar desde aquí
+  onReloadUsuarios // ✅ Opcional: si se desea recargar la lista global
+}) => {
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('todos');
-  const [recargar, setRecargar] = useState(false);
+  const [mostrarInactivos, setMostrarInactivos] = useState(false); // ✅ Estado local solo para esta pestaña
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/usuarios`);
-        const data = await res.json().catch(() => null);
-        if (!res.ok) {
-          const msg = data?.message || data?.error || `HTTP ${res.status}`;
-          throw new Error(msg);
-        }
-        setUsuarios(Array.isArray(data) ? data : []);
-        setError(null);
-      } catch (fetchError) {
-        console.error('Error fetching usuarios:', fetchError);
-        setError(fetchError.message || 'Error al obtener usuarios');
-      }
-    };
-
-    fetchUsuarios();
-  }, [recargar]);
-
-  const listaRolesFiltro = useMemo(() => {
-    const roles = usuarios
-      .map(u => u.role)
-      .filter(role => role && String(role).trim() !== '');
-    const unicos = [...new Set(roles.map(role => String(role).trim()))];
-    return ['todos', ...unicos];
-  }, [usuarios]);
-
+  // ✅ Filtrar usuarios según búsqueda, rol e inactivos
   const usuariosFiltrados = useMemo(() => {
     const texto = (busqueda || '').toLowerCase().trim();
-
     return usuarios.filter((u) => {
       const estaInhabilitado = !!(u.deleted_at || u.disabled || u.inactivo);
 
-      // Si mostrarInactivos === true -> mostrar SOLO inactivos
-      // Si mostrarInactivos === false -> mostrar SOLO activos
+      // Aplicar filtro de "Mostrar inactivos" solo en esta pestaña
       if (mostrarInactivos) {
         if (!estaInhabilitado) return false;
       } else {
@@ -69,15 +40,41 @@ const UsuariosView = () => {
     });
   }, [usuarios, busqueda, filtroRol, mostrarInactivos]);
 
+  const listaRolesFiltro = useMemo(() => {
+    const roles = usuarios
+      .map(u => u.role)
+      .filter(role => role && String(role).trim() !== '');
+    const unicos = [...new Set(roles.map(role => String(role).trim()))];
+    return ['todos', ...unicos];
+  }, [usuarios]);
+
+  // ✅ Opcional: Función para inhabilitar/reactivar desde esta pestaña
+  const handleToggleUsuario = async (userId) => {
+    if (!onToggleUsuario) {
+      console.warn('onToggleUsuario no está definido');
+      return;
+    }
+    const user = usuarios.find(u => u.id === userId);
+    if (!user) return;
+
+    const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
+    const confirmText = estaInhabilitado ? '¿Reactivar este usuario?' : '¿Inhabilitar este usuario?';
+    if (!window.confirm(confirmText)) return;
+
+    const success = await onToggleUsuario(userId, estaInhabilitado);
+    if (success && onReloadUsuarios) {
+      // Opcional: recargar lista global
+      await onReloadUsuarios();
+    }
+  };
+
   return (
     <div className="w-100">
       <h5>Usuarios Registrados</h5>
-
       <div className="d-flex justify-content-between mb-3">
         <div>
           <button className="btn btn-primary" onClick={() => setMostrarModal(true)}>Agregar Usuario</button>
         </div>
-
         <div className="d-flex align-items-center">
           <div className="form-check me-3">
             <input
@@ -91,7 +88,6 @@ const UsuariosView = () => {
           </div>
         </div>
       </div>
-
       <div className="row g-2 mb-3">
         <div className="col-12 col-md-6">
           <input
@@ -111,7 +107,10 @@ const UsuariosView = () => {
         </div>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {/* ✅ Mensaje de error si no se pasaron usuarios */}
+      {usuarios.length === 0 && (
+        <div className="alert alert-info">Cargando usuarios...</div>
+      )}
 
       <div className="usuarios-scroll-container" style={{ maxHeight: '600px', overflowY: 'auto' }}>
         {usuariosFiltrados.length === 0 ? (
@@ -119,11 +118,15 @@ const UsuariosView = () => {
         ) : (
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
             {usuariosFiltrados.map((user) => {
+              const estaInhabilitado = !!(user.deleted_at || user.disabled || user.inactivo);
               return (
                 <div className="col" key={user.id}>
                   <div className="card h-100 shadow-sm">
                     <div className="card-body">
-                      <h5 className="card-title text-primary mb-3">{user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}</h5>
+                      <h5 className="card-title text-primary mb-3">
+                        {user.nombres ?? 'Sin Nombre'} {user.apellidos ?? 'Sin Apellido'}
+                        {estaInhabilitado && <span className="badge bg-warning ms-2">Inactivo</span>}
+                      </h5>
                       <p className="card-text mb-1"><strong>Email:</strong> {user.email ?? '—'}</p>
                       <p className="card-text mb-1"><strong>Usuario:</strong> {user.username ?? '—'}</p>
                       <p className="card-text mb-1"><strong>Cédula:</strong> {user.cedula ?? '—'}</p>
@@ -133,9 +136,15 @@ const UsuariosView = () => {
                           {user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '—'}
                         </span>
                       </p>
-                      
-                      {/* Aquí estaba el botón de inhabilitar/reactivar, ha sido eliminado */}
-                      
+                      {/* ✅ Botón para inhabilitar/reactivar, si se desea */}
+                      {onToggleUsuario && (
+                        <button
+                          className={`btn btn-sm ${estaInhabilitado ? 'btn-success' : 'btn-warning'}`}
+                          onClick={() => handleToggleUsuario(user.id)}
+                        >
+                          {estaInhabilitado ? 'Reactivar' : 'Inhabilitar'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -154,7 +163,7 @@ const UsuariosView = () => {
                 <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
               </div>
               <div className="modal-body">
-                <RegisterView onShowLogin={() => { setMostrarModal(false); setRecargar(prev => !prev); }} />
+                <RegisterView onShowLogin={() => { setMostrarModal(false); }} />
               </div>
             </div>
           </div>
