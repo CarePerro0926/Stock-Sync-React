@@ -37,7 +37,7 @@ const normalizeProducto = (p = {}) => {
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
-  // ✅ CORREGIDO: usar categoria_nombre o categoria o category_name, pero no cambiarlo por "Sin Categoría" si viene vacío
+  // ✅ CORREGIDO: mantener valor original, no forzar "Sin Categoría"
   const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
 
   const cantidad = typeof p?.cantidad === 'number'
@@ -65,7 +65,7 @@ const normalizeProducto = (p = {}) => {
     id,
     product_id,
     nombre,
-    categoria_nombre, // ✅ CORREGIDO: ahora se mantiene el valor original
+    categoria_nombre, // ✅ CORREGIDO
     cantidad,
     precio,
     deleted_at,
