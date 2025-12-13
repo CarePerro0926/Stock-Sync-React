@@ -68,10 +68,11 @@ const buildNormalized = (p) => {
   };
 };
 
-const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => {
+const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdmin = false }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [localProductos, setLocalProductos] = useState([]);
+  const [showInactive, setShowInactive] = useState(false); // nuevo estado
 
   useEffect(() => {
     setLocalProductos(Array.isArray(productos) ? productos : []);
@@ -119,7 +120,13 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
   };
 
   const productosFiltrados = useMemo(() => {
-    let filtered = productosNormalizados.filter(p => !isPlaceholderProduct(p));
+    let filtered = productosNormalizados
+      .filter(p => !isPlaceholderProduct(p))
+      .filter(p => {
+        // si no queremos ver inactivos, excluirlos
+        if (!showInactive) return !p._inactive;
+        return true;
+      });
 
     // Filtrar por categoría si aplica
     if (filtroCat && filtroCat !== 'Todas') {
@@ -156,7 +163,7 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
 
     console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
     return filtered;
-  }, [productosNormalizados, filtroCat, filtroTxt]);
+  }, [productosNormalizados, filtroCat, filtroTxt, showInactive]);
 
   const tableData = useMemo(() => {
     const data = productosFiltrados.map(p => ({
@@ -230,6 +237,7 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
             ))}
           </select>
         </div>
+
         <div className="col">
           <input
             id="filtroTxtAdmin"
@@ -239,6 +247,20 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
+
+        {/* Checkbox para mostrar inactivos — solo visible si isAdmin */}
+        {isAdmin && (
+          <div className="col-auto d-flex align-items-center">
+            <label className="form-check-label me-2" htmlFor="showInactiveCheckbox">Mostrar inactivos</label>
+            <input
+              id="showInactiveCheckbox"
+              type="checkbox"
+              className="form-check-input"
+              checked={showInactive}
+              onChange={e => setShowInactive(e.target.checked)}
+            />
+          </div>
+        )}
       </div>
 
       <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
