@@ -9,6 +9,11 @@ import ResponsiveTable from '../ResponsiveTable';
  *   o raw (product_id, nombre, categoria, stock, etc).
  * - Normaliza internamente y evita placeholders.
  * - Búsqueda: si el término es solo numérico -> buscar por ID exacto.
+ *
+ * Cambios clave:
+ * - showInactive checkbox siempre renderizado para facilitar debugging.
+ * - checkbox deshabilitado si isAdmin === false y se muestra un texto explicativo.
+ * - logs añadidos para verificar runtime.
  */
 
 const normalizeDeletedAt = (val) => {
@@ -68,11 +73,11 @@ const buildNormalized = (p) => {
   };
 };
 
-const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdmin = false }) => {
+const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdmin = undefined }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [localProductos, setLocalProductos] = useState([]);
-  const [showInactive, setShowInactive] = useState(false); // nuevo estado
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
     setLocalProductos(Array.isArray(productos) ? productos : []);
@@ -84,6 +89,11 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
       console.log('INVENTORY DEBUG: primeros 3 productos (raw):', productos.slice(0, 3));
     }
   }, [productos]);
+
+  // Log para verificar isAdmin y showInactive en runtime
+  useEffect(() => {
+    console.log('INVENTORY DEBUG: isAdmin (prop) =', isAdmin, 'showInactive (state) =', showInactive);
+  }, [isAdmin, showInactive]);
 
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = (localProductos || [])
@@ -103,18 +113,14 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
     return arr;
   }, [localProductos]);
 
-  // Helper: determina si el término es un ID explícito
   const extractIdFromSearch = (raw) => {
     if (!raw) return null;
     const trimmed = String(raw).trim();
-    // Si tiene formato "123 - Nombre", tomar la parte antes del guion
     if (trimmed.includes(' - ')) {
       const maybeId = trimmed.split(' - ')[0].trim();
       if (maybeId !== '') return maybeId;
     }
-    // Si es solo dígitos (positivo), considerarlo ID explícito
     if (/^\d+$/.test(trimmed)) return trimmed;
-    // Si es UUID-like (letras y guiones) también puede ser id
     if (/^[0-9a-fA-F-]{8,}$/.test(trimmed)) return trimmed;
     return null;
   };
@@ -128,36 +134,30 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
         return true;
       });
 
-    // Filtrar por categoría si aplica
     if (filtroCat && filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => String(p.categoria_nombre ?? '').trim() === filtroCatStr);
     }
 
-    // Si no hay texto de búsqueda, devolver lo filtrado por categoría
     const rawSearch = String(filtroTxt ?? '').trim();
     if (!rawSearch) {
       console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
       return filtered;
     }
 
-    // Intentar extraer ID explícito
     const explicitId = extractIdFromSearch(rawSearch);
 
     if (explicitId !== null) {
-      // Buscar por ID exacto (coincidencia completa)
       filtered = filtered.filter(p => String(p.id ?? '').trim() === String(explicitId).trim());
       console.log('INVENTORY DEBUG: búsqueda por ID explícito =', explicitId, 'resultados =', filtered.length);
       return filtered;
     }
 
-    // Búsqueda por texto (nombre, categoría, o id parcial si no es solo número)
     const term = rawSearch.toLowerCase();
     filtered = filtered.filter(p => {
       const idStr = String(p.id ?? '').toLowerCase();
       const nombreStr = String(p.nombre ?? '').toLowerCase();
       const catStr = String(p.categoria_nombre ?? '').toLowerCase();
-      // permitir coincidencia parcial en id, nombre o categoría (pero no en precio/cantidad)
       return idStr.includes(term) || nombreStr.includes(term) || catStr.includes(term);
     });
 
@@ -186,7 +186,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  // Si quieres usar toggle desde la tabla, descomenta y pásalo a ResponsiveTable
   const _handleToggleFromRow = async (productId, currentlyDisabled) => {
     console.log('INVENTORY DEBUG: toggle requested for', productId, 'currentlyDisabled=', currentlyDisabled);
     if (typeof onToggleProducto === 'function') {
@@ -197,7 +196,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
           const rawProductId = String(p._raw?.product_id ?? p._raw?.id ?? '');
           if (String(norm.id) === String(productId) || rawProductId === String(productId)) {
             const newRaw = { ...p._raw, deleted_at: currentlyDisabled ? null : new Date().toISOString() };
-            // mantener la estructura original pero con _raw actualizado
             return { ...p, _raw: newRaw };
           }
           return p;
@@ -248,19 +246,24 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
           />
         </div>
 
-        {/* Checkbox para mostrar inactivos — solo visible si isAdmin */}
-        {isAdmin && (
-          <div className="col-auto d-flex align-items-center">
-            <label className="form-check-label me-2" htmlFor="showInactiveCheckbox">Mostrar inactivos</label>
-            <input
-              id="showInactiveCheckbox"
-              type="checkbox"
-              className="form-check-input"
-              checked={showInactive}
-              onChange={e => setShowInactive(e.target.checked)}
-            />
-          </div>
-        )}
+        {/* Checkbox siempre visible para debugging; deshabilitado si no es admin */}
+        <div className="col-auto d-flex align-items-center">
+          <label className="form-check-label me-2" htmlFor="showInactiveCheckbox">Mostrar inactivos</label>
+          <input
+            id="showInactiveCheckbox"
+            type="checkbox"
+            className="form-check-input"
+            checked={showInactive}
+            onChange={e => setShowInactive(e.target.checked)}
+            disabled={isAdmin !== true} // solo interactivo si isAdmin === true
+            aria-disabled={isAdmin !== true}
+          />
+          {isAdmin !== true && (
+            <small className="text-muted ms-2">
+              (solo editable para administradores)
+            </small>
+          )}
+        </div>
       </div>
 
       <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -268,7 +271,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
           <ResponsiveTable
             headers={tableHeaders}
             data={tableData}
-            // Si tu ResponsiveTable soporta acciones por fila, pasa _handleToggleFromRow
             // onRowToggle={_handleToggleFromRow}
           />
         </div>
