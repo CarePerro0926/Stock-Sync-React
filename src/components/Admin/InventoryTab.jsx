@@ -123,7 +123,11 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
     let filtered = productosNormalizados.filter(p => !isPlaceholderProduct(p));
 
     // Nueva lógica: filtrar según el estado del checkbox "Mostrar inactivos"
-    if (!mostrarInactivos) {
+    if (mostrarInactivos) {
+      // Solo mostrar productos inactivos
+      filtered = filtered.filter(p => p._inactive);
+    } else {
+      // Solo mostrar productos activos
       filtered = filtered.filter(p => !p._inactive);
     }
 
