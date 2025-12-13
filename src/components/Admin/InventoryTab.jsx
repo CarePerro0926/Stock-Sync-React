@@ -71,6 +71,7 @@ const buildNormalized = (p) => {
 const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [mostrarInactivos, setMostrarInactivos] = useState(false); // Nuevo estado
   const [localProductos, setLocalProductos] = useState([]);
 
   useEffect(() => {
@@ -121,13 +122,18 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
   const productosFiltrados = useMemo(() => {
     let filtered = productosNormalizados.filter(p => !isPlaceholderProduct(p));
 
+    // Nueva lógica: filtrar según el estado del checkbox "Mostrar inactivos"
+    if (!mostrarInactivos) {
+      filtered = filtered.filter(p => !p._inactive);
+    }
+
     // Filtrar por categoría si aplica
     if (filtroCat && filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => String(p.categoria_nombre ?? '').trim() === filtroCatStr);
     }
 
-    // Si no hay texto de búsqueda, devolver lo filtrado por categoría
+    // Si no hay texto de búsqueda, devolver lo filtrado por categoría e inactivos
     const rawSearch = String(filtroTxt ?? '').trim();
     if (!rawSearch) {
       console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
@@ -156,7 +162,7 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
 
     console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
     return filtered;
-  }, [productosNormalizados, filtroCat, filtroTxt]);
+  }, [productosNormalizados, filtroCat, filtroTxt, mostrarInactivos]); // Agregar mostrarInactivos a las dependencias
 
   const tableData = useMemo(() => {
     const data = productosFiltrados.map(p => ({
@@ -238,6 +244,19 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => 
             value={filtroTxt}
             onChange={e => setFiltroTxt(e.target.value)}
           />
+        </div>
+        {/* Nuevo checkbox para mostrar inactivos */}
+        <div className="col-auto d-flex align-items-center">
+          <div className="form-check">
+            <input
+              id="chkMostrarInactivosInv"
+              className="form-check-input"
+              type="checkbox"
+              checked={mostrarInactivos}
+              onChange={e => setMostrarInactivos(e.target.checked)}
+            />
+            <label className="form-check-label" htmlFor="chkMostrarInactivosInv">Mostrar inactivos</label>
+          </div>
         </div>
       </div>
 
