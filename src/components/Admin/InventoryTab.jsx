@@ -3,11 +3,13 @@ import React, { useMemo, useState, useEffect } from 'react';
 import '../ResponsiveTable.css';
 import ResponsiveTable from '../ResponsiveTable';
 
-// Si usas Supabase Auth helpers en el frontend, mantenlos; si no, el componente
-// intentará detectar el usuario vía supabase-js si tienes el cliente disponible.
-import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
-
-/* ------------------ Helpers de normalización ------------------ */
+/**
+ * InventoryTab robusto
+ * - Acepta productos en varias formas: normalizados (id, nombre, categoria_nombre, cantidad, precio)
+ *   o raw (product_id, nombre, categoria, stock, etc).
+ * - Normaliza internamente y evita placeholders.
+ * - Búsqueda: si el término es solo numérico -> buscar por ID exacto.
+ */
 
 const normalizeDeletedAt = (val) => {
   if (val === null || val === undefined) return null;
@@ -44,10 +46,7 @@ const buildNormalized = (p) => {
   const categoriaRaw = p?.categoria_nombre ?? p?.categoria ?? raw?.categoria_nombre ?? raw?.categoria ?? raw?.category_name ?? '';
   const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') ? 'Sin Categoría' : String(categoriaRaw);
 
-  const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad
-    : (typeof raw?.cantidad === 'number' ? raw.cantidad
-      : (typeof raw?.stock === 'number' ? raw.stock : (p?.stock ?? 0)));
-
+  const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad : (typeof raw?.cantidad === 'number' ? raw.cantidad : (typeof raw?.stock === 'number' ? raw.stock : (p?.stock ?? 0)));
   const precioRaw = p?.precio ?? raw?.precio ?? raw?.precio_unitario ?? raw?.unit_price ?? null;
   const precio = (typeof precioRaw === 'number') ? precioRaw : (precioRaw ?? null);
 
@@ -69,78 +68,22 @@ const buildNormalized = (p) => {
   };
 };
 
-/* ------------------ Componente principal ------------------ */
-
-const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdmin: isAdminProp = undefined }) => {
+const InventoryTab = ({ productos = [], categorias = [], onToggleProducto }) => {
   const [filtroCat, setFiltroCat] = useState('Todas');
   const [filtroTxt, setFiltroTxt] = useState('');
   const [localProductos, setLocalProductos] = useState([]);
-  const [showInactive, setShowInactive] = useState(false);
-
-  // Supabase hooks (si están disponibles en tu proyecto)
-  const user = useUser?.();
-  const supabase = useSupabaseClient?.();
-
-  // Estado local que decide si el usuario es admin
-  const [isAdminLocal, setIsAdminLocal] = useState(Boolean(isAdminProp === true));
 
   useEffect(() => {
     setLocalProductos(Array.isArray(productos) ? productos : []);
   }, [productos]);
 
-  // Detección de rol: prioridad
-  // 1) Prop isAdmin pasada por el padre (boolean)
-  // 2) useUser hook (user metadata / role)
-  // 3) supabase.auth.getUser() fallback si supabase client está disponible
   useEffect(() => {
-    let mounted = true;
-
-    if (typeof isAdminProp === 'boolean') {
-      setIsAdminLocal(isAdminProp);
-      return () => { mounted = false; };
+    console.log('INVENTORY DEBUG: productos prop length =', Array.isArray(productos) ? productos.length : 'not-array');
+    if (Array.isArray(productos) && productos.length > 0) {
+      console.log('INVENTORY DEBUG: primeros 3 productos (raw):', productos.slice(0, 3));
     }
+  }, [productos]);
 
-    const detect = async () => {
-      try {
-        // 1) useUser hook
-        if (user) {
-          const role = user?.user_metadata?.role ?? user?.role ?? user?.app_metadata?.role ?? null;
-          if (String(role).toLowerCase() === 'admin') {
-            if (mounted) setIsAdminLocal(true);
-            return;
-          }
-        }
-
-        // 2) supabase client fallback
-        if (supabase && typeof supabase.auth?.getUser === 'function') {
-          const { data, error } = await supabase.auth.getUser();
-          if (!error && data?.user) {
-            const u = data.user;
-            const role = u?.user_metadata?.role ?? u?.role ?? u?.app_metadata?.role ?? null;
-            if (String(role).toLowerCase() === 'admin') {
-              if (mounted) setIsAdminLocal(true);
-              return;
-            }
-          }
-        }
-
-        // default false
-        if (mounted) setIsAdminLocal(false);
-      } catch (err) {
-        console.warn('INVENTORY DEBUG: error detectando rol admin', err);
-        if (mounted) setIsAdminLocal(false);
-      }
-    };
-
-    detect();
-    return () => { mounted = false; };
-  }, [isAdminProp, user, supabase]);
-
-  useEffect(() => {
-    console.log('INVENTORY DEBUG: isAdminProp=', isAdminProp, 'isAdminLocal=', isAdminLocal, 'showInactive=', showInactive);
-  }, [isAdminProp, isAdminLocal, showInactive]);
-
-  /* ------------------ Lista de categorías (filtro) ------------------ */
   const listaCategoriasFiltro = useMemo(() => {
     const nombresDesdeProductos = (localProductos || [])
       .map(p => p?.categoria_nombre ?? p?.categoria ?? p?._raw?.categoria_nombre ?? p?._raw?.categoria ?? '')
@@ -153,66 +96,68 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
     return ['Todas', ...unicas];
   }, [localProductos, categorias]);
 
-  /* ------------------ Normalización de productos ------------------ */
   const productosNormalizados = useMemo(() => {
     const arr = (localProductos || []).map(p => buildNormalized(p));
     console.log('INVENTORY DEBUG: productos normalizados (primeros 5):', arr.slice(0, 5));
     return arr;
   }, [localProductos]);
 
-  /* ------------------ Búsqueda / filtrado ------------------ */
+  // Helper: determina si el término es un ID explícito
   const extractIdFromSearch = (raw) => {
     if (!raw) return null;
     const trimmed = String(raw).trim();
+    // Si tiene formato "123 - Nombre", tomar la parte antes del guion
     if (trimmed.includes(' - ')) {
       const maybeId = trimmed.split(' - ')[0].trim();
       if (maybeId !== '') return maybeId;
     }
+    // Si es solo dígitos (positivo), considerarlo ID explícito
     if (/^\d+$/.test(trimmed)) return trimmed;
+    // Si es UUID-like (letras y guiones) también puede ser id
     if (/^[0-9a-fA-F-]{8,}$/.test(trimmed)) return trimmed;
     return null;
   };
 
   const productosFiltrados = useMemo(() => {
-    let filtered = productosNormalizados
-      .filter(p => !isPlaceholderProduct(p))
-      .filter(p => {
-        // si no queremos ver inactivos, excluirlos
-        if (!showInactive) return !p._inactive;
-        return true;
-      });
+    let filtered = productosNormalizados.filter(p => !isPlaceholderProduct(p));
 
+    // Filtrar por categoría si aplica
     if (filtroCat && filtroCat !== 'Todas') {
       const filtroCatStr = String(filtroCat).trim();
       filtered = filtered.filter(p => String(p.categoria_nombre ?? '').trim() === filtroCatStr);
     }
 
+    // Si no hay texto de búsqueda, devolver lo filtrado por categoría
     const rawSearch = String(filtroTxt ?? '').trim();
     if (!rawSearch) {
       console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
       return filtered;
     }
 
+    // Intentar extraer ID explícito
     const explicitId = extractIdFromSearch(rawSearch);
+
     if (explicitId !== null) {
+      // Buscar por ID exacto (coincidencia completa)
       filtered = filtered.filter(p => String(p.id ?? '').trim() === String(explicitId).trim());
       console.log('INVENTORY DEBUG: búsqueda por ID explícito =', explicitId, 'resultados =', filtered.length);
       return filtered;
     }
 
+    // Búsqueda por texto (nombre, categoría, o id parcial si no es solo número)
     const term = rawSearch.toLowerCase();
     filtered = filtered.filter(p => {
       const idStr = String(p.id ?? '').toLowerCase();
       const nombreStr = String(p.nombre ?? '').toLowerCase();
       const catStr = String(p.categoria_nombre ?? '').toLowerCase();
+      // permitir coincidencia parcial en id, nombre o categoría (pero no en precio/cantidad)
       return idStr.includes(term) || nombreStr.includes(term) || catStr.includes(term);
     });
 
     console.log('INVENTORY DEBUG: productos filtrados count =', filtered.length);
     return filtered;
-  }, [productosNormalizados, filtroCat, filtroTxt, showInactive]);
+  }, [productosNormalizados, filtroCat, filtroTxt]);
 
-  /* ------------------ Datos para la tabla ------------------ */
   const tableData = useMemo(() => {
     const data = productosFiltrados.map(p => ({
       id: p.id || '—',
@@ -234,7 +179,7 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
     { key: 'precio', label: 'Precio Unidad', align: 'right' }
   ];
 
-  /* ------------------ Toggle desde fila (mantener compatibilidad) ------------------ */
+  // Si quieres usar toggle desde la tabla, descomenta y pásalo a ResponsiveTable
   const _handleToggleFromRow = async (productId, currentlyDisabled) => {
     console.log('INVENTORY DEBUG: toggle requested for', productId, 'currentlyDisabled=', currentlyDisabled);
     if (typeof onToggleProducto === 'function') {
@@ -245,6 +190,7 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
           const rawProductId = String(p._raw?.product_id ?? p._raw?.id ?? '');
           if (String(norm.id) === String(productId) || rawProductId === String(productId)) {
             const newRaw = { ...p._raw, deleted_at: currentlyDisabled ? null : new Date().toISOString() };
+            // mantener la estructura original pero con _raw actualizado
             return { ...p, _raw: newRaw };
           }
           return p;
@@ -265,7 +211,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
     }
   };
 
-  /* ------------------ Render ------------------ */
   return (
     <div className="w-100">
       <h5>Inventario</h5>
@@ -285,7 +230,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
             ))}
           </select>
         </div>
-
         <div className="col">
           <input
             id="filtroTxtAdmin"
@@ -295,25 +239,6 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
             onChange={e => setFiltroTxt(e.target.value)}
           />
         </div>
-
-        {/* Checkbox: visible siempre; habilitado solo si isAdminLocal === true */}
-        <div className="col-auto d-flex align-items-center">
-          <label className="form-check-label me-2" htmlFor="showInactiveCheckbox">Mostrar inactivos</label>
-          <input
-            id="showInactiveCheckbox"
-            type="checkbox"
-            className="form-check-input"
-            checked={showInactive}
-            onChange={e => setShowInactive(e.target.checked)}
-            disabled={!isAdminLocal}
-            aria-disabled={!isAdminLocal}
-          />
-          {!isAdminLocal && (
-            <small className="text-muted ms-2">
-              (solo editable para administradores)
-            </small>
-          )}
-        </div>
       </div>
 
       <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
@@ -321,7 +246,8 @@ const InventoryTab = ({ productos = [], categorias = [], onToggleProducto, isAdm
           <ResponsiveTable
             headers={tableHeaders}
             data={tableData}
-            // onRowToggle={_handleToggleFromRow} // descomenta si tu ResponsiveTable soporta toggle
+            // Si tu ResponsiveTable soporta acciones por fila, pasa _handleToggleFromRow
+            // onRowToggle={_handleToggleFromRow}
           />
         </div>
       </div>
