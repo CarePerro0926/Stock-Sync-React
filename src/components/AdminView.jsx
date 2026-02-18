@@ -9,8 +9,7 @@ import UsuariosView from './UsuariosView';
 import { providerService } from '@/services/providerService';
 
 /* Config de entorno */
-const API_BASE = import.meta.env.VITE_API_URL || '';
-const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || '';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com';
 
 /* Helpers de normalización */
 const normalizeDeletedAt = (val) => {
@@ -75,16 +74,20 @@ const normalizeProducto = (p = {}) => {
   };
 };
 
-/* Headers para llamadas admin */
+/* Headers para llamadas admin - ¡CORREGIDO! */
 const buildAdminHeaders = () => {
   const headers = { 'Content-Type': 'application/json' };
-  if (ADMIN_API_TOKEN) headers['x-admin-token'] = ADMIN_API_TOKEN;
+  
+  // SOLO USAMOS EL TOKEN DE SESIÓN (método correcto para JWT)
   try {
     const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
-    if (session?.token) headers['Authorization'] = `Bearer ${session.token}`;
+    if (session?.token) {
+      headers['Authorization'] = `Bearer ${session.token}`;
+    }
   } catch (err) {
     console.warn('buildAdminHeaders: no se pudo leer userSession', err);
   }
+  
   return headers;
 };
 
@@ -148,6 +151,7 @@ const AdminView = ({
       }
 
       const includeInactivos = true;
+      // ¡CORREGIDO! Ahora usa /api/productos
       const url = `${API_BASE}/api/productos?include_inactivos=${includeInactivos}&_=${Date.now()}`;
       const res = await fetch(url, { 
         cache: 'no-store',
@@ -191,9 +195,9 @@ const AdminView = ({
       }
 
       const includeInactivos = true;
+      // ¡CORREGIDO! Ahora usa /api/proveedores
       const url = `${API_BASE}/api/proveedores?include_inactivos=${includeInactivos}&_=${Date.now()}`;
       
-      // Añadimos los headers de autenticación
       const headers = buildAdminHeaders();
       console.log('Headers para proveedores:', headers);
       
@@ -245,6 +249,7 @@ const AdminView = ({
       const includeInactivos = true;
       const headers = buildAdminHeaders();
       
+      // ¡CORREGIDO! Ahora usa /api/usuarios
       const res = await fetch(`${API_BASE}/api/usuarios?include_inactivos=${includeInactivos}`, { 
         headers: headers
       });
@@ -312,6 +317,7 @@ const AdminView = ({
       }
 
       const action = currentlyDisabled ? 'enable' : 'disable';
+      // ¡CORREGIDO! Ahora usa /api/productos
       const apiUrl = `${API_BASE}/api/productos/${encodeURIComponent(id)}/${action}`;
 
       // Optimismo local
@@ -367,7 +373,7 @@ const AdminView = ({
         deleted_at: String(p.id) === String(id) ? (currentlyDisabled ? null : new Date().toISOString()) : p.deleted_at
       })));
       
-      // Llamada a la API - SIN capturar la respuesta
+      // ¡CORREGIDO! Ahora providerService usa la URL correcta
       await providerService[action](id);
       
       // Recargar proveedores después de la operación
@@ -392,6 +398,7 @@ const AdminView = ({
   const toggleCategoria = useCallback(async (id, currentlyDisabled) => {
     try {
       const action = currentlyDisabled ? 'enable' : 'disable';
+      // ¡CORREGIDO! Ahora usa /api/categorias
       const apiUrl = `${API_BASE}/api/categorias/nombre/${encodeURIComponent(id)}/${action}`;
 
       const res = await fetch(apiUrl, {
@@ -427,6 +434,7 @@ const AdminView = ({
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
     try {
       const action = currentlyDisabled ? 'enable' : 'disable';
+      // ¡CORREGIDO! Ahora usa /api/usuarios
       const apiUrl = `${API_BASE}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
       
       const res = await fetch(apiUrl, {
