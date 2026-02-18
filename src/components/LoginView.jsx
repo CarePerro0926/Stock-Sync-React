@@ -6,7 +6,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-sync-api.onrender.com/api';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,7 +22,7 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         ? { email: id, password: pwd }
         : { username: id, password: pwd };
 
-      const res = await fetch(`${apiUrl}/api/login`, {
+      const res = await fetch(`${apiUrl}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -31,9 +31,16 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
       const result = await res.json();
 
       if (!res.ok) {
-        // Muestra el mensaje del backend si existe
         alert(result?.message || 'Credenciales incorrectas');
         return;
+      }
+
+      // ✅ Guardar tokens en localStorage
+      if (result.accessToken) {
+        localStorage.setItem('accessToken', result.accessToken);
+      }
+      if (result.refreshToken) {
+        localStorage.setItem('refreshToken', result.refreshToken);
       }
 
       // Normaliza datos del usuario para la sesión
@@ -42,10 +49,10 @@ const LoginView = ({ onLogin, onShowRegister, onShowCatalog, onShowForgot }) => 
         email: result.user?.email ?? null,
         username: result.user?.username ?? null,
         role: result.user?.role ?? 'cliente',
-        token: result.token ?? null,
+        token: result.accessToken ?? null, // usa el accessToken real
       };
 
-      // Guarda sesión en storage y eleva al estado de la app
+      // Guarda sesión en sessionStorage y eleva al estado de la app
       sessionStorage.setItem('userSession', JSON.stringify(usr));
       onLogin(usr);
     } catch (err) {
