@@ -1,52 +1,55 @@
-// src/services/productService.js
-import apiClient from './apiClient';
+// src/services/apiClient.ts
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { tokenService } from './tokenService';
 
-export const productService = {
-  getAll: async (includeInactivos = false) => {
-    const params = includeInactivos ? '?include_inactivos=true' : '';
-    const res = await apiClient.get(`/productos${params}`);
-    return res.data;
-  },
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-  getById: async (id) => {
-    const res = await apiClient.get(`/productos/${id}`);
-    return res.data;
-  },
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+});
 
-  create: async (producto) => {
-    const res = await apiClient.post('/productos', producto);
-    return res.data;
-  },
-
-  update: async (id, producto) => {
-    const res = await apiClient.put(`/productos/${id}`, producto);
-    return res.data;
-  },
-
-  disable: async (id) => {
-    const res = await apiClient.patch(`/productos/${id}/disable`);
-    return res.data;
-  },
-
-  enable: async (id) => {
-    const res = await apiClient.patch(`/productos/${id}/enable`);
-    return res.data;
-  },
-
-  getMovimientos: async (productId = null, type = null, limit = 100, offset = 0) => {
-    const params = new URLSearchParams();
-    if (productId) params.append('product_id', productId);
-    if (type) params.append('type', type);
-    if (limit) params.append('limit', limit);
-    if (offset) params.append('offset', offset);
-
-    const url = params.toString() ? `/movimientos?${params.toString()}` : '/movimientos';
-    const res = await apiClient.get(url);
-    return res.data;
-  },
-
-  createMovimiento: async (movimiento) => {
-    const res = await apiClient.post('/movimientos', movimiento);
-    return res.data;
+// Interceptor: añade siempre el accessToken
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    if (config.headers && typeof (config.headers as any).set === 'function') {
+      // Si headers es AxiosHeaders, usa set
+      (config.headers as any).set('Authorization', `Bearer ${token}`);
+    } else {
+      // Fallback seguro para TS
+      (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
   }
-};
+  return config;
+});
+
+// Interceptor: refresca token si expiró
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest: any = error.config;
+
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      (error.response.data as any)?.needsRefresh &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      const newToken = await tokenService.refreshToken();
+      if (newToken) {
+        if (originalRequest.headers && typeof (originalRequest.headers as any).set === 'function') {
+          (originalRequest.headers as any).set('Authorization', `Bearer ${newToken}`);
+        } else {
+          (originalRequest.headers as Record<string, string>).Authorization = `Bearer ${newToken}`;
+        }
+        return apiClient(originalRequest);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
