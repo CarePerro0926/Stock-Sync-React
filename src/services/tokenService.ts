@@ -4,7 +4,7 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 export const tokenService = {
-  refreshToken: async () => {
+  refreshToken: async (): Promise<string | null> => {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) return null;
 
