@@ -1,74 +1,89 @@
 // src/services/providerService.js
-import axios from 'axios';
-
-// Obtén la URL base de tu API desde las variables de entorno
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:10000/api';
+import { supabase } from '@/services/supabaseClient';
 
 export const providerService = {
-  // Obtener proveedores
-  getAll: async (includeInactivos = false) => {
-    try {
-      const params = includeInactivos ? '?include_inactivos=true' : '';
-      const response = await axios.get(`${API_BASE_URL}/proveedores${params}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching providers:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener proveedores');
-    }
+  // Obtener proveedores y devolver también lista de categoria_ids asociados
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('proveedores')
+      .select('id,nombre,email,telefono')
+      .order('nombre', { ascending: true });
+
+    if (error) throw error;
+
+    const proveedores = data || [];
+
+    // Cargar categorías asociadas para cada proveedor
+    const proveedoresConCategorias = await Promise.all(
+      proveedores.map(async (prov) => {
+        const { data: cats, error: catsErr } = await supabase
+          .from('proveedor_categorias') // corregido: plural
+          .select('categoria_id')
+          .eq('proveedor_id', prov.id);
+
+        if (catsErr) throw catsErr;
+
+        return {
+          ...prov,
+          categorias: (cats || []).map(c => c.categoria_id)
+        };
+      })
+    );
+
+    return proveedoresConCategorias;
   },
 
-  // Obtener proveedor por ID
-  getById: async (id) => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/proveedores/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching provider:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener proveedor');
-    }
-  },
-
-  // Crear proveedor
+  // Crear proveedor y relaciones con categorias (categoria ids)
+  // proveedor = { nombre, email, telefono, categorias: [categoriaId,...], productos: [productoId,...] }
   create: async (proveedor) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/proveedores`, proveedor);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating provider:', error);
-      throw new Error(error.response?.data?.message || 'Error al crear proveedor');
+    const { nombre, email, telefono, categorias = [], productos = [] } = proveedor;
+
+    // 1) Crear proveedor y obtener id
+    const { data, error } = await supabase
+      .from('proveedores')
+      .insert([{ nombre, email, telefono }])
+      .select('id')
+      .single();
+    if (error) throw error;
+    const provId = data.id;
+
+    // 2) Insertar relaciones proveedor_categorias
+    if (Array.isArray(categorias) && categorias.length > 0) {
+      const relacionesCats = categorias.map(catId => ({
+        proveedor_id: provId,
+        categoria_id: catId
+      }));
+      const { error: relCatsErr } = await supabase
+        .from('proveedor_categorias') // corregido: plural
+        .insert(relacionesCats)
+        .onConflict(['proveedor_id', 'categoria_id'])
+        .ignore();
+      if (relCatsErr) throw relCatsErr;
     }
+
+    // 3) Insertar relaciones producto_proveedor (si hubo productos seleccionados)
+    if (Array.isArray(productos) && productos.length > 0) {
+      const relacionesProds = productos.map(prodId => ({
+        producto_id: prodId,
+        proveedor_id: provId
+      }));
+      const { error: relProdsErr } = await supabase
+        .from('producto_proveedor')
+        .insert(relacionesProds)
+        .onConflict(['producto_id', 'proveedor_id'])
+        .ignore();
+      if (relProdsErr) throw relProdsErr;
+    }
+
+    return provId;
   },
 
-  // Actualizar proveedor
-  update: async (id, proveedor) => {
-    try {
-      const response = await axios.put(`${API_BASE_URL}/proveedores/${id}`, proveedor);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating provider:', error);
-      throw new Error(error.response?.data?.message || 'Error al actualizar proveedor');
-    }
-  },
-
-  // Inhabilitar proveedor
-  disable: async (id) => {
-    try {
-      const response = await axios.patch(`${API_BASE_URL}/proveedores/${id}/disable`);
-      return response.data;
-    } catch (error) {
-      console.error('Error disabling provider:', error);
-      throw new Error(error.response?.data?.message || 'Error al inhabilitar proveedor');
-    }
-  },
-
-  // Habilitar proveedor
-  enable: async (id) => {
-    try {
-      const response = await axios.patch(`${API_BASE_URL}/proveedores/${id}/enable`);
-      return response.data;
-    } catch (error) {
-      console.error('Error enabling provider:', error);
-      throw new Error(error.response?.data?.message || 'Error al habilitar proveedor');
-    }
+  remove: async (id) => {
+    const { error } = await supabase
+      .from('proveedores')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   }
 };
