@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 export const authService = {
   // Login: recibe credenciales y guarda tokens
   login: async (credentials) => {
-    const response = await axios.post(`${API_BASE_URL}/login`, credentials);
+    const response = await axios.post(`${API_BASE_URL}/api/login`, credentials);
 
     const { accessToken, refreshToken } = response.data;
 
