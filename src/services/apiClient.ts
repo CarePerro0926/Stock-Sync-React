@@ -12,10 +12,13 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    };
+    // Usa el método set de AxiosHeaders si existe
+    if (config.headers && typeof (config.headers as any).set === 'function') {
+      (config.headers as any).set('Authorization', `Bearer ${token}`);
+    } else {
+      // fallback seguro para TS
+      (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -36,7 +39,11 @@ apiClient.interceptors.response.use(
 
       const newToken = await tokenService.refreshToken();
       if (newToken) {
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        if (originalRequest.headers && typeof (originalRequest.headers as any).set === 'function') {
+          (originalRequest.headers as any).set('Authorization', `Bearer ${newToken}`);
+        } else {
+          (originalRequest.headers as Record<string, string>).Authorization = `Bearer ${newToken}`;
+        }
         return apiClient(originalRequest);
       }
     }
