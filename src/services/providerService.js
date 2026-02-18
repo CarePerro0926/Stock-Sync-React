@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:10000/api';
 
+// Helper para añadir el token en cada petición
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
   return {
@@ -15,9 +16,10 @@ export const providerService = {
   // Obtener proveedores
   getAll: async (includeInactivos = true) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/proveedores?include_inactivos=${includeInactivos}`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/proveedores?include_inactivos=${includeInactivos}`,
+        { headers: getAuthHeaders() }
+      );
       return response.data;
     } catch (error) {
       console.error('Error fetching providers:', error);
