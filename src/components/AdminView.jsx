@@ -6,11 +6,11 @@ import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
-import { providerService } from '@/services/providerService'; // Importamos el servicio correcto
+import { providerService } from '@/services/providerService';
 
 /* Config de entorno */
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || ''; // temporal: en producción usa JWT por rol
+const ADMIN_API_TOKEN = import.meta.env.VITE_ADMIN_API_TOKEN || '';
 
 /* Helpers de normalización */
 const normalizeDeletedAt = (val) => {
@@ -37,7 +37,6 @@ const normalizeProducto = (p = {}) => {
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
-  // ✅ CORREGIDO: mantener valor original, no forzar "Sin Categoría"
   const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
 
   const cantidad = typeof p?.cantidad === 'number'
@@ -65,7 +64,7 @@ const normalizeProducto = (p = {}) => {
     id,
     product_id,
     nombre,
-    categoria_nombre, // ✅ CORREGIDO
+    categoria_nombre,
     cantidad,
     precio,
     deleted_at,
@@ -102,11 +101,12 @@ const AdminView = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [productos, setProductos] = useState(Array.isArray(productosProp) ? productosProp.map(normalizeProducto) : []);
-  const [proveedores, setProveedores] = useState([]); // Ahora manejamos proveedores localmente
+  const [proveedores, setProveedores] = useState([]); 
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
   const [recargarUsuariosView, setRecargarUsuariosView] = useState(0);
+  const [proveedoresError, setProveedoresError] = useState('');
   const fetchedUsersRef = useRef(false);
   const fetchedProvidersRef = useRef(false);
 
@@ -147,9 +147,12 @@ const AdminView = ({
         return null;
       }
 
-      const includeInactivos = true; // Siempre incluir inactivos
+      const includeInactivos = true;
       const url = `${API_BASE}/api/productos?include_inactivos=${includeInactivos}&_=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetch(url, { 
+        cache: 'no-store',
+        headers: buildAdminHeaders()
+      });
       
       if (!res.ok) {
         throw new Error(`Error ${res.status}: ${await res.text()}`);
@@ -180,18 +183,33 @@ const AdminView = ({
    */
   const fetchProveedores = useCallback(async () => {
     try {
+      setProveedoresError('');
       if (!API_BASE) {
         console.error('ADMINVIEW ERROR: VITE_API_URL no definido para proveedores.');
         setProveedores([]);
         return null;
       }
 
-      const includeInactivos = true; // Siempre incluir inactivos
+      const includeInactivos = true;
       const url = `${API_BASE}/api/proveedores?include_inactivos=${includeInactivos}&_=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-store' });
+      
+      // Añadimos los headers de autenticación
+      const headers = buildAdminHeaders();
+      console.log('Headers para proveedores:', headers);
+      
+      const res = await fetch(url, { 
+        cache: 'no-store',
+        headers: headers
+      });
       
       if (!res.ok) {
-        throw new Error(`Error ${res.status}: ${await res.text()}`);
+        const errorText = await res.text();
+        console.error('Error en la API de proveedores:', {
+          status: res.status,
+          errorText,
+          url
+        });
+        throw new Error(`Error ${res.status}: ${errorText}`);
       }
       
       const data = await res.json();
@@ -207,6 +225,7 @@ const AdminView = ({
       return data;
     } catch (err) {
       console.error('fetchProveedores error (API):', err);
+      setProveedoresError('No se pudieron cargar los proveedores: ' + err.message);
       setProveedores([]);
       return null;
     }
@@ -223,9 +242,11 @@ const AdminView = ({
         throw new Error('VITE_API_URL no definido');
       }
 
-      const includeInactivos = true; // Siempre incluir inactivos
+      const includeInactivos = true;
+      const headers = buildAdminHeaders();
+      
       const res = await fetch(`${API_BASE}/api/usuarios?include_inactivos=${includeInactivos}`, { 
-        headers: { 'Content-Type': 'application/json' } 
+        headers: headers
       });
       
       if (!res.ok) {
@@ -496,11 +517,18 @@ const AdminView = ({
       )}
 
       {vistaActiva === 'providers' && (
-        <ProvidersTab
-          proveedores={proveedores}
-          onAddProveedor={onAddProveedor}
-          onToggleProveedor={toggleProveedor}
-        />
+        <div>
+          {proveedoresError && (
+            <div className="alert alert-danger">
+              {proveedoresError}
+            </div>
+          )}
+          <ProvidersTab
+            proveedores={proveedores}
+            onAddProveedor={onAddProveedor}
+            onToggleProveedor={toggleProveedor}
+          />
+        </div>
       )}
 
       {vistaActiva === 'add' && (
