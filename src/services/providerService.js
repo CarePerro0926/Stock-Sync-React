@@ -6,13 +6,25 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:10000/api
 
 export const providerService = {
   // Obtener proveedores
-  getAll: async () => {
+  getAll: async (includeInactivos = false) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/proveedores`);
+      const params = includeInactivos ? '?include_inactivos=true' : '';
+      const response = await axios.get(`${API_BASE_URL}/proveedores${params}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching providers:', error);
       throw new Error(error.response?.data?.message || 'Error al obtener proveedores');
+    }
+  },
+
+  // Obtener proveedor por ID
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/proveedores/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching provider:', error);
+      throw new Error(error.response?.data?.message || 'Error al obtener proveedor');
     }
   },
 
@@ -24,6 +36,17 @@ export const providerService = {
     } catch (error) {
       console.error('Error creating provider:', error);
       throw new Error(error.response?.data?.message || 'Error al crear proveedor');
+    }
+  },
+
+  // Actualizar proveedor
+  update: async (id, proveedor) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/proveedores/${id}`, proveedor);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating provider:', error);
+      throw new Error(error.response?.data?.message || 'Error al actualizar proveedor');
     }
   },
 
