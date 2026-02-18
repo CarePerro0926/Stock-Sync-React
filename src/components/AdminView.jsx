@@ -1,12 +1,12 @@
 // src/components/AdminView.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/services/supabaseClient';
 import InventoryTab from './Admin/InventoryTab';
 import ProvidersTab from './Admin/ProvidersTab';
 import AddTab from './Admin/AddTab';
 import UpdateTab from './Admin/UpdateTab';
 import GestionarEstadoTab from './Admin/GestionarEstadoTab';
 import UsuariosView from './UsuariosView';
+import { providerService } from '@/services/providerService'; // Importamos el servicio correcto
 
 /* Config de entorno */
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -91,24 +91,24 @@ const buildAdminHeaders = () => {
 
 const AdminView = ({
   productos: productosProp = [],
-  proveedores = [],
   categorias = [],
   vistaActiva,
   setVistaActiva,
   onAddProducto,
   onAddProveedor,
   onAddCategoria,
-  onDeleteProveedor,
   onLogout,
   onUpdateSuccess
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [productos, setProductos] = useState(Array.isArray(productosProp) ? productosProp.map(normalizeProducto) : []);
+  const [proveedores, setProveedores] = useState([]); // Ahora manejamos proveedores localmente
   const [usuarios, setUsuarios] = useState([]);
   const [usuariosLoading, setUsuariosLoading] = useState(false);
   const [usuariosError, setUsuariosError] = useState('');
-  const [recargarUsuariosView, setRecargarUsuariosView] = useState(0); // ✅ Nuevo estado para forzar recarga
+  const [recargarUsuariosView, setRecargarUsuariosView] = useState(0);
   const fetchedUsersRef = useRef(false);
+  const fetchedProvidersRef = useRef(false);
 
   /* Cierre de menú mobile al hacer click fuera */
   const handleClickOutside = useCallback((event) => {
@@ -138,7 +138,6 @@ const AdminView = ({
 
   /**
    * fetchProductos - SIEMPRE incluye activos + inactivos
-   * Valida respuesta y normaliza
    */
   const fetchProductos = useCallback(async () => {
     try {
@@ -148,21 +147,19 @@ const AdminView = ({
         return null;
       }
 
-      // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
-      const url = `${API_BASE}/api/productos?_=${Date.now()}`;
+      const includeInactivos = true; // Siempre incluir inactivos
+      const url = `${API_BASE}/api/productos?include_inactivos=${includeInactivos}&_=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
-      const text = await res.text().catch(() => null);
-      let data = null;
-      try { data = JSON.parse(text); } catch (err) {
-        data = null;
-        console.warn('ADMINVIEW WARN: respuesta no JSON válida', err);
+      
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${await res.text()}`);
       }
-
-      console.log('ADMINVIEW DEBUG: fetchProductos API raw:', text?.slice?.(0, 200) ?? text);
-
+      
+      const data = await res.json();
+      
       const looksValid = Array.isArray(data) && data.length > 0 && (data[0]?.id || data[0]?.product_id);
-      if (!res.ok || !looksValid) {
-        console.error('ADMINVIEW ERROR: API productos inválida', { status: res.status, data });
+      if (!looksValid) {
+        console.error('ADMINVIEW ERROR: API productos inválida', { data });
         setProductos([]);
         return null;
       }
@@ -178,47 +175,65 @@ const AdminView = ({
     }
   }, []);
 
-  useEffect(() => {
-    if (!productosProp || productosProp.length === 0) {
-      fetchProductos();
+  /**
+   * fetchProveedores - Carga proveedores desde la API
+   */
+  const fetchProveedores = useCallback(async () => {
+    try {
+      if (!API_BASE) {
+        console.error('ADMINVIEW ERROR: VITE_API_URL no definido para proveedores.');
+        setProveedores([]);
+        return null;
+      }
+
+      const includeInactivos = true; // Siempre incluir inactivos
+      const url = `${API_BASE}/api/proveedores?include_inactivos=${includeInactivos}&_=${Date.now()}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${await res.text()}`);
+      }
+      
+      const data = await res.json();
+      
+      if (!Array.isArray(data)) {
+        console.error('ADMINVIEW ERROR: API proveedores inválida', { data });
+        setProveedores([]);
+        return null;
+      }
+
+      setProveedores(data);
+      console.log('ADMINVIEW DEBUG: fetchProveedores (API) ->', data.slice(0, 5));
+      return data;
+    } catch (err) {
+      console.error('fetchProveedores error (API):', err);
+      setProveedores([]);
+      return null;
     }
-  }, [productosProp, fetchProductos]);
+  }, []);
 
   /**
-   * fetchUsuariosFromApi - carga usuarios con API o Supabase
-   * SIEMPRE incluye activos + inactivos
+   * fetchUsuariosFromApi - carga usuarios con API
    */
   const fetchUsuariosFromApi = useCallback(async () => {
     setUsuariosLoading(true);
     setUsuariosError('');
     try {
-      if (API_BASE) {
-        // ⚠️ Asegúrate de que /api/usuarios DEVUELVA todos los registros (activos + inactivos)
-        const res = await fetch(`${API_BASE}/api/usuarios`, { headers: { 'Content-Type': 'application/json' } });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || 'Error al obtener usuarios desde API');
-        const normalized = (data || []).map(u => ({
-          id: String(u.id ?? u.user_id ?? ''),
-          display_name: (u.nombres || u.apellidos)
-            ? `${u.nombres ?? ''} ${u.apellidos ?? ''}`.trim()
-            : (u.display_name ?? u.username ?? u.email ?? String(u.id ?? '')),
-          deleted_at: normalizeDeletedAt(u.deleted_at),
-          raw: u
-        }));
-        setUsuarios(normalized);
-        fetchedUsersRef.current = true;
-        setUsuariosLoading(false);
-        return;
+      if (!API_BASE) {
+        throw new Error('VITE_API_URL no definido');
       }
 
-      // Fallback: Supabase directo — SIN FILTRO por deleted_at
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nombres, apellidos, email, username, deleted_at')
-        .order('nombres', { ascending: true });
-
-      if (error) throw error;
-
+      const includeInactivos = true; // Siempre incluir inactivos
+      const res = await fetch(`${API_BASE}/api/usuarios?include_inactivos=${includeInactivos}`, { 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${res.status} al obtener usuarios`);
+      }
+      
+      const data = await res.json();
       const normalized = (data || []).map(u => ({
         id: String(u.id ?? u.user_id ?? ''),
         display_name: (u.nombres || u.apellidos)
@@ -227,16 +242,42 @@ const AdminView = ({
         deleted_at: normalizeDeletedAt(u.deleted_at),
         raw: u
       }));
-
+      
       setUsuarios(normalized);
       fetchedUsersRef.current = true;
+      return normalized;
     } catch (err) {
       console.error('Error cargando usuarios:', err);
       setUsuariosError('No fue posible cargar usuarios. Revisa la tabla "usuarios", el endpoint /api/usuarios o los permisos.');
+      setUsuarios([]);
+      return [];
     } finally {
       setUsuariosLoading(false);
     }
   }, []);
+
+  /* Cargar productos al montar */
+  useEffect(() => {
+    if (!productosProp || productosProp.length === 0) {
+      fetchProductos();
+    }
+  }, [productosProp, fetchProductos]);
+
+  /* Cargar proveedores al montar */
+  useEffect(() => {
+    if (!fetchedProvidersRef.current) {
+      fetchedProvidersRef.current = true;
+      fetchProveedores();
+    }
+  }, [fetchProveedores]);
+
+  /* Cargar usuarios al montar */
+  useEffect(() => {
+    if (!fetchedUsersRef.current) {
+      fetchedUsersRef.current = true;
+      fetchUsuariosFromApi();
+    }
+  }, [fetchUsuariosFromApi]);
 
   /**
    * toggleProducto - PATCH /api/productos/:id/disable|enable
@@ -246,11 +287,6 @@ const AdminView = ({
       if (!API_BASE) {
         console.error('toggleProducto: VITE_API_URL no definido.');
         alert('Configuración inválida: falta VITE_API_URL.');
-        return false;
-      }
-      if (!ADMIN_API_TOKEN) {
-        console.error('toggleProducto: VITE_ADMIN_API_TOKEN vacío.');
-        alert('Acción admin bloqueada: falta VITE_ADMIN_API_TOKEN en el frontend.');
         return false;
       }
 
@@ -274,35 +310,17 @@ const AdminView = ({
         body: JSON.stringify({ reason: currentlyDisabled ? 'reactivado admin' : 'inhabilitado admin' })
       });
 
-      const payload = await res.json().catch(() => null);
-      console.log('TOGGLE PRODUCT payload:', payload, 'status:', res.status);
-
       if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
         console.error('toggleProducto API error:', { status: res.status, payload });
         await fetchProductos(); // revertir optimismo
         alert(payload?.message || 'Error al cambiar el estado del producto (API).');
         return false;
       }
 
-      // Actualizar según el tipo de respuesta
-      if (Array.isArray(payload)) {
-        const normalized = payload.map(normalizeProducto);
-        setProductos(normalized);
-      } else if (payload && (payload.id || payload.product_id)) {
-        const returnedId = String(payload.product_id ?? payload.id ?? '');
-        setProductos(prev => (prev || []).map(p => {
-          const pid = String(p.id ?? p.product_id ?? '');
-          const rawPid = String(p._raw?.product_id ?? p._raw?.id ?? '');
-          if (String(pid) === returnedId || String(rawPid) === returnedId) {
-            return normalizeProducto(payload);
-          }
-          return p;
-        }));
-      } else {
-        // Respuesta inesperada: recargar
-        await fetchProductos();
-      }
-
+      // Recargar productos después de la operación
+      await fetchProductos();
+      
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
       }
@@ -316,32 +334,61 @@ const AdminView = ({
   }, [fetchProductos, onUpdateSuccess]);
 
   /**
-   * toggleProveedor - Supabase directo
+   * toggleProveedor - Usando API backend
    */
   const toggleProveedor = useCallback(async (id, currentlyDisabled) => {
     try {
-      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      const { error } = await supabase.from('proveedores').update(payload).eq('id', id);
-      if (error) throw error;
+      const action = currentlyDisabled ? 'enable' : 'disable';
+      
+      // Optimismo local
+      setProveedores(prev => (prev || []).map(p => ({
+        ...p,
+        deleted_at: String(p.id) === String(id) ? (currentlyDisabled ? null : new Date().toISOString()) : p.deleted_at
+      })));
+      
+      // Llamada a la API - SIN capturar la respuesta
+      await providerService[action](id);
+      
+      // Recargar proveedores después de la operación
+      await fetchProveedores();
+      
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
       }
       return true;
     } catch (err) {
       console.error('Error toggling proveedor:', err);
-      alert('Ocurrió un error al cambiar el estado del proveedor.');
+      // Revertir optimismo en caso de error
+      await fetchProveedores();
+      alert('Ocurrió un error al cambiar el estado del proveedor: ' + (err.message || 'Error desconocido'));
       return false;
     }
-  }, [onUpdateSuccess]);
+  }, [fetchProveedores, onUpdateSuccess]);
 
   /**
-   * toggleCategoria - Supabase directo
+   * toggleCategoria - Usando API backend
    */
   const toggleCategoria = useCallback(async (id, currentlyDisabled) => {
     try {
-      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      const { error } = await supabase.from('categorias').update(payload).eq('id', id);
-      if (error) throw error;
+      const action = currentlyDisabled ? 'enable' : 'disable';
+      const apiUrl = `${API_BASE}/api/categorias/nombre/${encodeURIComponent(id)}/${action}`;
+
+      const res = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: buildAdminHeaders(),
+        body: JSON.stringify({ reason: `cambio desde admin (${action})` })
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        console.error('toggleCategoria API error:', { status: res.status, payload });
+        alert(payload?.message || 'Error al cambiar el estado de la categoría (API).');
+        return false;
+      }
+
+      // Recargar productos después de la operación (ya que las categorías afectan a los productos)
+      await fetchProductos();
+      
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
       }
@@ -351,69 +398,41 @@ const AdminView = ({
       alert('Ocurrió un error al cambiar el estado de la categoría.');
       return false;
     }
-  }, [onUpdateSuccess]);
+  }, [fetchProductos, onUpdateSuccess]);
 
   /**
-   * toggleUsuario - API con headers admin, fallback a Supabase
-   * ✅ AHORA tambien fuerza recarga en UsuariosView
+   * toggleUsuario - API con headers admin
    */
   const toggleUsuario = useCallback(async (userId, currentlyDisabled) => {
-    // Primero intenta por API
     try {
-      if (API_BASE) {
-        const action = currentlyDisabled ? 'enable' : 'disable';
-        const apiUrl = `${API_BASE}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
-        const res = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: buildAdminHeaders(),
-          body: JSON.stringify({ reason: `cambio desde admin (${action})` })
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.message || 'Error API usuarios');
-        }
-        fetchedUsersRef.current = false;
-        await fetchUsuariosFromApi(); // ✅ Recargar usuarios globales al cambiar estado
-        setRecargarUsuariosView(prev => prev + 1); // ✅ Forzar recarga en UsuariosView
-        if (onUpdateSuccess) {
-          try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
-        }
-        return true;
+      const action = currentlyDisabled ? 'enable' : 'disable';
+      const apiUrl = `${API_BASE}/api/usuarios/${encodeURIComponent(userId)}/${action}`;
+      
+      const res = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: buildAdminHeaders(),
+        body: JSON.stringify({ reason: `cambio desde admin (${action})` })
+      });
+      
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || 'Error API usuarios');
       }
-    } catch (err) {
-      console.warn('toggleUsuario: fallo en endpoint API, intentando fallback con supabase', err);
-    }
-
-    // Fallback directo a Supabase
-    try {
-      const payload = currentlyDisabled ? { deleted_at: null } : { deleted_at: new Date().toISOString() };
-      let { error } = await supabase.from('usuarios').update(payload).eq('id', userId);
-      if (error) {
-        const { error: err2 } = await supabase.from('user_profiles').update(payload).eq('user_id', userId);
-        if (err2) throw err2;
-      }
-      setUsuarios(prev => prev.map(u => (
-        String(u.id) === String(userId)
-          ? { ...u, deleted_at: currentlyDisabled ? null : payload.deleted_at }
-          : u
-      )));
-      setRecargarUsuariosView(prev => prev + 1); // ✅ Forzar recarga en UsuariosView
+      
+      fetchedUsersRef.current = false;
+      await fetchUsuariosFromApi(); // Recargar usuarios globales al cambiar estado
+      setRecargarUsuariosView(prev => prev + 1); // Forzar recarga en UsuariosView
+      
       if (onUpdateSuccess) {
         try { await onUpdateSuccess(); } catch (err) { console.error('onUpdateSuccess error:', err); }
       }
       return true;
     } catch (err) {
-      console.error('Error toggling usuario (fallback supabase):', err);
-      alert('Ocurrió un error al cambiar el estado del usuario.');
+      console.error('Error toggling usuario:', err);
+      alert('Ocurrió un error al cambiar el estado del usuario: ' + (err.message || 'Error desconocido'));
       return false;
     }
   }, [fetchUsuariosFromApi, onUpdateSuccess]);
-
-  /* Cargar usuarios al montar */
-  useEffect(() => {
-    if (fetchedUsersRef.current) return;
-    fetchUsuariosFromApi();
-  }, [fetchUsuariosFromApi]);
 
   return (
     <div className="card p-4 w-100">
@@ -480,7 +499,6 @@ const AdminView = ({
         <ProvidersTab
           proveedores={proveedores}
           onAddProveedor={onAddProveedor}
-          onDeleteProveedor={onDeleteProveedor}
           onToggleProveedor={toggleProveedor}
         />
       )}
@@ -511,7 +529,7 @@ const AdminView = ({
           productos={productos}
           proveedores={proveedores}
           categorias={categorias}
-          usuarios={usuarios} // ✅ Lista global de usuarios (activos + inactivos)
+          usuarios={usuarios}
           usuariosLoading={usuariosLoading}
           usuariosError={usuariosError}
           onToggleProducto={toggleProducto}
@@ -525,12 +543,18 @@ const AdminView = ({
               } catch (err) {
                 console.error('onAfterToggle fetchProductos error:', err);
               }
+            } else if (what === 'proveedores') {
+              try {
+                await fetchProveedores();
+              } catch (err) {
+                console.error('onAfterToggle fetchProveedores error:', err);
+              }
             }
           }}
         />
       )}
 
-      {vistaActiva === 'usuarios' && <UsuariosView key={recargarUsuariosView} />} {/* ✅ Pasa key para forzar recarga */}
+      {vistaActiva === 'usuarios' && <UsuariosView key={recargarUsuariosView} />}
 
       <div className="text-end mt-3">
         <button onClick={onLogout} id="btnAdminBack" className="btn btn-danger">Cerrar Sesión</button>
