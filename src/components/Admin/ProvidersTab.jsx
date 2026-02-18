@@ -1,21 +1,35 @@
 // src/components/Admin/ProvidersTab.jsx
 import React, { useEffect, useState, useMemo } from 'react';
+import { providerService } from '../../services/providerService'; // ajusta ruta si hace falta
 
-const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
-  const [proveedores, setProveedores] = useState(proveedoresProp);
+const ProvidersTab = () => {
+  const [proveedores, setProveedores] = useState([]);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [filtroTxt, setFiltroTxt] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    setProveedores(proveedoresProp || []);
-  }, [proveedoresProp]);
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await providerService.getAll(mostrarInactivos);
+        if (mounted) setProveedores(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error cargando proveedores:', err);
+        if (mounted) setError('No se pudieron cargar los proveedores');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [mostrarInactivos]);
 
-  // Lista filtrada por checkbox y por texto
   const proveedoresFiltrados = useMemo(() => {
     let list = [...(proveedores || [])];
 
-    // Mostrar solo inactivos cuando mostrarInactivos === true,
-    // en caso contrario mostrar solo activos.
     if (mostrarInactivos) {
       list = list.filter(p => p.deleted_at !== null && p.deleted_at !== undefined && String(p.deleted_at).trim() !== '');
     } else {
@@ -34,6 +48,9 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
 
     return list;
   }, [proveedores, mostrarInactivos, filtroTxt]);
+
+  if (loading) return <div>Cargando proveedores...</div>;
+  if (error) return <div className="text-danger">{error}</div>;
 
   return (
     <div>
@@ -63,13 +80,12 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
         </div>
       </div>
 
-      {/* Contenedor con la misma altura y scroll vertical */}
       <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-        {/* Tabla para pantallas md+ (sin columna de acción) */}
         <div className="d-none d-md-block">
           <table className="table mb-0">
             <thead>
               <tr>
+                <th>#</th>
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Email</th>
@@ -77,8 +93,9 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
               </tr>
             </thead>
             <tbody>
-              {proveedoresFiltrados.map(p => (
+              {proveedoresFiltrados.map((p, index) => (
                 <tr key={p.id}>
+                  <td>{index + 1}</td>
                   <td>{p.id}</td>
                   <td>{p.nombre}</td>
                   <td>{p.email}</td>
@@ -86,16 +103,15 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
                 </tr>
               ))}
               {proveedoresFiltrados.length === 0 && (
-                <tr><td colSpan={4}>No hay proveedores</td></tr>
+                <tr><td colSpan={5}>No hay proveedores</td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Tarjetas para móvil: una columna, apiladas verticalmente */}
         <div className="d-block d-md-none">
           <div className="row g-3 p-2">
-            {proveedoresFiltrados.map(p => (
+            {proveedoresFiltrados.map((p, index) => (
               <div className="col-12" key={p.id}>
                 <div className="card shadow-sm">
                   <div className="card-body">
@@ -105,6 +121,8 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
                         <div className="text-muted small">{p.email || '—'}</div>
                       </div>
                       <div className="text-end">
+                        <div className="small text-muted">#</div>
+                        <div className="fw-semibold">{index + 1}</div>
                         <div className="small text-muted">ID</div>
                         <div className="fw-semibold">{p.id}</div>
                       </div>
@@ -117,7 +135,6 @@ const ProvidersTab = ({ proveedores: proveedoresProp = [] }) => {
                           {p.deleted_at ? 'Inhabilitado' : 'Activo'}
                         </div>
                       </div>
-                      {/* Sin botón de inhabilitar/re-activar en la UI */}
                     </div>
                   </div>
                 </div>
