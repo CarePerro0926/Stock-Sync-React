@@ -65,11 +65,13 @@ const AddTab = ({
     }
 
     if (onAddProducto) {
-      onAddProducto({
-        ...nuevoProducto,
-        proveedores: provs
-      });
-    }
+  onAddProducto({
+    ...nuevoProducto,
+    categoria_id: nuevoProducto.categoria, // aquí va el UUID correcto
+    proveedores: provs
+  });
+}
+
 
     setNuevoProducto({
       id: '',
