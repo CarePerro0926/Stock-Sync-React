@@ -10,6 +10,7 @@ export const getAll = async () => {
       precio,
       cantidad,
       categoria_id,
+      categoria,
       categorias ( nombre )
     `);
 
