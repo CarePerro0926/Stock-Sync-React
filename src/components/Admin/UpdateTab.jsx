@@ -59,6 +59,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     if (isNaN(precio) || precio < 0) { alert('Precio inválido.'); return; }
     if (isNaN(cantidad) || cantidad < 0) { alert('Cantidad inválida.'); return; }
 
+    console.log('categoria_id a enviar:', formData.categoria);
     const session = JSON.parse(sessionStorage.getItem('userSession') || '{}');
 const token = session?.token || session?.access_token || '';
 const response = await fetch(`https://stock-sync-api.onrender.com/api/productos/${Number(producto.id)}`, {
