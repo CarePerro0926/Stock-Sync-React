@@ -180,7 +180,7 @@ function App() {
     try {
       const categoriaSeleccionada = categorias.find(cat => cat.nombre === nuevoProducto.categoria);
       if (!categoriaSeleccionada) {
-        alert('Categoría no encontrada. Agrégala primero o selecciona una existante.');
+        alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
         return;
       }
 
