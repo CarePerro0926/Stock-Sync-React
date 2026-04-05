@@ -50,6 +50,8 @@ const categoriaRaw = p?.categoria
   ?? p?._raw?.categoria_nombre
   ?? 'Sin Categoría';
 
+  // fix categorias
+
 const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') 
   ? 'Sin Categoría' 
   : String(categoriaRaw);
