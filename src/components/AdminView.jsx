@@ -42,7 +42,7 @@ const normalizeProducto = (p = {}, categorias = []) => {
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
 
   // 🔍 Buscar categoría en la lista si no viene nombre
-  let categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
+  let categoria_nombre = p?.categoria_nombre || p?.categoria || p?.category_name || '';
   if (!categoria_nombre && p?.categoria_id && Array.isArray(categorias)) {
     const cat = categorias.find(c => String(c.id) === String(p.categoria_id));
     categoria_nombre = cat?.nombre || 'Sin Categoría';
