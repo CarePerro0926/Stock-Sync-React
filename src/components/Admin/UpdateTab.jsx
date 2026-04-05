@@ -59,15 +59,22 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     if (isNaN(precio) || precio < 0) { alert('Precio inválido.'); return; }
     if (isNaN(cantidad) || cantidad < 0) { alert('Cantidad inválida.'); return; }
 
-    const { error } = await supabase
-  .from('productos')
-  .update({
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+const response = await fetch(`https://stock-sync-api.onrender.com/api/productos/${Number(producto.id)}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
     nombre: formData.nombre.trim(),
     precio,
     cantidad,
     categoria_id: formData.categoria ? formData.categoria : null
   })
-  .eq('id', Number(producto.id));
+});
+const result = await response.json();
+const error = response.ok ? null : result;
 
 
     if (error) { alert('Error al actualizar el producto: ' + error.message); return; }
