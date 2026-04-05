@@ -67,7 +67,7 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     cantidad,
     categoria_id: formData.categoria ? formData.categoria : null
   })
-  .eq('id', producto.id);
+  .eq('id', Number(producto.id));
 
 
     if (error) { alert('Error al actualizar el producto: ' + error.message); return; }
