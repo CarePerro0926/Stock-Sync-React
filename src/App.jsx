@@ -76,10 +76,17 @@ function App() {
     const productosData = await resProductos.json();
     const productosDB = Array.isArray(productosData) ? productosData : (productosData?.items || []);
 
-    const [proveedoresDB, categoriasDB] = await Promise.all([
-      providerService.getAll(),
-      categoryService.getAll()
-    ]);
+    
+const [proveedoresDB, categoriasRes] = await Promise.all([
+  providerService.getAll(),
+  fetch(`${import.meta.env.VITE_API_URL || ''}/api/categorias`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  }).then(r => r.json())
+]);
+const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
 
     setProductos(productosDB.length > 0 ? productosDB : initialProductos);
     setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
