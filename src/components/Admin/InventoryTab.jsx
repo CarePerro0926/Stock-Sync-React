@@ -45,12 +45,8 @@ const buildNormalized = (p) => {
 
 const categoriaRaw = p?.categorias?.nombre 
   ?? p?.categoria 
-  ?? p?.categoria_nombre 
-  ?? raw?.categorias?.nombre 
-  ?? raw?.categoria 
-  ?? raw?.categoria_nombre 
-  ?? raw?.category_name 
   ?? '';
+
 
   const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') ? 'Sin Categoría' : String(categoriaRaw);
 
