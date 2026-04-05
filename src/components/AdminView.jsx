@@ -157,7 +157,10 @@ const fetchProductos = useCallback(async () => {
 
     // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
     const url = `${API_BASE}/api/productos?_=${Date.now()}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { 
+  cache: 'no-store',
+  headers: buildAdminHeaders()  // ← agregar esto
+});
     const text = await res.text().catch(() => null);
 
     let data = null;
