@@ -46,16 +46,14 @@ const buildNormalized = (p) => {
   const nombre = nombreRaw === null || nombreRaw === undefined ? '' : String(nombreRaw);
 
   // Usa || en lugar de ?? para que los strings vacíos también sean saltados
-  const categoriaRaw =
-    p?.categorias?.nombre ||
-    raw?.categorias?.nombre ||
-    p?.categoria_nombre ||
-    raw?.categoria_nombre ||
-    p?.categoria ||
-    raw?.categoria ||
-    null;
+  const categoriaRaw = p?.categoria_nombre
+  || p?.categoria
+  || p?.categorias?.nombre
+  || raw?.categoria_nombre
+  || raw?.categoria
+  || null;
 
-  const categoria_nombre = categoriaRaw ? String(categoriaRaw).trim() : 'Sin Categoría';
+const categoria_nombre = categoriaRaw ? String(categoriaRaw).trim() : 'Sin Categoría';
 
   const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad
     : (typeof raw?.cantidad === 'number' ? raw.cantidad
