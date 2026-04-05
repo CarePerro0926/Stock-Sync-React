@@ -43,10 +43,16 @@ const buildNormalized = (p) => {
   const nombreRaw = p?.nombre ?? p?.name ?? raw?.nombre ?? raw?.name ?? raw?.display_name ?? '';
   const nombre = nombreRaw === null || nombreRaw === undefined ? '' : String(nombreRaw);
 
-const categoriaRaw = p?.categoria ?? 'Sin Categoría';
+const categoriaRaw = p?.categoria 
+  ?? p?.categorias?.nombre 
+  ?? p?._raw?.categoria 
+  ?? p?._raw?.categoria_nombre 
+  ?? 'Sin Categoría';
 
+const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') 
+  ? 'Sin Categoría' 
+  : String(categoriaRaw);
 
-  const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') ? 'Sin Categoría' : String(categoriaRaw);
 
   const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad : (typeof raw?.cantidad === 'number' ? raw.cantidad : (typeof raw?.stock === 'number' ? raw.stock : (p?.stock ?? 0)));
   const precioRaw = p?.precio ?? raw?.precio ?? raw?.precio_unitario ?? raw?.unit_price ?? null;
