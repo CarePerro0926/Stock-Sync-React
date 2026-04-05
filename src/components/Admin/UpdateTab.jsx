@@ -60,13 +60,26 @@ const UpdateTab = ({ productos = [], categorias = [], proveedores = [], onUpdate
     if (isNaN(cantidad) || cantidad < 0) { alert('Cantidad inválida.'); return; }
 
     const { error } = await supabase
-      .from('productos')
-      .update({ nombre: formData.nombre.trim(), precio, cantidad, categoria_id: formData.categoria || null })
-      .eq('id', producto.id);
+  .from('productos')
+  .update({
+    nombre: formData.nombre.trim(),
+    precio,
+    cantidad,
+    categoria_id: formData.categoria ? formData.categoria : null
+  })
+  .eq('id', producto.id);
+
 
     if (error) { alert('Error al actualizar el producto: ' + error.message); return; }
 
-    if (onUpdateSuccess) { try { onUpdateSuccess(); } catch (e) { console.error(e); } }
+    if (onUpdateSuccess) {
+  try {
+    await onUpdateSuccess(); // este callback debe volver a pedir productos con getAll()
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 
     alert('Producto actualizado correctamente.');
     setBusqueda(''); setProductoSeleccionado(''); setProducto(null);
