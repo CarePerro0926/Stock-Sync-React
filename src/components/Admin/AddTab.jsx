@@ -187,7 +187,7 @@ const AddTab = ({
           >
             <option value="">Seleccionar categoría</option>
             {categorias.map((cat) => (
-              <option key={cat.nombre} value={cat.nombre}>
+              <option key={cat.id} value={cat.id}>
                 {cat.nombre}
               </option>
             ))}
