@@ -200,6 +200,16 @@ useEffect(() => {
   }
 }, [productosProp, categorias, fetchProductos]); // ✅ incluye categorias y fetchProductos
 
+// ✅ Re-normalizar productos cuando cambien las categorías
+useEffect(() => {
+  if (categorias && categorias.length > 0) {
+    setProductos(prev =>
+      prev.map(p => normalizeProducto(p._raw, categorias))
+    );
+  }
+}, [categorias]);
+
+
   /**
    * fetchUsuariosFromApi - carga usuarios con API o Supabase
    * SIEMPRE incluye activos + inactivos
