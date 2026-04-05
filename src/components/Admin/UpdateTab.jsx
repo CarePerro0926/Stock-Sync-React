@@ -95,6 +95,7 @@ const error = response.ok ? null : result;
     setFormData({ nombre: '', precio: '', cantidad: '', categoria: '' });
   };
 
+  console.log('categorias prop:', categorias);
   const listaCategorias = getListaCategorias();
 
   // ---------------------- Estado: Proveedores ----------------------
