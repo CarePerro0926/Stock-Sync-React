@@ -27,18 +27,26 @@ const normalizeBool = (val, defaultValue = false) => {
   return !(s === '' || s === '0' || s === 'false' || s === 'no' || s === 'null' || s === 'undefined');
 };
 
-const normalizeProducto = (p = {}) => {
+const normalizeProducto = (p = {}, categorias = []) => {
   const productIdRaw = p?.product_id ?? p?.productId ?? null;
   const idRaw = p?.id ?? productIdRaw ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
-  const product_id = productIdRaw === null || productIdRaw === undefined ? (p?.id ? String(p.id) : '') : String(productIdRaw);
+
+  const product_id = productIdRaw === null || productIdRaw === undefined
+    ? (p?.id ? String(p.id) : '')
+    : String(productIdRaw);
 
   const deleted_at_raw = p?.deleted_at ?? p?.deletedAt ?? null;
   const deleted_at = normalizeDeletedAt(deleted_at_raw);
 
   const nombre = p?.nombre ?? p?.name ?? p?.display_name ?? 'Sin nombre';
-  // ✅ CORREGIDO: mantener valor original, no forzar "Sin Categoría"
-  const categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
+
+  // 🔍 Buscar categoría en la lista si no viene nombre
+  let categoria_nombre = p?.categoria_nombre ?? p?.categoria ?? p?.category_name ?? '';
+  if (!categoria_nombre && p?.categoria_id && Array.isArray(categorias)) {
+    const cat = categorias.find(c => String(c.id) === String(p.categoria_id));
+    categoria_nombre = cat?.nombre || 'Sin Categoría';
+  }
 
   const cantidad = typeof p?.cantidad === 'number'
     ? p.cantidad
@@ -54,8 +62,6 @@ const normalizeProducto = (p = {}) => {
     precio = p.precio_unitario;
   } else if (typeof p?.unit_price === 'number') {
     precio = p.unit_price;
-  } else {
-    precio = null;
   }
 
   const disabled = normalizeBool(p?.disabled, false);
@@ -65,7 +71,7 @@ const normalizeProducto = (p = {}) => {
     id,
     product_id,
     nombre,
-    categoria_nombre, // ✅ CORREGIDO
+    categoria_nombre,
     cantidad,
     precio,
     deleted_at,
@@ -131,58 +137,68 @@ const AdminView = ({
 
   /* Sincronizar productos desde props */
   useEffect(() => {
-    if (Array.isArray(productosProp) && productosProp.length > 0) {
-      setProductos(productosProp.map(normalizeProducto));
-    }
-  }, [productosProp]);
+  if (Array.isArray(productosProp) && productosProp.length > 0) {
+    setProductos(productosProp.map(p => normalizeProducto(p, categorias)));
+  }
+}, [productosProp, categorias]); // ✅ incluye categorias
 
-  /**
-   * fetchProductos - SIEMPRE incluye activos + inactivos
-   * Valida respuesta y normaliza
-   */
-  const fetchProductos = useCallback(async () => {
-    try {
-      if (!API_BASE) {
-        console.error('ADMINVIEW ERROR: VITE_API_URL no definido.');
-        setProductos([]);
-        return null;
-      }
 
-      // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
-      const url = `${API_BASE}/api/productos?_=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      const text = await res.text().catch(() => null);
-      let data = null;
-      try { data = JSON.parse(text); } catch (err) {
-        data = null;
-        console.warn('ADMINVIEW WARN: respuesta no JSON válida', err);
-      }
-
-      console.log('ADMINVIEW DEBUG: fetchProductos API raw:', text?.slice?.(0, 200) ?? text);
-
-      const looksValid = Array.isArray(data) && data.length > 0 && (data[0]?.id || data[0]?.product_id);
-      if (!res.ok || !looksValid) {
-        console.error('ADMINVIEW ERROR: API productos inválida', { status: res.status, data });
-        setProductos([]);
-        return null;
-      }
-
-      const normalized = data.map(normalizeProducto);
-      setProductos(normalized);
-      console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0, 5));
-      return normalized;
-    } catch (err) {
-      console.error('fetchProductos error (API):', err);
+/**
+ * fetchProductos - SIEMPRE incluye activos + inactivos
+ * Valida respuesta y normaliza
+ */
+const fetchProductos = useCallback(async () => {
+  try {
+    if (!API_BASE) {
+      console.error('ADMINVIEW ERROR: VITE_API_URL no definido.');
       setProductos([]);
       return null;
     }
-  }, []);
 
-  useEffect(() => {
-    if (!productosProp || productosProp.length === 0) {
-      fetchProductos();
+    // ⚠️ IMPORTANTE: Asegúrate de que el backend DEVUELVA todos los registros (incluyendo deleted_at != null)
+    const url = `${API_BASE}/api/productos?_=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    const text = await res.text().catch(() => null);
+
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      data = null;
+      console.warn('ADMINVIEW WARN: respuesta no JSON válida', err);
     }
-  }, [productosProp, fetchProductos]);
+
+    console.log('ADMINVIEW DEBUG: fetchProductos API raw:', text?.slice?.(0, 200) ?? text);
+
+    const looksValid =
+      Array.isArray(data) &&
+      data.length > 0 &&
+      (data[0]?.id || data[0]?.product_id);
+
+    if (!res.ok || !looksValid) {
+      console.error('ADMINVIEW ERROR: API productos inválida', { status: res.status, data });
+      setProductos([]);
+      return null;
+    }
+
+    // ✅ Normalizar pasando categorias
+    const normalized = data.map(p => normalizeProducto(p, categorias));
+    setProductos(normalized);
+
+    console.log('ADMINVIEW DEBUG: fetchProductos (API) ->', normalized.slice(0, 5));
+    return normalized;
+  } catch (err) {
+    console.error('fetchProductos error (API):', err);
+    setProductos([]);
+    return null;
+  }
+}, [categorias]); // ✅ incluye categorias en dependencias
+
+useEffect(() => {
+  if (!productosProp || productosProp.length === 0) {
+    fetchProductos();
+  }
+}, [productosProp, categorias, fetchProductos]); // ✅ incluye categorias y fetchProductos
 
   /**
    * fetchUsuariosFromApi - carga usuarios con API o Supabase
