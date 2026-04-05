@@ -3,8 +3,15 @@ import { supabase } from '@/services/supabaseClient';
 
 export const getAll = async () => {
   const { data, error } = await supabase
-    .from('vista_productos_con_categoria')
-    .select('*');
+    .from('productos')
+    .select(`
+      id,
+      nombre,
+      precio,
+      cantidad,
+      categoria_id,
+      categorias ( nombre )
+    `);
 
   if (error) throw error;
 
