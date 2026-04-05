@@ -37,17 +37,18 @@ const isPlaceholderProduct = (p) => {
 
 const buildNormalized = (p) => {
   const raw = p?._raw ?? p ?? {};
-  const idRaw = p?.id ?? p?.product_id ?? raw?.product_id ?? raw?.id ?? '';
+  const idRaw = p?.product_id ?? p?.id ?? raw?.product_id ?? raw?.id ?? '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
 
   const nombreRaw = p?.nombre ?? p?.name ?? raw?.nombre ?? raw?.name ?? raw?.display_name ?? '';
   const nombre = nombreRaw === null || nombreRaw === undefined ? '' : String(nombreRaw);
 
-const categoriaRaw = p?.categoria
+const categoriaRaw = p?.categorias?.nombre
   ?? p?.categoria_nombre
-  ?? p?.categorias?.nombre
-  ?? p?._raw?.categoria
+  ?? p?.categoria
+  ?? p?._raw?.categorias?.nombre
   ?? p?._raw?.categoria_nombre
+  ?? p?._raw?.categoria
   ?? 'Sin Categoría';
 
   // fix categorias
