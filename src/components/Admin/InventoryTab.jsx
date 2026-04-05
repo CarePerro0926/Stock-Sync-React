@@ -37,28 +37,31 @@ const isPlaceholderProduct = (p) => {
 
 const buildNormalized = (p) => {
   const raw = p?._raw ?? p ?? {};
-  const idRaw = p?.product_id ?? p?.id ?? raw?.product_id ?? raw?.id ?? '';
+
+  // Prioriza product_id (numérico) sobre id (UUID)
+  const idRaw = p?.product_id || raw?.product_id || p?.id || raw?.id || '';
   const id = idRaw === null || idRaw === undefined ? '' : String(idRaw);
 
   const nombreRaw = p?.nombre ?? p?.name ?? raw?.nombre ?? raw?.name ?? raw?.display_name ?? '';
   const nombre = nombreRaw === null || nombreRaw === undefined ? '' : String(nombreRaw);
 
-const categoriaRaw = p?.categorias?.nombre
-  ?? p?.categoria_nombre
-  ?? p?.categoria
-  ?? p?._raw?.categorias?.nombre
-  ?? p?._raw?.categoria_nombre
-  ?? p?._raw?.categoria
-  ?? 'Sin Categoría';
+  // Usa || en lugar de ?? para que los strings vacíos también sean saltados
+  const categoriaRaw =
+    p?.categorias?.nombre ||
+    raw?.categorias?.nombre ||
+    p?.categoria_nombre ||
+    raw?.categoria_nombre ||
+    p?.categoria ||
+    raw?.categoria ||
+    null;
 
-  // fix categorias
+  const categoria_nombre = categoriaRaw ? String(categoriaRaw).trim() : 'Sin Categoría';
 
-const categoria_nombre = (categoriaRaw === null || categoriaRaw === undefined || String(categoriaRaw).trim() === '') 
-  ? 'Sin Categoría' 
-  : String(categoriaRaw);
+  const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad
+    : (typeof raw?.cantidad === 'number' ? raw.cantidad
+    : (typeof raw?.stock === 'number' ? raw.stock
+    : (p?.stock ?? 0)));
 
-
-  const cantidad = (typeof p?.cantidad === 'number') ? p.cantidad : (typeof raw?.cantidad === 'number' ? raw.cantidad : (typeof raw?.stock === 'number' ? raw.stock : (p?.stock ?? 0)));
   const precioRaw = p?.precio ?? raw?.precio ?? raw?.precio_unitario ?? raw?.unit_price ?? null;
   const precio = (typeof precioRaw === 'number') ? precioRaw : (precioRaw ?? null);
 
