@@ -42,30 +42,55 @@ function App() {
   }, []);
 
   const recargarProductos = async () => {
-    const data = await productService.getAll();
-    setProductos(data);
-  };
+  try {
+    const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
+    const token = storedSession?.token || '';
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos?_=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json();
+    if (Array.isArray(data)) setProductos(data);
+    else if (Array.isArray(data?.items)) setProductos(data.items);
+  } catch (err) {
+    console.error('recargarProductos error:', err);
+  }
+};
 
   // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
-      try {
-        const [productosDB, proveedoresDB, categoriasDB] = await Promise.all([
-          productService.getAll(),
-          providerService.getAll(),
-          categoryService.getAll()
-        ]);
+  try {
+    const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
+    const token = storedSession?.token || '';
 
-        setProductos(productosDB.length > 0 ? productosDB : initialProductos);
-        setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
-        setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
-      } catch (error) {
-        console.error('Error al cargar datos:', error);
-        setProductos(initialProductos);
-        setProveedores(initialProveedores);
-        setCategorias(initialCategorias);
+    const resProductos = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
-    };
+    });
+    const productosData = await resProductos.json();
+    const productosDB = Array.isArray(productosData) ? productosData : (productosData?.items || []);
+
+    const [proveedoresDB, categoriasDB] = await Promise.all([
+      providerService.getAll(),
+      categoryService.getAll()
+    ]);
+
+    setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+    setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+    setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+  } catch (error) {
+    console.error('Error al cargar datos:', error);
+    setProductos(initialProductos);
+    setProveedores(initialProveedores);
+    setCategorias(initialCategorias);
+  }
+};
     cargarDatos();
   }, []);
 
