@@ -1,7 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import LoginView from './components/LoginView';
-import RegisterView from './components/RegisterView';
+import ClientRegisterView from './components/ClientRegisterView';
 import PublicCatalogView from './components/PublicCatalogView';
 import ClientView from './components/ClientView';
 import AdminView from './components/AdminView';
@@ -180,7 +180,7 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
       case 'login':
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
       case 'register':
-        return <RegisterView onShowLogin={handleShowLogin} />;
+        return <ClientRegisterView onShowLogin={handleShowLogin} />;
       case 'catalog':
         return <PublicCatalogView productos={productos} categorias={categorias} onBack={handleShowLogin} />;
       case 'client':

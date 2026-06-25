@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './ResponsiveTable.css';
-import RegisterView from './RegisterView';
+import AdminRegisterView from './Admin/AdminRegisterView';
 const UsuariosView = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [error, setError] = useState(null);
@@ -136,7 +136,7 @@ const UsuariosView = () => {
                 <button type="button" className="btn-close" onClick={() => setMostrarModal(false)}></button>
               </div>
               <div className="modal-body">
-                <RegisterView onShowLogin={() => { setMostrarModal(false); setRecargar(prev => !prev); }} />
+                <AdminRegisterView onShowLogin={() => { setMostrarModal(false); setRecargar(prev => !prev); }} />
               </div>
             </div>
           </div>

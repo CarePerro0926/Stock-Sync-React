@@ -1,8 +1,7 @@
-// src/components/Admin/AdminRegisterView.jsx
+// src/components/ClientRegisterView.jsx
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 
-const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null }) => {
+const ClientRegisterView = ({ onShowLogin }) => {
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -23,12 +22,6 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { role, email, user, pass, fecha, telefono, ...rest } = formData;
-
-    // Validación de correo para administrador
-    if (role === 'administrador' && !email.toLowerCase().endsWith('@stocksync.com')) {
-      alert('Los administradores deben registrarse con un correo @stocksync.com');
-      return;
-    }
 
     // Validar campos obligatorios
     if (Object.values(rest).some(v => !v) || !user || !pass || !email || !fecha || !telefono) {
@@ -78,7 +71,6 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
 
       alert(result.message);
       onShowLogin();
-      if (onRegistered) onRegistered();
     } catch (error) {
       console.error('Error inesperado:', error);
       alert('Error inesperado. Revisa la consola.');
@@ -87,7 +79,7 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
 
   return (
     <div className="card mx-auto p-4 w-100" style={{ maxWidth: '500px' }}>
-      <h4 className="mb-3">Registrar Usuario</h4>
+      <h4 className="mb-3">Registro de Usuario</h4>
       <form onSubmit={handleSubmit}>
         <input name="nombres" className="form-control mb-2" placeholder="Nombres" value={formData.nombres} onChange={handleChange} />
         <input name="apellidos" className="form-control mb-2" placeholder="Apellidos" value={formData.apellidos} onChange={handleChange} />
@@ -98,12 +90,6 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
         <input name="email" type="email" className="form-control mb-2" placeholder="Correo Electrónico" value={formData.email} onChange={handleChange} />
         <input name="user" className="form-control mb-2" placeholder="Nombre de Usuario" value={formData.user} onChange={handleChange} />
         <input name="pass" type="password" className="form-control mb-2" placeholder="Contraseña" value={formData.pass} onChange={handleChange} />
-        <label className="form-label">Rol</label>
-        <select name="role" className="form-select mb-3" value={formData.role} onChange={handleChange}>
-          <option value="cliente">Cliente</option>
-          <option value="administrador">Administrador</option>
-          {/* Aquí puedes agregar más roles en el futuro */}
-        </select>
         <div className="d-flex justify-content-between">
           <button type="submit" className="btn btn-success">Registrar</button>
           <button type="button" onClick={onShowLogin} className="btn btn-outline-secondary">Cancelar</button>
@@ -113,9 +99,4 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
   );
 };
 
-AdminRegisterView.propTypes = {
-  onShowLogin: PropTypes.func,
-  onRegistered: PropTypes.func,
-};
-
-export default AdminRegisterView;
+export default ClientRegisterView;
