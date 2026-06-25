@@ -32,7 +32,8 @@ function App() {
       try {
         const usr = JSON.parse(storedSession);
         setUsuarioActual(usr);
-        setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
+        const rolesAdmin = ['administrador', 'empleado', 'auditor'];
+setVistaActual(rolesAdmin.includes(usr.role) ? 'admin' : 'client');
         if (usr.role === 'administrador') setVistaAdminActiva('inventory');
       } catch (err) {
         console.error('Error parsing userSession:', err);
