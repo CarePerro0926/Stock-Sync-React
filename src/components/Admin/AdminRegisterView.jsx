@@ -1,6 +1,5 @@
 // src/components/Admin/AdminRegisterView.jsx
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 
 const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null }) => {
   const [formData, setFormData] = useState({
@@ -111,11 +110,6 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
       </form>
     </div>
   );
-};
-
-AdminRegisterView.propTypes = {
-  onShowLogin: PropTypes.func,
-  onRegistered: PropTypes.func,
 };
 
 export default AdminRegisterView;
