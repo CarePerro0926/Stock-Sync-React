@@ -23,9 +23,10 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
     e.preventDefault();
     const { role, email, user, pass, fecha, telefono, ...rest } = formData;
 
-    // Validación de correo para administrador
-    if (role === 'administrador' && !email.toLowerCase().endsWith('@stocksync.com')) {
-      alert('Los administradores deben registrarse con un correo @stocksync.com');
+    // Validación de correo para roles administrativos
+    const rolesAdmin = ['administrador', 'empleado', 'auditor'];
+    if (rolesAdmin.includes(role) && !email.toLowerCase().endsWith('@stocksync.com')) {
+      alert('Este rol requiere un correo @stocksync.com');
       return;
     }
 
@@ -101,7 +102,8 @@ const AdminRegisterView = ({ onShowLogin = () => null, onRegistered = () => null
         <select name="role" className="form-select mb-3" value={formData.role} onChange={handleChange}>
           <option value="cliente">Cliente</option>
           <option value="administrador">Administrador</option>
-          {/* Aquí puedes agregar más roles en el futuro */}
+          <option value="empleado">Empleado</option>
+          <option value="auditor">Auditor</option>
         </select>
         <div className="d-flex justify-content-between">
           <button type="submit" className="btn btn-success">Registrar</button>
