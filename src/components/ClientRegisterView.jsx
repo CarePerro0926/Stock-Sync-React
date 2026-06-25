@@ -21,10 +21,10 @@ const ClientRegisterView = ({ onShowLogin }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { role, email, user, pass, fecha, telefono, ...rest } = formData;
+    const { email, user, pass, fecha, telefono, nombres, apellidos, cedula } = formData;
 
     // Validar campos obligatorios
-    if (Object.values(rest).some(v => !v) || !user || !pass || !email || !fecha || !telefono) {
+    if (!nombres || !apellidos || !cedula || !user || !pass || !email || !fecha || !telefono) {
       alert('Completa todos los campos');
       return;
     }
