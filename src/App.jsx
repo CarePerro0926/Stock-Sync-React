@@ -1,17 +1,19 @@
 // src/App.jsx
+
 import React, { useState, useEffect } from 'react';
+
 import LoginView from './components/LoginView';
 import ClientRegisterView from './components/ClientRegisterView';
 import PublicCatalogView from './components/PublicCatalogView';
 import ClientView from './components/ClientView';
 import AdminView from './components/AdminView';
+import AuditorPanel from './components/AuditorPanel';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
+
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
 import { initialProductos, initialProveedores, initialCategorias } from './data/initialData';
-// Importación de filtroProductos eliminada
-// import { filtroProductos } from './utils/helpers';
 import { supabase } from './services/supabaseClient';
 
 function App() {
@@ -19,6 +21,7 @@ function App() {
   const [proveedores, setProveedores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
+
   // La variable usuarioActual se usa para gestionar la sesión
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [vistaActual, setVistaActual] = useState('login');
@@ -32,9 +35,16 @@ function App() {
       try {
         const usr = JSON.parse(storedSession);
         setUsuarioActual(usr);
-        const rolesAdmin = ['administrador', 'empleado', 'auditor'];
-setVistaActual(rolesAdmin.includes(usr.role) ? 'admin' : 'client');
-        if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+
+        // Determinar vista según rol explícitamente
+        if (usr.role === 'administrador') {
+          setVistaActual('admin');
+          setVistaAdminActiva('inventory');
+        } else if (usr.role === 'auditor') {
+          setVistaActual('auditor');
+        } else {
+          setVistaActual('client');
+        }
       } catch (err) {
         console.error('Error parsing userSession:', err);
         localStorage.removeItem('userSession');
@@ -43,62 +53,63 @@ setVistaActual(rolesAdmin.includes(usr.role) ? 'admin' : 'client');
   }, []);
 
   const recargarProductos = async () => {
-  try {
-    const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
-    const token = storedSession?.token || '';
-    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos?_=${Date.now()}`, {
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const data = await res.json();
-    if (Array.isArray(data)) setProductos(data);
-    else if (Array.isArray(data?.items)) setProductos(data.items);
-  } catch (err) {
-    console.error('recargarProductos error:', err);
-  }
-};
+    try {
+      const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
+      const token = storedSession?.token || '';
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos?_=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setProductos(data);
+      else if (Array.isArray(data?.items)) setProductos(data.items);
+    } catch (err) {
+      console.error('recargarProductos error:', err);
+    }
+  };
 
   // Cargar datos iniciales
   useEffect(() => {
     const cargarDatos = async () => {
-  try {
-    const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
-    const token = storedSession?.token || '';
+      try {
+        const storedSession = JSON.parse(localStorage.getItem('userSession') || '{}');
+        const token = storedSession?.token || '';
 
-    const resProductos = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        const resProductos = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/productos`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const productosData = await resProductos.json();
+        const productosDB = Array.isArray(productosData) ? productosData : (productosData?.items || []);
+
+        const [proveedoresDB, categoriasRes] = await Promise.all([
+          providerService.getAll(),
+          fetch(`${import.meta.env.VITE_API_URL || ''}/api/categorias`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          }).then(r => r.json())
+        ]);
+
+        const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
+
+        setProductos(productosDB.length > 0 ? productosDB : initialProductos);
+        setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
+        setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        setProductos(initialProductos);
+        setProveedores(initialProveedores);
+        setCategorias(initialCategorias);
       }
-    });
-    const productosData = await resProductos.json();
-    const productosDB = Array.isArray(productosData) ? productosData : (productosData?.items || []);
+    };
 
-    
-const [proveedoresDB, categoriasRes] = await Promise.all([
-  providerService.getAll(),
-  fetch(`${import.meta.env.VITE_API_URL || ''}/api/categorias`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
-  }).then(r => r.json())
-]);
-const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
-
-    setProductos(productosDB.length > 0 ? productosDB : initialProductos);
-    setProveedores(proveedoresDB.length > 0 ? proveedoresDB : initialProveedores);
-    setCategorias(categoriasDB.length > 0 ? categoriasDB : initialCategorias);
-  } catch (error) {
-    console.error('Error al cargar datos:', error);
-    setProductos(initialProductos);
-    setProveedores(initialProveedores);
-    setCategorias(initialCategorias);
-  }
-};
     cargarDatos();
   }, []);
 
@@ -118,7 +129,13 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
       .subscribe();
 
     return () => {
-      supabase.removeChannel(canalProductos);
+      // limpiar canal según la API de supabase instalada
+      try {
+        supabase.removeChannel(canalProductos);
+      } catch (e) {
+        // fallback: intentar unsubscribe si aplica
+        if (canalProductos?.unsubscribe) canalProductos.unsubscribe();
+      }
     };
   }, []);
 
@@ -138,7 +155,11 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
       .subscribe();
 
     return () => {
-      supabase.removeChannel(canalProveedores);
+      try {
+        supabase.removeChannel(canalProveedores);
+      } catch (e) {
+        if (canalProveedores?.unsubscribe) canalProveedores.unsubscribe();
+      }
     };
   }, []);
 
@@ -153,8 +174,15 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
       console.error('No se pudo guardar la sesión en localStorage:', err);
     }
     setUsuarioActual(usr);
-    setVistaActual(usr.role === 'administrador' ? 'admin' : 'client');
-    if (usr.role === 'administrador') setVistaAdminActiva('inventory');
+
+    if (usr.role === 'administrador') {
+      setVistaActual('admin');
+      setVistaAdminActiva('inventory');
+    } else if (usr.role === 'auditor') {
+      setVistaActual('auditor');
+    } else {
+      setVistaActual('client');
+    }
   };
 
   const handleLogout = () => {
@@ -174,8 +202,7 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
 
   const renderView = () => {
     // Lectura directa de usuarioActual para satisfacer ESLint
-    // Este valor no se usa para cambiar la lógica aquí, ya que vistaActual ya determina la vista
-    const _usuarioActualParaESLint = usuarioActual; 
+    const _usuarioActualParaESLint = usuarioActual;
 
     switch (vistaActual) {
       case 'login':
@@ -204,6 +231,12 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
             onUpdateSuccess={recargarProductos}
           />
         );
+      case 'auditor':
+        return (
+          <AuditorPanel
+            onLogout={handleLogout}
+          />
+        );
       default:
         return <LoginView onLogin={handleLogin} onShowRegister={handleShowRegister} onShowCatalog={handleShowCatalog} onShowForgot={() => setShowForgotModal(true)} />;
     }
@@ -216,13 +249,13 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
         alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
         return;
       }
-
       const productoParaInsertar = {
         ...nuevoProducto,
         categoria_id: categoriaSeleccionada.id
       };
-
       await productService.create(productoParaInsertar);
+      // recargar lista
+      await recargarProductos();
     } catch (error) {
       console.error('Error al crear producto:', error);
       alert('Error al crear el producto: ' + (error.message || 'Desconocido'));
@@ -232,6 +265,7 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
   const handleDeleteProducto = async (id) => {
     try {
       await productService.remove(id);
+      await recargarProductos();
     } catch (error) {
       console.error('Error al eliminar producto:', error);
       alert('Error al eliminar el producto');
@@ -243,12 +277,11 @@ const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
         if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
-            !(cleaned.length === 12 && cleaned.startsWith('573'))) {
+          !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
         }
       }
-
       await providerService.create(nuevoProveedor);
     } catch (error) {
       console.error('Error al crear proveedor:', error);
