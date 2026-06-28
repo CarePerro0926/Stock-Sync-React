@@ -236,88 +236,78 @@ body {
 
 
 
-/* ===== FIX definitivo: fondo decorativo + contenido claro ===== */
+/* ====== FORZAR BLANCO PURO Y ELIMINAR FILTROS ====== */
 
-/* 1. Elimina overlay global oscuro: no usar body::before */
-/* (Si existe, bórralo o coméntalo) */
-
-/* 2. Mantener fondo visible pero no oscurecer contenido */
-body {
-  /* deja la imagen de fondo tal cual; no añadimos overlay global */
-  background-attachment: fixed;
-  background-position: center;
-  background-size: cover;
+/* 1) Asegurar que no exista overlay global oscuro */
+body::before, html::before {
+  display: none !important;
+  content: none !important;
 }
 
-/* 3. Forzar blanco puro en tarjetas y paneles de contenido */
-.card, .panel, .table-container, .controls-panel {
-  background-color: #ffffff !important; /* blanco puro */
-  color: #212529 !important;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.06);
-}
-
-/* 4. Asegurar que inputs y headers sean nítidos sobre el fondo */
-.responsive-table table thead th,
-.header, .controls-panel .title {
+/* 2) Forzar blanco puro en contenedores de contenido */
+html body .card,
+html body .panel,
+html body .table-container,
+html body .controls-panel,
+html body .responsive-table,
+html body .responsive-table table,
+html body .responsive-table table thead th,
+html body .responsive-table table tbody td {
   background-color: #ffffff !important;
+  background-image: none !important;
   color: #212529 !important;
+  border-color: rgba(0,0,0,0.06) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06) !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
-/* 5. Botones: visibles y con contraste sobre blanco */
-button, .btn, .control-btn, input[type="button"], input[type="submit"] {
+/* 3) Forzar que botones y controles contrasten sobre blanco */
+html body button,
+html body .btn,
+html body .control-btn,
+html body input[type="button"],
+html body input[type="submit"] {
   background-color: #0F2C54 !important;
   color: #ffffff !important;
   border: 1px solid rgba(0,0,0,0.08) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-  z-index: 1300 !important;
-}
-
-/* 6. Tabla: filas y celdas con fondo blanco y separación sutil */
-.responsive-table table {
-  background: #ffffff !important;
-  border-collapse: collapse;
-  width: 100%;
-}
-.responsive-table table thead th {
-  background: #ffffff !important;
-  color: #212529 !important;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-}
-.responsive-table table tbody td {
-  background: #ffffff !important;
-  color: #212529 !important;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
-}
-
-/* 7. Mensaje "No hay registros" sobre fondo blanco */
-.responsive-table .no-records, .table-no-records {
-  background: #ffffff !important;
-  color: #6c757d;
-  border: 1px dashed rgba(0,0,0,0.04);
-}
-
-/* 8. Evitar overlays que bloqueen sin clase activa */
-.overlay, .modal-backdrop, .app-overlay {
-  display: none; /* por defecto no visible */
-}
-.overlay.active, .modal-backdrop.active, .app-overlay.active {
-  display: block;
-  pointer-events: auto;
-  background: rgba(0,0,0,0.36);
-  z-index: 1200;
-}
-
-/* 9. Forzar que no haya opacidades heredadas en elementos clave */
-.card, .panel, .controls-panel, .responsive-table table, button {
-  opacity: 1 !important;
-}
-
-/* 10. Debug helper para forzar visibilidad si algo sigue oculto */
-.debug-force-visible {
   opacity: 1 !important;
   pointer-events: auto !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+  z-index: 2000 !important;
+}
+
+/* 4) Eliminar opacidades o filtros heredados en padres */
+html body .content, html body .main, html body #root, html body .app {
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* 5) Si hay overlay, que solo aparezca con .active (por JS) */
+.overlay, .modal-backdrop, .app-overlay { display: none !important; }
+.overlay.active, .modal-backdrop.active, .app-overlay.active {
+  display: block !important;
+  pointer-events: auto !important;
+  background: rgba(0,0,0,0.36) !important;
+  z-index: 3000 !important;
+}
+
+/* 6) Mensaje "No hay registros" sobre blanco puro */
+.responsive-table .no-records, .table-no-records {
   background: #ffffff !important;
-  color: #212529 !important;
-  z-index: 9999 !important;
+  color: #6c757d !important;
+  border: 1px dashed rgba(0,0,0,0.04) !important;
+}
+
+/* 7) Debug helper (temporal) */
+.debug-force-white {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  z-index: 99999 !important;
 }
