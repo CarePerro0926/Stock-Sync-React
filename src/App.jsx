@@ -45,8 +45,8 @@ function App() {
         } else {
           setVistaActual('client');
         }
-      } catch (err) {
-        console.error('Error parsing userSession:', err);
+      } catch (error) {
+        console.error('Error parsing userSession:', error);
         localStorage.removeItem('userSession');
       }
     }
@@ -66,8 +66,8 @@ function App() {
       const data = await res.json();
       if (Array.isArray(data)) setProductos(data);
       else if (Array.isArray(data?.items)) setProductos(data.items);
-    } catch (err) {
-      console.error('recargarProductos error:', err);
+    } catch (error) {
+      console.error('recargarProductos error:', error);
     }
   };
 
@@ -94,7 +94,7 @@ function App() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             }
-          }).then(r => r.json())
+          }).then(response => response.json())
         ]);
 
         const categoriasDB = Array.isArray(categoriasRes) ? categoriasRes : [];
@@ -129,12 +129,17 @@ function App() {
       .subscribe();
 
     return () => {
-      // limpiar canal según la API de supabase instalada
       try {
         supabase.removeChannel(canalProductos);
-      } catch (e) {
-        // fallback: intentar unsubscribe si aplica
-        if (canalProductos?.unsubscribe) canalProductos.unsubscribe();
+      } catch (error) {
+        console.error('Error removing productos channel:', error);
+        if (canalProductos?.unsubscribe) {
+          try {
+            canalProductos.unsubscribe();
+          } catch (unsubError) {
+            console.error('Error unsubscribing productos channel:', unsubError);
+          }
+        }
       }
     };
   }, []);
@@ -157,8 +162,15 @@ function App() {
     return () => {
       try {
         supabase.removeChannel(canalProveedores);
-      } catch (e) {
-        if (canalProveedores?.unsubscribe) canalProveedores.unsubscribe();
+      } catch (error) {
+        console.error('Error removing proveedores channel:', error);
+        if (canalProveedores?.unsubscribe) {
+          try {
+            canalProveedores.unsubscribe();
+          } catch (unsubError) {
+            console.error('Error unsubscribing proveedores channel:', unsubError);
+          }
+        }
       }
     };
   }, []);
@@ -170,8 +182,8 @@ function App() {
     }
     try {
       localStorage.setItem('userSession', JSON.stringify(usr));
-    } catch (err) {
-      console.error('No se pudo guardar la sesión en localStorage:', err);
+    } catch (error) {
+      console.error('No se pudo guardar la sesión en localStorage:', error);
     }
     setUsuarioActual(usr);
 
@@ -188,8 +200,8 @@ function App() {
   const handleLogout = () => {
     try {
       localStorage.removeItem('userSession');
-    } catch (err) {
-      console.error('No se pudo eliminar userSession:', err);
+    } catch (error) {
+      console.error('No se pudo eliminar userSession:', error);
     }
     setUsuarioActual(null);
     setCarrito([]);
@@ -254,7 +266,6 @@ function App() {
         categoria_id: categoriaSeleccionada.id
       };
       await productService.create(productoParaInsertar);
-      // recargar lista
       await recargarProductos();
     } catch (error) {
       console.error('Error al crear producto:', error);
