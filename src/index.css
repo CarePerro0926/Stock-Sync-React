@@ -236,22 +236,20 @@ body {
 
 
 
-/* ===========================
-   FIX: botones, overlays y tabla
-   =========================== */
+/* ===== FIX: visibilidad botones y legibilidad del contenido ===== */
 
-/* 1) Fondo: oscurecer ligeramente para mejorar contraste del contenido */
+/* 1. Mantener fondo visual pero no oscurecer todo el contenido */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.28); /* ajusta entre 0.18 - 0.36 según preferencia */
+  background: rgba(0,0,0,0.10); /* sutil, no oscuro */
   pointer-events: none;
   z-index: 0;
 }
 
-/* 2) Forzar estilo base accesible para todos los botones */
-button, .btn, .button, input[type="button"], input[type="submit"] {
+/* 2. Estilo base definitivo para botones (visibles y accesibles) */
+button, .btn, .button, input[type="button"], input[type="submit"], .control-btn {
   background-color: #0F2C54 !important;
   color: #ffffff !important;
   border: 1px solid rgba(0,0,0,0.08) !important;
@@ -260,117 +258,64 @@ button, .btn, .button, input[type="button"], input[type="submit"] {
   cursor: pointer !important;
   opacity: 1 !important;
   pointer-events: auto !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
-  transition: filter .12s ease, transform .06s ease;
-  z-index: 1100; /* encima de overlays no activos */
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+  transition: transform .06s ease, filter .12s ease !important;
+  z-index: 1200 !important; /* encima de overlays no activos */
 }
 
-/* Hover / focus accesible */
-button:hover, .btn:hover, input[type="button"]:hover, input[type="submit"]:hover {
+/* 3. Hover y focus claros */
+button:hover, .btn:hover, .control-btn:hover {
   filter: brightness(0.95);
+  transform: translateY(-1px);
 }
-button:focus, .btn:focus, input[type="button"]:focus, input[type="submit"]:focus {
+button:focus, .btn:focus, .control-btn:focus {
   outline: 3px solid rgba(11,116,222,0.22);
   outline-offset: 2px;
 }
 
-/* 3) Evitar que overlays transparentes bloqueen controles por defecto */
+/* 4. Overlays por defecto no bloquean; solo bloquean con .active */
 .overlay, .modal-backdrop, .app-overlay {
   pointer-events: none;
   background: transparent;
-  z-index: 800;
+  z-index: 900;
 }
-
-/* Si el overlay debe bloquear, usar clase .active (controlada por JS) */
 .overlay.active, .modal-backdrop.active, .app-overlay.active {
   pointer-events: auto;
   background: rgba(0,0,0,0.36);
-  z-index: 900;
+  z-index: 1000;
 }
 
-/* 4) Asegurar toolbar/controles siempre encima */
-.toolbar, .header, .controls, #adminMenu {
-  z-index: 1200 !important;
+/* 5. Asegurar que toolbar y controles estén siempre encima */
+.toolbar, .header, .controls, #adminMenu, .top-actions {
+  position: relative;
+  z-index: 1300 !important;
 }
 
-/* 5) Asegurar que las tarjetas (.card) sean opacas para legibilidad */
-.card {
+/* 6. Tarjetas y paneles opacos para legibilidad */
+.card, .panel {
   background-color: rgba(255,255,255,0.98) !important;
   color: #212529 !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
-/* 6) Tabla: forzar color y visibilidad de celdas y filas */
-.responsive-table table {
-  color: #212529;
-  background: transparent;
-  border-collapse: collapse;
-  width: 100%;
-}
-.responsive-table table thead th {
-  background-color: #f8f9fa;
-  color: #212529;
-  font-weight: 600;
-  padding: 0.6rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e9ecef;
-}
-.responsive-table table tbody td {
-  color: #212529;
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid #f1f3f5;
-  vertical-align: middle;
+/* 7. Tabla: forzar visibilidad de filas y mensaje vacío */
+.responsive-table table { color: #212529; width: 100%; border-collapse: collapse; }
+.responsive-table table thead th { background: #f8f9fa; color: #212529; font-weight: 600; padding: .6rem; }
+.responsive-table table tbody td { padding: .55rem; border-bottom: 1px solid #f1f3f5; color: #212529; }
+.responsive-table .no-records, .table-no-records {
+  display: block; padding: 1rem; text-align: center; color: #6c757d;
+  background: rgba(255,255,255,0.95); border-radius: .375rem;
 }
 
-/* Mensaje "No hay registros" — centrado y visible */
-.responsive-table .no-records,
-.table-no-records {
-  display: block;
-  padding: 1.25rem;
-  text-align: center;
-  color: #6c757d;
-  background: rgba(255,255,255,0.9);
-  border-radius: 0.375rem;
-  border: 1px dashed rgba(108,117,125,0.12);
-}
-
-/* 7) Asegurar inputs/fechas legibles dentro de controles */
-input, select, textarea {
-  background: #fff;
-  color: #212529;
-  border: 1px solid #ced4da;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.375rem;
-}
-
-/* 8) Mobile: mantener labels visibles en filas convertidas */
-@media (max-width: 767.98px) {
-  .responsive-table table tbody tr td::before,
-  .responsive-table table tbody > tr > td::before {
-    color: #6c757d;
-    font-weight: 600;
-  }
-  .responsive-table table tbody tr,
-  .responsive-table table tbody > tr {
-    background-color: #ffffff;
-    box-shadow: none;
-  }
-}
-
-/* 9) Seguridad: evitar reglas globales que oculten botones accidentalmente */
-html button[hidden], button.hidden, .hidden-button {
-  display: none !important;
-}
-/* Evitar reglas globales que pongan opacity 0 o pointer-events none sin clase específica */
-button[style*="opacity: 0"], button[style*="pointer-events: none"] {
+/* 8. Evitar reglas globales que oculten botones accidentalmente */
+button[style*="opacity: 0"], button[style*="pointer-events: none"], .btn[style*="opacity: 0"] {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
 
-/* 10) Utilidad: clase para forzar visibilidad temporal en debugging */
-.debug-force-visible {
+/* 9. Clase utilitaria para forzar visibilidad (uso temporal o condicional) */
+.force-visible {
   opacity: 1 !important;
   pointer-events: auto !important;
-  background-color: #0F2C54 !important;
-  color: #fff !important;
   z-index: 2000 !important;
 }
