@@ -1,5 +1,4 @@
 // src/components/AuditLogsView.jsx
-
 import React, { useEffect, useState } from 'react';
 
 export default function AuditLogsView() {
@@ -8,35 +7,61 @@ export default function AuditLogsView() {
   const [filters, setFilters] = useState({ user: '', action: '', from: '', to: '' });
   const [page, setPage] = useState(1);
   const [pageSize] = useState(100);
+  const [total, setTotal] = useState(0);
 
   const buildQuery = () => {
     const params = new URLSearchParams();
-    if (filters.user) params.append('user', filters.user);
-    if (filters.action) params.append('action', filters.action);
-    if (filters.from) params.append('from', filters.from);
-    if (filters.to) params.append('to', filters.to);
+    if (filters.user) params.append('usuario', filters.user); // coincide con backend
+    if (filters.action) params.append('accion', filters.action);
+    if (filters.from) params.append('desde', filters.from);
+    if (filters.to) params.append('hasta', filters.to);
     params.append('limit', pageSize);
-    params.append('page', page);
+    // calcular offset si el backend usa offset
+    const offset = (page - 1) * pageSize;
+    params.append('offset', offset);
     return params.toString();
   };
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
+      // Ajusta según dónde guardes el token:
+      // Si guardas en localStorage.userSession: const session = JSON.parse(localStorage.getItem('userSession') || '{}'); const token = session?.token || '';
       const session = JSON.parse(localStorage.getItem('userSession') || '{}');
-      const token = session?.token || '';
+      const token = session?.token || localStorage.getItem('token') || '';
+
       const query = buildQuery();
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/audit/logs?${query}`, {
+
+      // Asegúrate que la ruta coincide con tu backend: /api/audit-logs
+      const base = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${base}/api/audit-logs?${query}`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
-      const data = await res.json();
-      setLogs(Array.isArray(data) ? data : (data.items || []));
+
+      if (!res.ok) {
+        console.error('API audit error', res.status);
+        setLogs([]);
+        setTotal(0);
+        return;
+      }
+
+      const json = await res.json();
+
+      // Manejar ambos formatos: { items, meta } o array directo
+      const items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : (json.items || []));
+      setLogs(items);
+
+      // Si el backend devuelve meta.total, úsalo para paginación
+      const metaTotal = json.meta?.total ?? (Array.isArray(json) ? json.length : items.length);
+      setTotal(Number(metaTotal) || 0);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
       setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -52,19 +77,17 @@ export default function AuditLogsView() {
       alert('No hay registros para exportar');
       return;
     }
-    const rows = logs.map(l => {
-      return {
-        id: l.id,
-        actor_username: l.actor_username,
-        action: l.action,
-        target_table: l.target_table,
-        target_id: l.target_id,
-        created_at: l.created_at,
-        ip: l.ip,
-        reason: l.reason,
-        metadata: JSON.stringify(l.metadata || '')
-      };
-    });
+    const rows = logs.map(l => ({
+      id: l.id,
+      actor_username: l.actor_username,
+      action: l.action,
+      target_table: l.target_table,
+      target_id: l.target_id,
+      created_at: l.created_at,
+      ip: l.ip,
+      reason: l.reason,
+      metadata: JSON.stringify(l.metadata || '')
+    }));
     const csvContent = [
       Object.keys(rows[0]).join(','),
       ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -79,9 +102,18 @@ export default function AuditLogsView() {
     URL.revokeObjectURL(url);
   };
 
+  // UI: contenedor tipo "card" con título visible
   return (
-    <div>
-      <div className="mb-3 d-flex gap-2">
+    <div className="audit-card card p-3">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="audit-title mb-0">Módulo Auditoría</h2>
+        <div className="d-flex gap-2">
+          <button className="btn btn-light" onClick={() => fetchLogs()}>Refrescar</button>
+          <button className="btn btn-outline-secondary" onClick={() => { /* logout si aplica */ }}>Cerrar Sesión</button>
+        </div>
+      </div>
+
+      <div className="mb-3 d-flex gap-2 flex-wrap">
         <input className="form-control" placeholder="Usuario" value={filters.user} onChange={e => setFilters(f => ({ ...f, user: e.target.value }))} />
         <input className="form-control" placeholder="Acción" value={filters.action} onChange={e => setFilters(f => ({ ...f, action: e.target.value }))} />
         <input className="form-control" type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} />
@@ -112,13 +144,11 @@ export default function AuditLogsView() {
                   <td>{l.action}</td>
                   <td>{l.target_table}</td>
                   <td>{l.target_id}</td>
-                  <td>{new Date(l.created_at).toLocaleString()}</td>
+                  <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
                   <td>{l.ip}</td>
                   <td>
                     <button className="btn btn-sm btn-outline-primary" onClick={() => {
-                      // temporal: mostrar metadata; reemplazar por modal si prefieres
                       const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
-                      // abrir en nueva ventana para lectura cómoda
                       const w = window.open('', '_blank', 'noopener,noreferrer');
                       w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
                       w.document.title = `Audit ${l.id}`;
@@ -137,9 +167,9 @@ export default function AuditLogsView() {
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div>
           <button className="btn btn-outline-secondary me-2" onClick={() => { if (page > 1) setPage(p => p - 1); }}>Anterior</button>
-          <button className="btn btn-outline-secondary" onClick={() => setPage(p => p + 1)}>Siguiente</button>
+          <button className="btn btn-outline-secondary" onClick={() => { if ((page * pageSize) < total) setPage(p => p + 1); }}>Siguiente</button>
         </div>
-        <div className="text-muted">Página {page}</div>
+        <div className="text-muted">Página {page} — Total {total}</div>
       </div>
     </div>
   );
