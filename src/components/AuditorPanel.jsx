@@ -1,5 +1,4 @@
-// src/components/AuditorPanel.jsx
-
+// AuditorPanel.jsx
 import React from 'react';
 import AuditLogsView from './AuditLogsView';
 
@@ -14,7 +13,7 @@ export default function AuditorPanel({ onLogout }) {
         </div>
       </header>
       <main>
-        <AuditLogsView />
+        <AuditLogsView onLogout={onLogout} />
       </main>
     </div>
   );
