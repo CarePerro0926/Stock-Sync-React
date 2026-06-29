@@ -1,4 +1,4 @@
-// src/components/AuditLogsView.jsx
+// AuditLogsView.jsx
 import React, { useEffect, useState } from 'react';
 
 export default function AuditLogsView({ onLogout }) {
@@ -42,32 +42,57 @@ export default function AuditLogsView({ onLogout }) {
   const fetchLogs = async () => {
     setLoading(true);
     try {
+      // Obtener token si lo guardas en userSession o token
       const session = JSON.parse(localStorage.getItem('userSession') || '{}');
       const token = session?.token || localStorage.getItem('token') || '';
 
       const query = buildQuery();
-      const base = import.meta.env.VITE_API_URL || '';
-      const res = await fetch(`${base}/api/audit-logs?${query}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
+
+      // --- Llamada al proxy serverless en la misma origin ---
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+      // Si activaste validación JWT en el proxy, reenviamos el token
+      if (token) headers.append('Authorization', `Bearer ${token}`);
+
+      console.log('AuditLogs fetch -> token present?', !!token);
+
+      const res = await fetch(`/api/proxy-audit-logs?${query}`, {
+        method: 'GET',
+        headers,
         credentials: 'include'
       });
 
+      console.log('AuditLogs fetch -> status:', res.status, 'ok:', res.ok);
+      let text;
+      try {
+        text = await res.text();
+        console.log('AuditLogs fetch -> response text:', text);
+      } catch {
+        // No necesitamos el detalle del error aquí; lo registramos de forma genérica
+        console.log('AuditLogs fetch -> error reading response body');
+      }
+
       if (!res.ok) {
-        console.error('API audit error', res.status);
+        try {
+          const json = JSON.parse(text || '{}');
+          console.error('API audit error body:', json);
+        } catch {
+          console.error('API audit error raw body:', text);
+        }
         setLogs([]);
         setTotal(0);
+        setLoading(false);
         return;
       }
 
-      const json = await res.json();
+      // parsear JSON si todo ok
+      const json = JSON.parse(text || '{}');
       const items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : (json.items || []));
       setLogs(items);
       const metaTotal = json.meta?.total ?? (Array.isArray(json) ? json.length : items.length);
       setTotal(Number(metaTotal) || 0);
     } catch (err) {
+      // Aquí sí usamos la variable para depuración
       console.error('Error fetching audit logs:', err);
       setLogs([]);
       setTotal(0);
@@ -117,7 +142,7 @@ export default function AuditLogsView({ onLogout }) {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="audit-title mb-0">Módulo Auditoría</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={() => fetchLogs()}>Refrescar</button>
+          <button className="btn btn-light" onClick={fetchLogs}>Refrescar</button>
           <button
             className="btn btn-outline-secondary"
             onClick={() => {
@@ -137,12 +162,42 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       <div className="mb-3 d-flex gap-2 flex-wrap">
-        <input className="form-control" placeholder="Usuario" value={filters.user} onChange={e => setFilters(f => ({ ...f, user: e.target.value }))} />
-        <input className="form-control" placeholder="Acción" value={filters.action} onChange={e => setFilters(f => ({ ...f, action: e.target.value }))} />
-        <input className="form-control" type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} />
-        <input className="form-control" type="date" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} />
-        <button className="btn btn-primary" onClick={() => { setPage(1); fetchLogs(); }}>Filtrar</button>
-        <button className="btn btn-outline-secondary" onClick={() => { setFilters({ user: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}>Limpiar</button>
+        <input
+          className="form-control"
+          placeholder="Usuario"
+          value={filters.user}
+          onChange={event => setFilters(f => ({ ...f, user: event.target.value }))}
+        />
+        <input
+          className="form-control"
+          placeholder="Acción"
+          value={filters.action}
+          onChange={event => setFilters(f => ({ ...f, action: event.target.value }))}
+        />
+        <input
+          className="form-control"
+          type="date"
+          value={filters.from}
+          onChange={event => setFilters(f => ({ ...f, from: event.target.value }))}
+        />
+        <input
+          className="form-control"
+          type="date"
+          value={filters.to}
+          onChange={event => setFilters(f => ({ ...f, to: event.target.value }))}
+        />
+        <button
+          className="btn btn-primary"
+          onClick={() => { setPage(1); fetchLogs(); }}
+        >
+          Filtrar
+        </button>
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => { setFilters({ user: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}
+        >
+          Limpiar
+        </button>
         <button className="btn btn-success" onClick={handleExportCSV}>Exportar CSV</button>
       </div>
 
@@ -170,12 +225,17 @@ export default function AuditLogsView({ onLogout }) {
                   <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
                   <td>{l.ip}</td>
                   <td>
-                    <button className="btn btn-sm btn-outline-primary" onClick={() => {
-                      const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
-                      const w = window.open('', '_blank', 'noopener,noreferrer');
-                      w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
-                      w.document.title = `Audit ${l.id}`;
-                    }}>Ver</button>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => {
+                        const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
+                        const w = window.open('', '_blank', 'noopener,noreferrer');
+                        w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
+                        w.document.title = `Audit ${l.id}`;
+                      }}
+                    >
+                      Ver
+                    </button>
                   </td>
                 </tr>
               ))}
