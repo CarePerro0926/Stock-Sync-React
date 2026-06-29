@@ -9,6 +9,37 @@ export default function AuditLogsView() {
   const [pageSize] = useState(100);
   const [total, setTotal] = useState(0);
 
+  // --- Ocultar título y botones duplicados fuera del recuadro ---
+  useEffect(() => {
+    // Oculta elementos con texto exacto que NO estén dentro de .audit-card
+    const hideOutsideCard = (selector, exactText) => {
+      const nodes = Array.from(document.querySelectorAll(selector));
+      nodes.forEach(node => {
+        const text = (node.textContent || '').trim();
+        if (text === exactText) {
+          if (!node.closest('.audit-card')) {
+            node.dataset._hiddenByAudit = '1';
+            node.style.display = 'none';
+          }
+        }
+      });
+    };
+
+    // Ajusta los textos si tu header usa variantes distintas
+    hideOutsideCard('h1, h2, .global-page-title', 'Módulo Auditoría');
+    hideOutsideCard('button', 'Refrescar');
+    hideOutsideCard('button', 'Cerrar Sesión');
+
+    // Restaurar al desmontar
+    return () => {
+      document.querySelectorAll('[data-_hiddenByAudit="1"]').forEach(el => {
+        el.style.display = '';
+        delete el.dataset._hiddenByAudit;
+      });
+    };
+  }, []);
+  // --- fin ocultar duplicados ---
+
   const buildQuery = () => {
     const params = new URLSearchParams();
     if (filters.user) params.append('usuario', filters.user); // coincide con backend
