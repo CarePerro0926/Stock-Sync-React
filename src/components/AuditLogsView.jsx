@@ -1,7 +1,7 @@
 // src/components/AuditLogsView.jsx
 import React, { useEffect, useState } from 'react';
 
-export default function AuditLogsView() {
+export default function AuditLogsView({ onLogout }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ user: '', action: '', from: '', to: '' });
@@ -9,28 +9,16 @@ export default function AuditLogsView() {
   const [pageSize] = useState(100);
   const [total, setTotal] = useState(0);
 
-  // --- Ocultar título y botones duplicados fuera del recuadro ---
+  // Ocultar solo títulos duplicados fuera de la tarjeta; no tocar botones
   useEffect(() => {
-    // Oculta elementos con texto exacto que NO estén dentro de .audit-card
-    const hideOutsideCard = (selector, exactText) => {
-      const nodes = Array.from(document.querySelectorAll(selector));
-      nodes.forEach(node => {
-        const text = (node.textContent || '').trim();
-        if (text === exactText) {
-          if (!node.closest('.audit-card')) {
-            node.dataset._hiddenByAudit = '1';
-            node.style.display = 'none';
-          }
-        }
-      });
-    };
-
-    // Ajusta los textos si tu header usa variantes distintas
-    hideOutsideCard('h1, h2, .global-page-title', 'Módulo Auditoría');
-    hideOutsideCard('button', 'Refrescar');
-    hideOutsideCard('button', 'Cerrar Sesión');
-
-    // Restaurar al desmontar
+    const nodes = Array.from(document.querySelectorAll('h1, h2, .global-page-title'));
+    nodes.forEach(node => {
+      const text = (node.textContent || '').trim();
+      if (text === 'Módulo Auditoría' && !node.closest('.audit-card')) {
+        node.dataset._hiddenByAudit = '1';
+        node.style.display = 'none';
+      }
+    });
     return () => {
       document.querySelectorAll('[data-_hiddenByAudit="1"]').forEach(el => {
         el.style.display = '';
@@ -38,16 +26,14 @@ export default function AuditLogsView() {
       });
     };
   }, []);
-  // --- fin ocultar duplicados ---
 
   const buildQuery = () => {
     const params = new URLSearchParams();
-    if (filters.user) params.append('usuario', filters.user); // coincide con backend
+    if (filters.user) params.append('usuario', filters.user);
     if (filters.action) params.append('accion', filters.action);
     if (filters.from) params.append('desde', filters.from);
     if (filters.to) params.append('hasta', filters.to);
     params.append('limit', pageSize);
-    // calcular offset si el backend usa offset
     const offset = (page - 1) * pageSize;
     params.append('offset', offset);
     return params.toString();
@@ -56,14 +42,10 @@ export default function AuditLogsView() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // Ajusta según dónde guardes el token:
-      // Si guardas en localStorage.userSession: const session = JSON.parse(localStorage.getItem('userSession') || '{}'); const token = session?.token || '';
       const session = JSON.parse(localStorage.getItem('userSession') || '{}');
       const token = session?.token || localStorage.getItem('token') || '';
 
       const query = buildQuery();
-
-      // Asegúrate que la ruta coincide con tu backend: /api/audit-logs
       const base = import.meta.env.VITE_API_URL || '';
       const res = await fetch(`${base}/api/audit-logs?${query}`, {
         headers: {
@@ -81,12 +63,8 @@ export default function AuditLogsView() {
       }
 
       const json = await res.json();
-
-      // Manejar ambos formatos: { items, meta } o array directo
       const items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : (json.items || []));
       setLogs(items);
-
-      // Si el backend devuelve meta.total, úsalo para paginación
       const metaTotal = json.meta?.total ?? (Array.isArray(json) ? json.length : items.length);
       setTotal(Number(metaTotal) || 0);
     } catch (err) {
@@ -140,7 +118,21 @@ export default function AuditLogsView() {
         <h2 className="audit-title mb-0">Módulo Auditoría</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-light" onClick={() => fetchLogs()}>Refrescar</button>
-          <button className="btn btn-outline-secondary" onClick={() => { /* logout si aplica */ }}>Cerrar Sesión</button>
+          <button
+            className="btn btn-outline-secondary"
+            onClick={() => {
+              if (typeof onLogout === 'function') {
+                onLogout();
+              } else {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userSession');
+                document.cookie = 'token=; Max-Age=0; path=/;';
+                window.location.href = '/login';
+              }
+            }}
+          >
+            Cerrar Sesión
+          </button>
         </div>
       </div>
 
