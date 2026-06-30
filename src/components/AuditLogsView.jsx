@@ -48,7 +48,7 @@ export default function AuditLogsView({ onLogout }) {
 
       const query = buildQuery();
 
-      // --- Llamada al proxy serverless en la misma origin ---
+      // --- Llamada al backend (ajusta la URL si usas proxy o variable de entorno) ---
       const headers = new Headers();
       headers.append('Content-Type', 'application/json');
       // Si activaste validación JWT en el proxy, reenviamos el token
@@ -57,8 +57,8 @@ export default function AuditLogsView({ onLogout }) {
       console.log('AuditLogs fetch -> token present?', !!token);
 
       const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
-      method: 'GET',
-      headers,
+        method: 'GET',
+        headers,
         credentials: 'include'
       });
 
@@ -144,7 +144,7 @@ export default function AuditLogsView({ onLogout }) {
         <div className="d-flex gap-2">
           <button className="btn btn-light" onClick={fetchLogs}>Refrescar</button>
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-danger"
             onClick={() => {
               if (typeof onLogout === 'function') {
                 onLogout();
@@ -193,7 +193,7 @@ export default function AuditLogsView({ onLogout }) {
           Filtrar
         </button>
         <button
-          className="btn btn-outline-secondary"
+          className="btn btn-warning"
           onClick={() => { setFilters({ user: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}
         >
           Limpiar
@@ -202,56 +202,55 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       {loading ? <p>Cargando registros...</p> : (
-  <div className="audit-table-wrapper">
-    <table className="table table-sm mb-0">
-      <thead>
-        <tr>
-          <th>Usuario</th>
-          <th>Acción</th>
-          <th>Tabla</th>
-          <th>ID</th>
-          <th>Fecha</th>
-          <th>IP</th>
-          <th>Detalle</th>
-        </tr>
-      </thead>
-      <tbody>
-        {logs.map(l => (
-          <tr key={l.id}>
-            <td>{l.actor_username}</td>
-            <td>{l.action}</td>
-            <td>{l.target_table}</td>
-            <td>{l.target_id}</td>
-            <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
-            <td>{l.ip}</td>
-            <td>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => {
-                  const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
-                  const w = window.open('', '_blank', 'noopener,noreferrer');
-                  w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
-                  w.document.title = `Audit ${l.id}`;
-                }}
-              >
-                Ver
-              </button>
-            </td>
-          </tr>
-        ))}
-        {logs.length === 0 && (
-          <tr><td colSpan="7" className="text-center">No hay registros</td></tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-)}
-
+        <div className="audit-table-wrapper">
+          <table className="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Tabla</th>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>IP</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map(l => (
+                <tr key={l.id}>
+                  <td>{l.actor_username}</td>
+                  <td>{l.action}</td>
+                  <td>{l.target_table}</td>
+                  <td>{l.target_id}</td>
+                  <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
+                  <td>{l.ip}</td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => {
+                        const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
+                        const w = window.open('', '_blank', 'noopener,noreferrer');
+                        w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
+                        w.document.title = `Audit ${l.id}`;
+                      }}
+                    >
+                      Ver
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {logs.length === 0 && (
+                <tr><td colSpan="7" className="text-center">No hay registros</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div>
-          <button className="btn btn-outline-secondary me-2" onClick={() => { if (page > 1) setPage(p => p - 1); }}>Anterior</button>
-          <button className="btn btn-outline-secondary" onClick={() => { if ((page * pageSize) < total) setPage(p => p + 1); }}>Siguiente</button>
+          <button className="btn btn-primary me-2" onClick={() => { if (page > 1) setPage(p => p - 1); }}>Anterior</button>
+          <button className="btn btn-primary" onClick={() => { if ((page * pageSize) < total) setPage(p => p + 1); }}>Siguiente</button>
         </div>
         <div className="text-muted">Página {page} — Total {total}</div>
       </div>
