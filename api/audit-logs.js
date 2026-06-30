@@ -14,7 +14,6 @@ function verifyToken(req) {
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-
   try {
     const payload = verifyToken(req);
     if (!payload || !Array.isArray(payload.roles) || !payload.roles.includes('auditor')) {
@@ -41,8 +40,6 @@ export default async function handler(req, res) {
 
     return res.json({ items: data || [], meta: { total: count ?? (data || []).length } });
   } catch (err) {
-    const message = err?.message || String(err);
-    const status = message.includes('No token') || message.toLowerCase().includes('jwt') ? 401 : 500;
-    return res.status(status).json({ error: message });
+    return res.status(401).json({ error: String(err.message || err) });
   }
 }
