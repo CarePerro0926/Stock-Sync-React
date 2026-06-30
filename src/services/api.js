@@ -1,5 +1,5 @@
 // src/services/api.js
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Registro de usuario
 export async function registrarUsuario(data) {
@@ -71,9 +71,11 @@ export async function eliminarUsuario(id, token) {
   return { mensaje: 'Usuario eliminado' };
 }
 
-
 // Obtener registros de auditoría; filtra por usuario, acción, rango de fechas y soporta paginación
-export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 10, offset = 0 } = {}, token) {
+export async function obtenerAuditLogs(
+  { usuario, accion, desde, hasta, limit = 10, offset = 0 } = {},
+  token
+) {
   const params = new URLSearchParams();
   if (usuario) params.append('usuario', usuario);
   if (accion) params.append('accion', accion);
@@ -82,15 +84,33 @@ export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 
   params.append('limit', String(limit));
   params.append('offset', String(offset));
 
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  // Preferir token pasado; si no, intentar desde localStorage (cliente)
+  let authToken = token;
+  if (!authToken && typeof window !== 'undefined') {
+    authToken = localStorage.getItem('authToken') || localStorage.getItem('token') || null;
+  }
 
-  const base = import.meta.env.VITE_API_URL || '';
-  const res = await fetch(`${base}/api/audit-logs?${params.toString()}`, {
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  // Llamada RELATIVA al proxy serverless interno para no exponer claves
+  const url = `/api/proxy-audit-logs?${params.toString()}`;
+
+  const res = await fetch(url, {
     method: 'GET',
     headers
   });
 
-  if (!res.ok) throw await res.json();
+  if (!res.ok) {
+    let body;
+    try {
+      body = await res.json();
+    } catch {
+      body = await res.text();
+    }
+    const message = body?.message || body?.error || String(body) || `HTTP ${res.status}`;
+    throw new Error(message);
+  }
+
   return res.json(); // { items: [...], meta: { total } }
 }
