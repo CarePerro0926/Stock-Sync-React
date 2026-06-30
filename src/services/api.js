@@ -73,7 +73,7 @@ export async function eliminarUsuario(id, token) {
 
 
 // Obtener registros de auditoría; filtra por usuario, acción, rango de fechas y soporta paginación
-export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 100, offset = 0 } = {}, token) {
+export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 10, offset = 0 } = {}, token) {
   const params = new URLSearchParams();
   if (usuario) params.append('usuario', usuario);
   if (accion) params.append('accion', accion);
