@@ -6,7 +6,7 @@ export default function AuditLogsView({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ user: '', action: '', from: '', to: '' });
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(100);
+  const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
   // Ocultar solo títulos duplicados fuera de la tarjeta; no tocar botones
@@ -56,9 +56,9 @@ export default function AuditLogsView({ onLogout }) {
 
       console.log('AuditLogs fetch -> token present?', !!token);
 
-      const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
+      const res = await fetch(`/api/proxy-audit-logs?${query}`, {
       method: 'GET',
-      headers,
+        headers,
         credentials: 'include'
       });
 
