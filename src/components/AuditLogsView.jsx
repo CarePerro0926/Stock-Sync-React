@@ -202,50 +202,51 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       {loading ? <p>Cargando registros...</p> : (
-        <div className="table-responsive">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Acción</th>
-                <th>Tabla</th>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>IP</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(l => (
-                <tr key={l.id}>
-                  <td>{l.actor_username}</td>
-                  <td>{l.action}</td>
-                  <td>{l.target_table}</td>
-                  <td>{l.target_id}</td>
-                  <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
-                  <td>{l.ip}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => {
-                        const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
-                        const w = window.open('', '_blank', 'noopener,noreferrer');
-                        w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
-                        w.document.title = `Audit ${l.id}`;
-                      }}
-                    >
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {logs.length === 0 && (
-                <tr><td colSpan="7" className="text-center">No hay registros</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+  <div className="audit-table-wrapper">
+    <table className="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Acción</th>
+          <th>Tabla</th>
+          <th>ID</th>
+          <th>Fecha</th>
+          <th>IP</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {logs.map(l => (
+          <tr key={l.id}>
+            <td>{l.actor_username}</td>
+            <td>{l.action}</td>
+            <td>{l.target_table}</td>
+            <td>{l.target_id}</td>
+            <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
+            <td>{l.ip}</td>
+            <td>
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={() => {
+                  const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
+                  const w = window.open('', '_blank', 'noopener,noreferrer');
+                  w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
+                  w.document.title = `Audit ${l.id}`;
+                }}
+              >
+                Ver
+              </button>
+            </td>
+          </tr>
+        ))}
+        {logs.length === 0 && (
+          <tr><td colSpan="7" className="text-center">No hay registros</td></tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+)}
+
 
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div>
