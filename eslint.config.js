@@ -27,4 +27,12 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  // Override para funciones serverless en api/
+  {
+    files: ['api/**/*.js'],
+    languageOptions: {
+      env: { node: true }
+    },
+    rules: {}
+  }
 ])
