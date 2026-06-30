@@ -70,3 +70,27 @@ export async function eliminarUsuario(id, token) {
   if (!res.ok) throw await res.json();
   return { mensaje: 'Usuario eliminado' };
 }
+
+
+// Obtener registros de auditoría; filtra por usuario, acción, rango de fechas y soporta paginación
+export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 100, offset = 0 } = {}, token) {
+  const params = new URLSearchParams();
+  if (usuario) params.append('usuario', usuario);
+  if (accion) params.append('accion', accion);
+  if (desde) params.append('desde', desde);
+  if (hasta) params.append('hasta', hasta);
+  params.append('limit', String(limit));
+  params.append('offset', String(offset));
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const base = import.meta.env.VITE_API_URL || '';
+  const res = await fetch(`${base}/api/audit-logs?${params.toString()}`, {
+    method: 'GET',
+    headers
+  });
+
+  if (!res.ok) throw await res.json();
+  return res.json(); // { items: [...], meta: { total } }
+}
