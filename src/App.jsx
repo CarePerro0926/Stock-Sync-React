@@ -1,7 +1,6 @@
-// src/App.jsx
+/* src/App.jsx */
 
 import React, { useState, useEffect } from 'react';
-
 import LoginView from './components/LoginView';
 import ClientRegisterView from './components/ClientRegisterView';
 import PublicCatalogView from './components/PublicCatalogView';
@@ -9,7 +8,6 @@ import ClientView from './components/ClientView';
 import AdminView from './components/AdminView';
 import AuditorPanel from './components/AuditorPanel';
 import ForgotPasswordModal from './components/Modals/ForgotPasswordModal';
-
 import { productService } from './services/productService';
 import { providerService } from './services/providerService';
 import { categoryService } from './services/categoryService';
@@ -21,7 +19,6 @@ function App() {
   const [proveedores, setProveedores] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [carrito, setCarrito] = useState([]);
-
   // La variable usuarioActual se usa para gestionar la sesión
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [vistaActual, setVistaActual] = useState('login');
@@ -35,7 +32,6 @@ function App() {
       try {
         const usr = JSON.parse(storedSession);
         setUsuarioActual(usr);
-
         // Determinar vista según rol explícitamente
         if (usr.role === 'administrador') {
           setVistaActual('admin');
@@ -180,11 +176,13 @@ function App() {
       alert('Usuario/clave inválidos');
       return;
     }
+
     try {
       localStorage.setItem('userSession', JSON.stringify(usr));
     } catch (error) {
       console.error('No se pudo guardar la sesión en localStorage:', error);
     }
+
     setUsuarioActual(usr);
 
     if (usr.role === 'administrador') {
@@ -203,6 +201,7 @@ function App() {
     } catch (error) {
       console.error('No se pudo eliminar userSession:', error);
     }
+
     setUsuarioActual(null);
     setCarrito([]);
     setVistaActual('login');
@@ -247,6 +246,7 @@ function App() {
         return (
           <AuditorPanel
             onLogout={handleLogout}
+            token={usuarioActual?.token} // <-- AÑADIDO: pasamos el token de la sesión al panel de auditor
           />
         );
       default:
@@ -261,10 +261,12 @@ function App() {
         alert('Categoría no encontrada. Agrégala primero o selecciona una existente.');
         return;
       }
+
       const productoParaInsertar = {
         ...nuevoProducto,
         categoria_id: categoriaSeleccionada.id
       };
+
       await productService.create(productoParaInsertar);
       await recargarProductos();
     } catch (error) {
@@ -288,11 +290,12 @@ function App() {
       if (nuevoProveedor.telefono) {
         const cleaned = nuevoProveedor.telefono.replace(/\D/g, '');
         if (!(cleaned.length === 10 && cleaned.startsWith('3')) &&
-          !(cleaned.length === 12 && cleaned.startsWith('573'))) {
+            !(cleaned.length === 12 && cleaned.startsWith('573'))) {
           alert('Teléfono inválido. Usa formato colombiano: 3001234567 o +573001234567');
           return;
         }
       }
+
       await providerService.create(nuevoProveedor);
     } catch (error) {
       console.error('Error al crear proveedor:', error);
