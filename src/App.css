@@ -70,3 +70,27 @@
   text-overflow: ellipsis;
   vertical-align: middle;
 }
+
+
+/* Forzar modal encima de todo */
+.recover-modal,
+.recover-modal .modal-content {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 9999 !important; /* muy alto para sobrepasar otros elementos */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* Backdrop oscuro por debajo del modal */
+.recover-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.45);
+  z-index: 9998 !important;
+}
+
+/* Si usas botones con z-index alto, sube aún más */
+.recover-modal--top { z-index: 10050 !important; }
+.recover-modal-backdrop--top { z-index: 10040 !important; }
