@@ -41,3 +41,32 @@
 .read-the-docs {
   color: #888;
 }
+
+
+/* Contenedor que limita la altura y añade scroll vertical */
+.audit-table-wrapper {
+  max-height: 420px; /* ajusta según quieras ver más/menos filas (ej. 300px, 60vh) */
+  min-height: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 6px;
+  background: #fff;
+  padding: 0.25rem;
+}
+
+/* Mantener encabezado visible al scrollear */
+.audit-table-wrapper thead th {
+  position: sticky;
+  top: 0;
+  background: #f8f9fa; /* color del encabezado */
+  z-index: 2;
+}
+
+/* Evitar que el contenido rompa el layout */
+.audit-table-wrapper tbody td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
