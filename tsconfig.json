@@ -3,20 +3,20 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "bundler", 
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-
-    // 👇 en lugar de baseUrl, usa paths
+    "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
     },
-
-    // 👇 esto silencia las advertencias deprecadas en TS 6.x
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src", "api"]
+  "include": ["src", "api"],
+  "exclude": ["node_modules", "dist", "build"]
 }
