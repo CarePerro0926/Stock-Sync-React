@@ -83,10 +83,13 @@ export default function AuditLogsView({ onLogout }) {
     }
   };
 
+  // Llamar fetchLogs cuando cambie page, filters.name o activeTab,
+  // pero solo si estamos en la pestaña audit_logs
   useEffect(() => {
+    if (activeTab !== 'audit_logs') return;
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, filters.name, activeTab]);
 
   const handleExportCSV = () => {
     if (!logs || logs.length === 0) {
@@ -300,7 +303,7 @@ export default function AuditLogsView({ onLogout }) {
             onClick={() => {
               if (activeTab === 'audit_logs') {
                 setPage(1);
-                fetchLogs();
+                // fetchLogs() will be triggered by useEffect because page and filters.name are dependencies
               } else {
                 const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
                 const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
@@ -332,7 +335,7 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       <div className="mb-3 d-flex gap-2 flex-wrap">
-        {/* Input Nombre: actualiza filters.name y reinicia paginación; la búsqueda se dispara al escribir */}
+        {/* Input Nombre: actualiza filters.name y reinicia paginación; no llama fetchLogs() directamente */}
         <input
           className="form-control"
           placeholder="Nombre"
@@ -341,17 +344,15 @@ export default function AuditLogsView({ onLogout }) {
             const val = event.target.value;
             setFilters(f => ({ ...f, name: val }));
             setTablePage(prev => ({ ...prev, [activeTab]: 1 }));
-
-            // recarga inmediata de la vista activa (búsqueda en tiempo real)
-            const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
-            const offset = 0;
-            const meta = val ? { nombre: val } : null;
-
+            // reiniciar paginación global para audit logs; fetchLogs() será llamado por useEffect
             if (activeTab === 'audit_logs') {
               setPage(1);
-              fetchLogs();
-            } else if (rpcMap[activeTab]) {
-              callRpc(rpcMap[activeTab], pageSizeForTab, offset, meta);
+            } else {
+              // para las otras pestañas recargamos inmediatamente
+              const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+              const offset = 0;
+              const meta = val ? { nombre: val } : null;
+              if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], pageSizeForTab, offset, meta);
             }
           }}
         />
@@ -379,7 +380,7 @@ export default function AuditLogsView({ onLogout }) {
             // Reiniciar paginación general y recargar la vista activa
             setPage(1);
             if (activeTab === 'audit_logs') {
-              fetchLogs();
+              // fetchLogs will run via useEffect
               return;
             }
             const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
@@ -395,7 +396,7 @@ export default function AuditLogsView({ onLogout }) {
           onClick={() => {
             setFilters({ name: '', action: '', from: '', to: '' });
             setPage(1);
-            fetchLogs();
+            // fetchLogs will run via useEffect
             // reset tablas
             setTablePage({ productos: 1, categorias: 1, usuarios: 1 });
             setTableTotal({ productos: 0, categorias: 0, usuarios: 0 });
