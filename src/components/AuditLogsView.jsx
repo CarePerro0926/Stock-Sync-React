@@ -1,5 +1,6 @@
-// AuditLogsView.jsx
+// src/views/AuditLogsView.jsx
 import React, { useEffect, useState } from 'react';
+import { supabase } from '@/services/supabaseClient';
 
 export default function AuditLogsView({ onLogout }) {
   const [logs, setLogs] = useState([]);
@@ -43,8 +44,8 @@ export default function AuditLogsView({ onLogout }) {
     setLoading(true);
     try {
       // Obtener token si lo guardas en userSession o token
-      const session = JSON.parse(localStorage.getItem('userSession') || '{}');
-      const token = session?.token || localStorage.getItem('token') || '';
+      const sessionLocal = JSON.parse(localStorage.getItem('userSession') || '{}');
+      const token = sessionLocal?.token || localStorage.getItem('token') || '';
 
       const query = buildQuery();
 
@@ -137,12 +138,105 @@ export default function AuditLogsView({ onLogout }) {
   };
 
   // UI: contenedor tipo "card" con título visible
+
+  // -----------------------------
+  // AÑADIDO: integración — pestañas y tablas (manteniendo tu código original intacto)
+  // - Esta sección añade pestañas para Productos, Categorías y Usuarios.
+  // - Las tablas llaman a las RPCs en la base de datos: rpc_get_productos_for_audit, rpc_get_categorias_for_audit, rpc_get_usuarios_for_audit.
+  // - Cada RPC debe existir en la DB y registrar en audit_access (SECURITY DEFINER).
+  // - La vista de Usuarios no muestra la columna 'pass'.
+  // -----------------------------
+
+  const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
+  const [tableRows, setTableRows] = useState([]);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState('');
+
+  const rpcMap = {
+    productos: 'rpc_get_productos_for_audit',
+    categorias: 'rpc_get_categorias_for_audit',
+    usuarios: 'rpc_get_usuarios_for_audit'
+  };
+
+  // Llamada RPC usando el cliente supabase importado
+  const callRpc = async (rpcName, limit = 200, offset = 0, meta = null) => {
+    setTableLoading(true);
+    setTableError('');
+    setTableRows([]);
+    try {
+      const params = { p_limit: limit, p_offset: offset, p_meta: meta };
+      const { data, error } = await supabase.rpc(rpcName, params);
+      if (error) {
+        console.error(`${rpcName} error:`, error);
+        setTableError(error.message || `Error al obtener ${rpcName}`);
+        setTableRows([]);
+        return;
+      }
+      setTableRows(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Unexpected error calling RPC', err);
+      setTableError('Error inesperado al cargar datos');
+      setTableRows([]);
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchTableForTab = async () => {
+      if (!mounted) return;
+      if (activeTab === 'productos' || activeTab === 'categorias' || activeTab === 'usuarios') {
+        const rpcName = rpcMap[activeTab];
+        if (!rpcName) {
+          setTableError('Recurso no soportado: ' + activeTab);
+          return;
+        }
+        await callRpc(rpcName, 200, 0, null);
+      }
+    };
+    fetchTableForTab();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const renderTable = () => {
+    if (tableLoading) return <p>Cargando...</p>;
+    if (tableError) return <div className="alert alert-danger">{tableError}</div>;
+    if (!tableRows || tableRows.length === 0) return <div className="text-muted">Sin datos</div>;
+    const headers = Object.keys(tableRows[0]);
+    return (
+      <div className="table-responsive">
+        <table className="table table-sm">
+          <thead>
+            <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {tableRows.map((r, i) => (
+              <tr key={r.id ?? i}>
+                {headers.map(h => <td key={h}>{String(r[h] ?? '')}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // -----------------------------
+  // FIN AÑADIDO
+  // -----------------------------
+
+  // Detectar rol desde session para mostrar pestañas solo a auditores (mantengo tu lógica de session)
+  const session = JSON.parse(localStorage.getItem('userSession') || '{}');
+  const roleFromSession = session?.role || '';
+
   return (
     <div className="audit-card card p-3">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="audit-title mb-0">Módulo Auditoría</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={fetchLogs}>Refrescar</button>
+          <button className="btn btn-light" onClick={() => { if (activeTab === 'audit_logs') fetchLogs(); else { if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], 200, 0, null); } }}>Refrescar</button>
           <button
             className="btn btn-danger"
             onClick={() => {
@@ -201,59 +295,93 @@ export default function AuditLogsView({ onLogout }) {
         <button className="btn btn-success" onClick={handleExportCSV}>Exportar CSV</button>
       </div>
 
-      {loading ? <p>Cargando registros...</p> : (
-        <div className="audit-table-wrapper">
-          <table className="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Acción</th>
-                <th>Tabla</th>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>IP</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(l => (
-                <tr key={l.id}>
-                  <td>{l.actor_username}</td>
-                  <td>{l.action}</td>
-                  <td>{l.target_table}</td>
-                  <td>{l.target_id}</td>
-                  <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
-                  <td>{l.ip}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => {
-                        const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
-                        const w = window.open('', '_blank', 'noopener,noreferrer');
-                        w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
-                        w.document.title = `Audit ${l.id}`;
-                      }}
-                    >
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {logs.length === 0 && (
-                <tr><td colSpan="7" className="text-center">No hay registros</td></tr>
-              )}
-            </tbody>
-          </table>
+      {/* Pestañas: Audit logs + vistas solo lectura (solo para auditores) */}
+      <div className="mb-3">
+        <div className="btn-group" role="group" aria-label="Audit tabs">
+          <button type="button" className={`btn ${activeTab === 'audit_logs' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('audit_logs')}>Audit Logs</button>
+          {roleFromSession === 'auditor' && (
+            <>
+              <button type="button" className={`btn ${activeTab === 'productos' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('productos')}>Productos</button>
+              <button type="button" className={`btn ${activeTab === 'categorias' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('categorias')}>Categorías</button>
+              <button type="button" className={`btn ${activeTab === 'usuarios' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('usuarios')}>Usuarios</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Contenido según pestaña activa */}
+      {activeTab === 'audit_logs' && (
+        <>
+          {loading ? <p>Cargando registros...</p> : (
+            <div className="audit-table-wrapper">
+              <table className="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Tabla</th>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>IP</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map(l => (
+                    <tr key={l.id}>
+                      <td>{l.actor_username}</td>
+                      <td>{l.action}</td>
+                      <td>{l.target_table}</td>
+                      <td>{l.target_id}</td>
+                      <td>{l.created_at ? new Date(l.created_at).toLocaleString() : ''}</td>
+                      <td>{l.ip}</td>
+                      <td>
+                        <button className="btn btn-sm btn-outline-primary" onClick={() => {
+                          const detail = l.metadata ? JSON.stringify(l.metadata, null, 2) : JSON.stringify(l, null, 2);
+                          const w = window.open('', '_blank', 'noopener,noreferrer');
+                          w.document.write(`<pre>${detail.replace(/</g, '&lt;')}</pre>`);
+                          w.document.title = `Audit ${l.id}`;
+                        }}>Ver</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {logs.length === 0 && (<tr><td colSpan="7" className="text-center">No hay registros</td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <div>
+              <button className="btn btn-primary me-2" onClick={() => { if (page > 1) setPage(p => p - 1); }}>Anterior</button>
+              <button className="btn btn-primary" onClick={() => { if ((page * pageSize) < total) setPage(p => p + 1); }}>Siguiente</button>
+            </div>
+            <div className="text-muted">Página {page} — Total {total}</div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'productos' && (
+        <div>
+          <h5 className="mb-3">Ver productos</h5>
+          {renderTable()}
         </div>
       )}
 
-      <div className="d-flex justify-content-between align-items-center mt-3">
+      {activeTab === 'categorias' && (
         <div>
-          <button className="btn btn-primary me-2" onClick={() => { if (page > 1) setPage(p => p - 1); }}>Anterior</button>
-          <button className="btn btn-primary" onClick={() => { if ((page * pageSize) < total) setPage(p => p + 1); }}>Siguiente</button>
+          <h5 className="mb-3">Ver categorías</h5>
+          {renderTable()}
         </div>
-        <div className="text-muted">Página {page} — Total {total}</div>
-      </div>
+      )}
+
+      {activeTab === 'usuarios' && (
+        <div>
+          <h5 className="mb-3">Ver usuarios</h5>
+          <p className="text-muted small">Se muestran solo campos seguros; la columna <strong>pass</strong> está oculta.</p>
+          {renderTable()}
+        </div>
+      )}
     </div>
   );
 }
