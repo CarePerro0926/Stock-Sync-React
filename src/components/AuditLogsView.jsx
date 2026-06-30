@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabaseClient';
 
 export default function AuditLogsView({ onLogout }) {
+  // ---------- Estado principal (Audit Logs) ----------
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   // 'name' usado como "Nombre" compartido entre Audit Logs y las pestañas
@@ -11,24 +12,94 @@ export default function AuditLogsView({ onLogout }) {
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // Ocultar solo títulos duplicados fuera de la tarjeta; no tocar botones
+  // ---------- Estado y mapas para las pestañas (deben declararse antes de useEffect) ----------
+  const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
+  const [tableRows, setTableRows] = useState([]);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableError, setTableError] = useState('');
+
+  const [tablePage, setTablePage] = useState({
+    productos: 1,
+    categorias: 1,
+    usuarios: 1
+  });
+
+  const tablePageSizeMap = {
+    productos: 6,
+    categorias: 10,
+    usuarios: 10
+  };
+
+  const [tableTotal, setTableTotal] = useState({
+    productos: 0,
+    categorias: 0,
+    usuarios: 0
+  });
+
+  const rpcMap = {
+    productos: 'rpc_get_productos_for_audit',
+    categorias: 'rpc_get_categorias_for_audit',
+    usuarios: 'rpc_get_usuarios_for_audit'
+  };
+
+  const tableMap = {
+    productos: { table: 'productos' },
+    categorias: { table: 'categorias' },
+    usuarios: { table: 'vw_users_safe' }
+  };
+
+  // ---------- Seguridad: ocultar títulos duplicados SOLO cuando corresponda ----------
   useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll('h1, h2, .global-page-title'));
-    nodes.forEach(node => {
-      const text = (node.textContent || '').trim();
-      if (text === 'Módulo Auditoría' && !node.closest('.audit-card')) {
-        node.dataset._hiddenByAudit = '1';
-        node.style.display = 'none';
+    try {
+      // No ejecutar en entorno sin DOM (SSR) ni en la página de login
+      if (typeof document === 'undefined' || typeof window === 'undefined') return;
+      if (window.location && window.location.pathname && window.location.pathname.includes('/login')) return;
+
+      // Solo proceder si existe la tarjeta de auditoría en la página
+      const auditCardExists = document.querySelector('.audit-card') !== null;
+      if (!auditCardExists) return;
+
+      // Ejecutar al cargar el DOM (si ya está listo, ejecutar inmediatamente)
+      const runHide = () => {
+        const nodes = Array.from(document.querySelectorAll('h1, h2, .global-page-title'));
+        nodes.forEach(node => {
+          try {
+            const text = (node.textContent || '').trim();
+            // Solo ocultar títulos "Módulo Auditoría" que NO estén dentro de la tarjeta .audit-card
+            if (text === 'Módulo Auditoría' && !node.closest('.audit-card')) {
+              node.dataset._hiddenByAudit = '1';
+              node.style.display = 'none';
+            }
+          } catch (e) {
+            // no romper la app por un nodo problemático
+            console.warn('hide-title: node skip', e);
+          }
+        });
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runHide, { once: true });
+      } else {
+        runHide();
       }
-    });
-    return () => {
-      document.querySelectorAll('[data-_hiddenByAudit="1"]').forEach(el => {
-        el.style.display = '';
-        delete el.dataset._hiddenByAudit;
-      });
-    };
+
+      // Cleanup: restaurar estilos al desmontar
+      return () => {
+        document.querySelectorAll('[data-_hiddenByAudit="1"]').forEach(el => {
+          try {
+            el.style.display = '';
+            delete el.dataset._hiddenByAudit;
+          } catch (e) {
+            console.warn('restore-title: node skip', e);
+          }
+        });
+      };
+    } catch (err) {
+      console.warn('safe hide titles failed', err);
+    }
   }, []);
 
+  // ---------- Utilidades: construir query para Audit Logs ----------
   // buildQuery envía tanto 'nombre' (para RPCs) como 'usuario' (para la API de audit logs)
   const buildQuery = () => {
     const params = new URLSearchParams();
@@ -45,6 +116,7 @@ export default function AuditLogsView({ onLogout }) {
     return params.toString();
   };
 
+  // ---------- Fetch Audit Logs (API externa) ----------
   const fetchLogs = async () => {
     setLoading(true);
     try {
@@ -83,85 +155,7 @@ export default function AuditLogsView({ onLogout }) {
     }
   };
 
-  // Llamar fetchLogs cuando cambie page, filters.name o activeTab,
-  // pero solo si estamos en la pestaña audit_logs
-  useEffect(() => {
-    if (activeTab !== 'audit_logs') return;
-    fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters.name, activeTab]);
-
-  const handleExportCSV = () => {
-    if (!logs || logs.length === 0) {
-      alert('No hay registros para exportar');
-      return;
-    }
-    const rows = logs.map(l => ({
-      id: l.id,
-      actor_username: l.actor_username,
-      action: l.action,
-      target_table: l.target_table,
-      target_id: l.target_id,
-      created_at: l.created_at,
-      ip: l.ip,
-      reason: l.reason,
-      metadata: JSON.stringify(l.metadata || '')
-    }));
-    const csvContent = [
-      Object.keys(rows[0]).join(','),
-      ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `audit_logs_export_${new Date().toISOString()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // -----------------------------
-  // AÑADIDO: pestañas y tablas
-  // - productos = 6 por página; categorias/usuarios = 10
-  // - el filtro 'Nombre' se pasa como p_meta.nombre a las RPCs
-  // - además buildQuery envía usuario para Audit Logs
-  // -----------------------------
-  const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
-  const [tableRows, setTableRows] = useState([]);
-  const [tableLoading, setTableLoading] = useState(false);
-  const [tableError, setTableError] = useState('');
-
-  const [tablePage, setTablePage] = useState({
-    productos: 1,
-    categorias: 1,
-    usuarios: 1
-  });
-
-  const tablePageSizeMap = {
-    productos: 6,
-    categorias: 10,
-    usuarios: 10
-  };
-
-  const [tableTotal, setTableTotal] = useState({
-    productos: 0,
-    categorias: 0,
-    usuarios: 0
-  });
-
-  const rpcMap = {
-    productos: 'rpc_get_productos_for_audit',
-    categorias: 'rpc_get_categorias_for_audit',
-    usuarios: 'rpc_get_usuarios_for_audit'
-  };
-
-  const tableMap = {
-    productos: { table: 'productos' },
-    categorias: { table: 'categorias' },
-    usuarios: { table: 'vw_users_safe' }
-  };
-
-  // callRpc pasa p_meta tal cual (p_meta.nombre)
+  // ---------- RPC call helper (p_meta passed through) ----------
   const callRpc = async (rpcName, limit = 10, offset = 0, meta = null) => {
     setTableLoading(true);
     setTableError('');
@@ -192,6 +186,7 @@ export default function AuditLogsView({ onLogout }) {
     }
   };
 
+  // ---------- Obtener total (intentar count exacto) ----------
   const fetchTotalForResource = async (resourceName) => {
     const map = tableMap[resourceName];
     if (!map) return 0;
@@ -204,6 +199,14 @@ export default function AuditLogsView({ onLogout }) {
     return 0;
   };
 
+  // ---------- useEffect: Audit Logs (se ejecuta cuando page, filters.name o activeTab cambian) ----------
+  useEffect(() => {
+    if (activeTab !== 'audit_logs') return;
+    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters.name, activeTab]);
+
+  // ---------- useEffect: tablas (productos/categorias/usuarios) ----------
   useEffect(() => {
     let mounted = true;
     const fetchTableForTab = async () => {
@@ -231,6 +234,7 @@ export default function AuditLogsView({ onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, tablePage.productos, tablePage.categorias, tablePage.usuarios, filters.name]);
 
+  // ---------- renderTable helper ----------
   const renderTable = () => {
     if (tableLoading) return <p>Cargando...</p>;
     if (tableError) return <div className="alert alert-danger">{tableError}</div>;
@@ -260,9 +264,7 @@ export default function AuditLogsView({ onLogout }) {
           <div>
             <button
               className="btn btn-primary me-2"
-              onClick={() => {
-                setTablePage(prev => ({ ...prev, [activeTab]: Math.max(1, (prev[activeTab] || 1) - 1) }));
-              }}
+              onClick={() => setTablePage(prev => ({ ...prev, [activeTab]: Math.max(1, (prev[activeTab] || 1) - 1) }))}
               disabled={(tablePage[activeTab] || 1) <= 1}
             >
               Anterior
@@ -286,13 +288,41 @@ export default function AuditLogsView({ onLogout }) {
     );
   };
 
-  // -----------------------------
-  // FIN AÑADIDO
-  // -----------------------------
+  // ---------- Export CSV (Audit Logs) ----------
+  const handleExportCSV = () => {
+    if (!logs || logs.length === 0) {
+      alert('No hay registros para exportar');
+      return;
+    }
+    const rows = logs.map(l => ({
+      id: l.id,
+      actor_username: l.actor_username,
+      action: l.action,
+      target_table: l.target_table,
+      target_id: l.target_id,
+      created_at: l.created_at,
+      ip: l.ip,
+      reason: l.reason,
+      metadata: JSON.stringify(l.metadata || '')
+    }));
+    const csvContent = [
+      Object.keys(rows[0]).join(','),
+      ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_export_${new Date().toISOString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
+  // ---------- Session / role ----------
   const session = JSON.parse(localStorage.getItem('userSession') || '{}');
   const roleFromSession = session?.role || '';
 
+  // ---------- Render ----------
   return (
     <div className="audit-card card p-3">
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -302,8 +332,7 @@ export default function AuditLogsView({ onLogout }) {
             className="btn btn-light"
             onClick={() => {
               if (activeTab === 'audit_logs') {
-                setPage(1);
-                // fetchLogs() will be triggered by useEffect because page and filters.name are dependencies
+                setPage(1); // fetchLogs será llamado por useEffect
               } else {
                 const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
                 const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
@@ -344,11 +373,9 @@ export default function AuditLogsView({ onLogout }) {
             const val = event.target.value;
             setFilters(f => ({ ...f, name: val }));
             setTablePage(prev => ({ ...prev, [activeTab]: 1 }));
-            // reiniciar paginación global para audit logs; fetchLogs() será llamado por useEffect
             if (activeTab === 'audit_logs') {
-              setPage(1);
+              setPage(1); // fetchLogs será llamado por useEffect
             } else {
-              // para las otras pestañas recargamos inmediatamente
               const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
               const offset = 0;
               const meta = val ? { nombre: val } : null;
@@ -377,10 +404,9 @@ export default function AuditLogsView({ onLogout }) {
         <button
           className="btn btn-primary"
           onClick={() => {
-            // Reiniciar paginación general y recargar la vista activa
             setPage(1);
             if (activeTab === 'audit_logs') {
-              // fetchLogs will run via useEffect
+              // fetchLogs será ejecutado por useEffect
               return;
             }
             const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
@@ -396,7 +422,6 @@ export default function AuditLogsView({ onLogout }) {
           onClick={() => {
             setFilters({ name: '', action: '', from: '', to: '' });
             setPage(1);
-            // fetchLogs will run via useEffect
             // reset tablas
             setTablePage({ productos: 1, categorias: 1, usuarios: 1 });
             setTableTotal({ productos: 0, categorias: 0, usuarios: 0 });
