@@ -46,7 +46,6 @@ export default function AuditLogsView({ onLogout }) {
       // Obtener token si lo guardas en userSession o token
       const sessionLocal = JSON.parse(localStorage.getItem('userSession') || '{}');
       const token = sessionLocal?.token || localStorage.getItem('token') || '';
-
       const query = buildQuery();
 
       // --- Llamada al backend (ajusta la URL si usas proxy o variable de entorno) ---
@@ -54,7 +53,6 @@ export default function AuditLogsView({ onLogout }) {
       headers.append('Content-Type', 'application/json');
       // Si activaste validación JWT en el proxy, reenviamos el token
       if (token) headers.append('Authorization', `Bearer ${token}`);
-
       console.log('AuditLogs fetch -> token present?', !!token);
 
       const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
@@ -127,7 +125,6 @@ export default function AuditLogsView({ onLogout }) {
       Object.keys(rows[0]).join(','),
       ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -137,14 +134,10 @@ export default function AuditLogsView({ onLogout }) {
     URL.revokeObjectURL(url);
   };
 
-  // UI: contenedor tipo "card" con título visible
-
   // -----------------------------
   // AÑADIDO: integración — pestañas y tablas (manteniendo tu código original intacto)
-  // - Esta sección añade pestañas para Productos, Categorías y Usuarios.
-  // - Las tablas llaman a las RPCs en la base de datos: rpc_get_productos_for_audit, rpc_get_categorias_for_audit, rpc_get_usuarios_for_audit.
-  // - Cada RPC debe existir en la DB y registrar en audit_access (SECURITY DEFINER).
-  // - La vista de Usuarios no muestra la columna 'pass'.
+  // - Paginación por recurso: 10 registros por página
+  // - Botones Anterior / Siguiente por recurso (misma UX que Audit Logs)
   // -----------------------------
 
   const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
@@ -152,14 +145,33 @@ export default function AuditLogsView({ onLogout }) {
   const [tableLoading, setTableLoading] = useState(false);
   const [tableError, setTableError] = useState('');
 
+  // Paginación por recurso: mantenemos página y total por cada recurso
+  const [tablePage, setTablePage] = useState({
+    productos: 1,
+    categorias: 1,
+    usuarios: 1
+  });
+  const [tablePageSize] = useState(10); // 10 registros por página
+  const [tableTotal, setTableTotal] = useState({
+    productos: 0,
+    categorias: 0,
+    usuarios: 0
+  });
+
   const rpcMap = {
     productos: 'rpc_get_productos_for_audit',
     categorias: 'rpc_get_categorias_for_audit',
     usuarios: 'rpc_get_usuarios_for_audit'
   };
 
+  const tableMap = {
+    productos: { table: 'productos' },
+    categorias: { table: 'categorias' },
+    usuarios: { table: 'vw_users_safe' }
+  };
+
   // Llamada RPC usando el cliente supabase importado
-  const callRpc = async (rpcName, limit = 200, offset = 0, meta = null) => {
+  const callRpc = async (rpcName, limit = 10, offset = 0, meta = null) => {
     setTableLoading(true);
     setTableError('');
     setTableRows([]);
@@ -172,7 +184,15 @@ export default function AuditLogsView({ onLogout }) {
         setTableRows([]);
         return;
       }
-      setTableRows(Array.isArray(data) ? data : []);
+      // Normalizar: si la RPC devuelve row_to_json envuelto, extraer el objeto
+      const normalized = Array.isArray(data) ? data.map(item => {
+        if (item && typeof item === 'object' && Object.keys(item).length === 1) {
+          const v = Object.values(item)[0];
+          if (v && typeof v === 'object') return v;
+        }
+        return item;
+      }) : [];
+      setTableRows(normalized);
     } catch (err) {
       console.error('Unexpected error calling RPC', err);
       setTableError('Error inesperado al cargar datos');
@@ -180,6 +200,19 @@ export default function AuditLogsView({ onLogout }) {
     } finally {
       setTableLoading(false);
     }
+  };
+
+  // Obtener total de filas (intentar count exacto; si falla por RLS, usar fallback)
+  const fetchTotalForResource = async (resourceName) => {
+    const map = tableMap[resourceName];
+    if (!map) return 0;
+    try {
+      const headRes = await supabase.from(map.table).select('*', { count: 'exact', head: true });
+      if (headRes && typeof headRes.count === 'number') return Number(headRes.count);
+    } catch (err) {
+      console.warn('Count query failed (may be RLS/permissions):', err);
+    }
+    return 0;
   };
 
   useEffect(() => {
@@ -192,13 +225,21 @@ export default function AuditLogsView({ onLogout }) {
           setTableError('Recurso no soportado: ' + activeTab);
           return;
         }
-        await callRpc(rpcName, 200, 0, null);
+        const currentPage = tablePage[activeTab] || 1;
+        const offset = (currentPage - 1) * tablePageSize;
+        await callRpc(rpcName, tablePageSize, offset, null);
+
+        // intentar obtener total y actualizar estado
+        const totalCount = await fetchTotalForResource(activeTab);
+        if (mounted) {
+          setTableTotal(prev => ({ ...prev, [activeTab]: totalCount || (tableRows.length > 0 ? tableRows.length : prev[activeTab] || 0) }));
+        }
       }
     };
     fetchTableForTab();
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, tablePage.productos, tablePage.categorias, tablePage.usuarios]);
 
   const renderTable = () => {
     if (tableLoading) return <p>Cargando...</p>;
@@ -206,19 +247,49 @@ export default function AuditLogsView({ onLogout }) {
     if (!tableRows || tableRows.length === 0) return <div className="text-muted">Sin datos</div>;
     const headers = Object.keys(tableRows[0]);
     return (
-      <div className="table-responsive">
-        <table className="table table-sm">
-          <thead>
-            <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
-          </thead>
-          <tbody>
-            {tableRows.map((r, i) => (
-              <tr key={r.id ?? i}>
-                {headers.map(h => <td key={h}>{String(r[h] ?? '')}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div>
+        <div className="table-responsive">
+          <table className="table table-sm">
+            <thead>
+              <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {tableRows.map((r, i) => (
+                <tr key={r.id ?? i}>
+                  {headers.map(h => <td key={h}>{String(r[h] ?? '')}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Paginación para la tabla activa */}
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <div>
+            <button
+              className="btn btn-primary me-2"
+              onClick={() => {
+                setTablePage(prev => ({ ...prev, [activeTab]: Math.max(1, (prev[activeTab] || 1) - 1) }));
+              }}
+              disabled={(tablePage[activeTab] || 1) <= 1}
+            >
+              Anterior
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                const current = tablePage[activeTab] || 1;
+                const totalFor = tableTotal[activeTab] || 0;
+                if (totalFor && (current * tablePageSize) >= totalFor) return;
+                setTablePage(prev => ({ ...prev, [activeTab]: current + 1 }));
+              }}
+              disabled={tableTotal[activeTab] && ((tablePage[activeTab] || 1) * tablePageSize) >= tableTotal[activeTab]}
+            >
+              Siguiente
+            </button>
+          </div>
+          <div className="text-muted">Página {tablePage[activeTab] || 1} — Total {tableTotal[activeTab] || tableRows.length}</div>
+        </div>
       </div>
     );
   };
@@ -236,7 +307,7 @@ export default function AuditLogsView({ onLogout }) {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="audit-title mb-0">Módulo Auditoría</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={() => { if (activeTab === 'audit_logs') fetchLogs(); else { if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], 200, 0, null); } }}>Refrescar</button>
+          <button className="btn btn-light" onClick={() => { if (activeTab === 'audit_logs') fetchLogs(); else { if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], tablePageSize, ((tablePage[activeTab] || 1) - 1) * tablePageSize, null); } }}>Refrescar</button>
           <button
             className="btn btn-danger"
             onClick={() => {
