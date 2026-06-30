@@ -67,7 +67,6 @@ export default function AuditLogsView({ onLogout }) {
         text = await res.text();
         console.log('AuditLogs fetch -> response text:', text);
       } catch {
-        // No necesitamos el detalle del error aquí; lo registramos de forma genérica
         console.log('AuditLogs fetch -> error reading response body');
       }
 
@@ -91,7 +90,6 @@ export default function AuditLogsView({ onLogout }) {
       const metaTotal = json.meta?.total ?? (Array.isArray(json) ? json.length : items.length);
       setTotal(Number(metaTotal) || 0);
     } catch (err) {
-      // Aquí sí usamos la variable para depuración
       console.error('Error fetching audit logs:', err);
       setLogs([]);
       setTotal(0);
@@ -136,7 +134,7 @@ export default function AuditLogsView({ onLogout }) {
 
   // -----------------------------
   // AÑADIDO: integración — pestañas y tablas (manteniendo tu código original intacto)
-  // - Paginación por recurso: 10 registros por página
+  // - Paginación por recurso: productos = 6, categorias/usuarios = 10
   // - Botones Anterior / Siguiente por recurso (misma UX que Audit Logs)
   // -----------------------------
 
@@ -151,7 +149,14 @@ export default function AuditLogsView({ onLogout }) {
     categorias: 1,
     usuarios: 1
   });
-  const [tablePageSize] = useState(10); // 10 registros por página
+
+  // Tamaño por recurso: productos = 6, otros = 10
+  const tablePageSizeMap = {
+    productos: 6,
+    categorias: 10,
+    usuarios: 10
+  };
+
   const [tableTotal, setTableTotal] = useState({
     productos: 0,
     categorias: 0,
@@ -226,8 +231,9 @@ export default function AuditLogsView({ onLogout }) {
           return;
         }
         const currentPage = tablePage[activeTab] || 1;
-        const offset = (currentPage - 1) * tablePageSize;
-        await callRpc(rpcName, tablePageSize, offset, null);
+        const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+        const offset = (currentPage - 1) * pageSizeForTab;
+        await callRpc(rpcName, pageSizeForTab, offset, null);
 
         // intentar obtener total y actualizar estado
         const totalCount = await fetchTotalForResource(activeTab);
@@ -246,6 +252,8 @@ export default function AuditLogsView({ onLogout }) {
     if (tableError) return <div className="alert alert-danger">{tableError}</div>;
     if (!tableRows || tableRows.length === 0) return <div className="text-muted">Sin datos</div>;
     const headers = Object.keys(tableRows[0]);
+    const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+
     return (
       <div>
         <div className="table-responsive">
@@ -280,10 +288,10 @@ export default function AuditLogsView({ onLogout }) {
               onClick={() => {
                 const current = tablePage[activeTab] || 1;
                 const totalFor = tableTotal[activeTab] || 0;
-                if (totalFor && (current * tablePageSize) >= totalFor) return;
+                if (totalFor && (current * pageSizeForTab) >= totalFor) return;
                 setTablePage(prev => ({ ...prev, [activeTab]: current + 1 }));
               }}
-              disabled={tableTotal[activeTab] && ((tablePage[activeTab] || 1) * tablePageSize) >= tableTotal[activeTab]}
+              disabled={tableTotal[activeTab] && ((tablePage[activeTab] || 1) * pageSizeForTab) >= tableTotal[activeTab]}
             >
               Siguiente
             </button>
@@ -307,7 +315,19 @@ export default function AuditLogsView({ onLogout }) {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="audit-title mb-0">Módulo Auditoría</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-light" onClick={() => { if (activeTab === 'audit_logs') fetchLogs(); else { if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], tablePageSize, ((tablePage[activeTab] || 1) - 1) * tablePageSize, null); } }}>Refrescar</button>
+          <button
+            className="btn btn-light"
+            onClick={() => {
+              if (activeTab === 'audit_logs') fetchLogs();
+              else {
+                const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+                const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
+                if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], pageSizeForTab, offset, null);
+              }
+            }}
+          >
+            Refrescar
+          </button>
           <button
             className="btn btn-danger"
             onClick={() => {
