@@ -234,8 +234,6 @@ body {
     .inventory-row .value { font-size: 0.95rem; }
 }
 
-
-
 /* ====== FORZAR BLANCO PURO Y ELIMINAR FILTROS ====== */
 
 /* 1) Asegurar que no exista overlay global oscuro */
@@ -265,19 +263,18 @@ html body .responsive-table table tbody td {
   backdrop-filter: none !important;
 }
 
-/* 3) Forzar que botones y controles contrasten sobre blanco */
+/* 3) Evitar forzar color y z-index en todos los botones (reemplazo seguro) */
 html body button,
-html body .btn,
 html body .control-btn,
 html body input[type="button"],
 html body input[type="submit"] {
-  background-color: #0F2C54 !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(0,0,0,0.08) !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-  z-index: 2000 !important;
+  background-color: transparent;
+  color: inherit;
+  border: 1px solid rgba(0,0,0,0.06);
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  z-index: auto;
 }
 
 /* 4) Eliminar opacidades o filtros heredados en padres */
@@ -311,3 +308,35 @@ html body .content, html body .main, html body #root, html body .app {
   mix-blend-mode: normal !important;
   z-index: 99999 !important;
 }
+
+/* ====== COLORES ESPECÍFICOS PARA BOTONES IMPORTANTES ====== */
+
+/* Botón Cerrar Sesión (específico) */
+.btn-logout,
+.btn.btn-logout {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+.btn-logout:hover,
+.btn-logout:focus {
+  background-color: #c82333;
+  border-color: #c82333;
+}
+
+/* Botón Pagar (específico) */
+.btn-pay,
+.btn.btn-pay {
+  background-color: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+.btn-pay:hover,
+.btn-pay:focus {
+  background-color: #218838;
+  border-color: #218838;
+}
+
+/* Forzar modal propio por encima (temporal si hace falta) */
+.forgot-modal { z-index: 2147483647 !important; position: fixed !important; }
+.forgot-backdrop { z-index: 2147483646 !important; position: fixed !important; }
