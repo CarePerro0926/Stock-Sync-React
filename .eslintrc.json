@@ -1,0 +1,14 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": ["eslint:recommended"],
+  "overrides": [
+    {
+      "files": ["api/**/*.js"],
+      "env": { "node": true }
+    }
+  ]
+}
