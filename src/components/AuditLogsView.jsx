@@ -56,11 +56,12 @@ export default function AuditLogsView({ onLogout }) {
 
       console.log('AuditLogs fetch -> token present?', !!token);
 
-      const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
+      const res = await fetch(`/api/proxy-audit-logs?${query}`, {
       method: 'GET',
       headers,
-        credentials: 'include'
-      });
+      credentials: 'include'
+    });
+
 
       console.log('AuditLogs fetch -> status:', res.status, 'ok:', res.ok);
       let text;
