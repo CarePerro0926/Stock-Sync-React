@@ -5,7 +5,7 @@ import { supabase } from '@/services/supabaseClient';
 export default function AuditLogsView({ onLogout }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
-  // Cambié 'user' por 'name' para que el mismo campo sirva como "Nombre" en todas las pestañas
+  // 'name' usado como "Nombre" compartido entre Audit Logs y las pestañas
   const [filters, setFilters] = useState({ name: '', action: '', from: '', to: '' });
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -29,10 +29,13 @@ export default function AuditLogsView({ onLogout }) {
     };
   }, []);
 
+  // buildQuery envía tanto 'nombre' (para RPCs) como 'usuario' (para la API de audit logs)
   const buildQuery = () => {
     const params = new URLSearchParams();
-    // ahora usamos 'nombre' como parámetro en la API
-    if (filters.name) params.append('nombre', filters.name);
+    if (filters.name) {
+      params.append('nombre', filters.name);   // para RPCs (p_meta.nombre) si se usa
+      params.append('usuario', filters.name);  // para la API de audit logs (columna Usuario)
+    }
     if (filters.action) params.append('accion', filters.action);
     if (filters.from) params.append('desde', filters.from);
     if (filters.to) params.append('hasta', filters.to);
@@ -52,7 +55,6 @@ export default function AuditLogsView({ onLogout }) {
       const headers = new Headers();
       headers.append('Content-Type', 'application/json');
       if (token) headers.append('Authorization', `Bearer ${token}`);
-      console.log('AuditLogs fetch -> token present?', !!token);
 
       const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
         method: 'GET',
@@ -60,26 +62,12 @@ export default function AuditLogsView({ onLogout }) {
         credentials: 'include'
       });
 
-      console.log('AuditLogs fetch -> status:', res.status, 'ok:', res.ok);
       let text;
-      try {
-        text = await res.text();
-        console.log('AuditLogs fetch -> response text:', text);
-      } catch {
-        console.log('AuditLogs fetch -> error reading response body');
-      }
+      try { text = await res.text(); } catch { text = ''; }
 
       if (!res.ok) {
-        try {
-          const json = JSON.parse(text || '{}');
-          console.error('API audit error body:', json);
-        } catch {
-          console.error('API audit error raw body:', text);
-        }
-        setLogs([]);
-        setTotal(0);
-        setLoading(false);
-        return;
+        try { const json = JSON.parse(text || '{}'); console.error('API audit error body:', json); } catch { console.error('API audit error raw body:', text); }
+        setLogs([]); setTotal(0); setLoading(false); return;
       }
 
       const json = JSON.parse(text || '{}');
@@ -89,8 +77,7 @@ export default function AuditLogsView({ onLogout }) {
       setTotal(Number(metaTotal) || 0);
     } catch (err) {
       console.error('Error fetching audit logs:', err);
-      setLogs([]);
-      setTotal(0);
+      setLogs([]); setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -131,11 +118,11 @@ export default function AuditLogsView({ onLogout }) {
   };
 
   // -----------------------------
-  // AÑADIDO: integración — pestañas y tablas (manteniendo tu código original intacto)
-  // - Paginación por recurso: productos = 6, categorias/usuarios = 10
-  // - El filtro 'Nombre' se pasa como p_meta.nombre a las RPCs
+  // AÑADIDO: pestañas y tablas
+  // - productos = 6 por página; categorias/usuarios = 10
+  // - el filtro 'Nombre' se pasa como p_meta.nombre a las RPCs
+  // - además buildQuery envía usuario para Audit Logs
   // -----------------------------
-
   const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
   const [tableRows, setTableRows] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
@@ -171,8 +158,7 @@ export default function AuditLogsView({ onLogout }) {
     usuarios: { table: 'vw_users_safe' }
   };
 
-  // Llamada RPC usando el cliente supabase importado
-  // ahora acepta meta y lo pasa tal cual a la RPC (p_meta)
+  // callRpc pasa p_meta tal cual (p_meta.nombre)
   const callRpc = async (rpcName, limit = 10, offset = 0, meta = null) => {
     setTableLoading(true);
     setTableError('');
@@ -186,7 +172,6 @@ export default function AuditLogsView({ onLogout }) {
         setTableRows([]);
         return;
       }
-      // Normalizar: si la RPC devuelve row_to_json envuelto, extraer el objeto
       const normalized = Array.isArray(data) ? data.map(item => {
         if (item && typeof item === 'object' && Object.keys(item).length === 1) {
           const v = Object.values(item)[0];
@@ -204,7 +189,6 @@ export default function AuditLogsView({ onLogout }) {
     }
   };
 
-  // Obtener total de filas (intentar count exacto; si falla por RLS, usar fallback)
   const fetchTotalForResource = async (resourceName) => {
     const map = tableMap[resourceName];
     if (!map) return 0;
@@ -230,12 +214,9 @@ export default function AuditLogsView({ onLogout }) {
         const currentPage = tablePage[activeTab] || 1;
         const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
         const offset = (currentPage - 1) * pageSizeForTab;
-
-        // Pasamos el filtro 'nombre' en p_meta para que la RPC pueda aplicarlo si está implementado
         const meta = filters.name ? { nombre: filters.name } : null;
         await callRpc(rpcName, pageSizeForTab, offset, meta);
 
-        // intentar obtener total y actualizar estado
         const totalCount = await fetchTotalForResource(activeTab);
         if (mounted) {
           setTableTotal(prev => ({ ...prev, [activeTab]: totalCount || (tableRows.length > 0 ? tableRows.length : prev[activeTab] || 0) }));
@@ -306,7 +287,6 @@ export default function AuditLogsView({ onLogout }) {
   // FIN AÑADIDO
   // -----------------------------
 
-  // Detectar rol desde session para mostrar pestañas solo a auditores (mantengo tu lógica de session)
   const session = JSON.parse(localStorage.getItem('userSession') || '{}');
   const roleFromSession = session?.role || '';
 
@@ -318,8 +298,10 @@ export default function AuditLogsView({ onLogout }) {
           <button
             className="btn btn-light"
             onClick={() => {
-              if (activeTab === 'audit_logs') fetchLogs();
-              else {
+              if (activeTab === 'audit_logs') {
+                setPage(1);
+                fetchLogs();
+              } else {
                 const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
                 const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
                 if (rpcMap[activeTab]) {
@@ -350,16 +332,27 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       <div className="mb-3 d-flex gap-2 flex-wrap">
-        {/* Cambié placeholder a "Nombre" y el value/onChange usan filters.name */}
+        {/* Input Nombre: actualiza filters.name y reinicia paginación; la búsqueda se dispara al escribir */}
         <input
           className="form-control"
           placeholder="Nombre"
           value={filters.name}
           onChange={event => {
-            // al cambiar el filtro de nombre reiniciamos la página de la tabla activa
-            setFilters(f => ({ ...f, name: event.target.value }));
-            // reiniciar paginación de tablas para que la búsqueda empiece en la página 1
+            const val = event.target.value;
+            setFilters(f => ({ ...f, name: val }));
             setTablePage(prev => ({ ...prev, [activeTab]: 1 }));
+
+            // recarga inmediata de la vista activa (búsqueda en tiempo real)
+            const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+            const offset = 0;
+            const meta = val ? { nombre: val } : null;
+
+            if (activeTab === 'audit_logs') {
+              setPage(1);
+              fetchLogs();
+            } else if (rpcMap[activeTab]) {
+              callRpc(rpcMap[activeTab], pageSizeForTab, offset, meta);
+            }
           }}
         />
         <input
@@ -382,20 +375,39 @@ export default function AuditLogsView({ onLogout }) {
         />
         <button
           className="btn btn-primary"
-          onClick={() => { setPage(1); fetchLogs(); }}
+          onClick={() => {
+            // Reiniciar paginación general y recargar la vista activa
+            setPage(1);
+            if (activeTab === 'audit_logs') {
+              fetchLogs();
+              return;
+            }
+            const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
+            const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
+            const meta = filters.name ? { nombre: filters.name } : null;
+            if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], pageSizeForTab, offset, meta);
+          }}
         >
           Filtrar
         </button>
         <button
           className="btn btn-warning"
-          onClick={() => { setFilters({ name: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}
+          onClick={() => {
+            setFilters({ name: '', action: '', from: '', to: '' });
+            setPage(1);
+            fetchLogs();
+            // reset tablas
+            setTablePage({ productos: 1, categorias: 1, usuarios: 1 });
+            setTableTotal({ productos: 0, categorias: 0, usuarios: 0 });
+            setTableRows([]);
+          }}
         >
           Limpiar
         </button>
         <button className="btn btn-success" onClick={handleExportCSV}>Exportar CSV</button>
       </div>
 
-      {/* Pestañas: Audit logs + vistas solo lectura (solo para auditores) */}
+      {/* Pestañas */}
       <div className="mb-3">
         <div className="btn-group" role="group" aria-label="Audit tabs">
           <button type="button" className={`btn ${activeTab === 'audit_logs' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('audit_logs')}>Audit Logs</button>
@@ -409,7 +421,7 @@ export default function AuditLogsView({ onLogout }) {
         </div>
       </div>
 
-      {/* Contenido según pestaña activa */}
+      {/* Contenido por pestaña */}
       {activeTab === 'audit_logs' && (
         <>
           {loading ? <p>Cargando registros...</p> : (
