@@ -1,7 +1,7 @@
 // src/api/audit-logs.js
-const BASE = 'https://stock-sync-api.onrender.com/api';
+const BASE = ''; // llamada relativa al mismo dominio
 
-export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 25, offset = 0 } = {}) {
+export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 10, offset = 0 } = {}) {
   const params = new URLSearchParams();
   if (usuario) params.append('usuario', usuario);
   if (accion) params.append('accion', accion);
@@ -10,13 +10,12 @@ export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 
   params.append('limit', String(limit));
   params.append('offset', String(offset));
 
-  // Obtener token desde localStorage (ajusta según tu app)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') || localStorage.getItem('token') : null;
 
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const url = `${BASE}/audit-logs?${params.toString()}`;
+  const url = `${BASE}/api/proxy-audit-logs?${params.toString()}`;
 
   const res = await fetch(url, { method: 'GET', headers });
   if (!res.ok) {
