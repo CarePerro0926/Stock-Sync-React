@@ -1,3 +1,4 @@
+// tsconfig.json
 {
   "compilerOptions": {
     "target": "ESNext",
@@ -17,5 +18,5 @@
     // 👇 esto silencia las advertencias deprecadas en TS 6.x
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src"]
+  "include": ["src", "api"]
 }
