@@ -1,5 +1,5 @@
 // src/api/audit-logs.js
-const base = 'https://stock-sync-api.onrender.com';
+const base = 'https://stock-sync-react.vercel.app/api/proxy-audit-logs';
 
 export async function obtenerAuditLogs({ usuario, accion, desde, hasta, limit = 25, offset = 0 } = {}, token) {
   const params = new URLSearchParams();
