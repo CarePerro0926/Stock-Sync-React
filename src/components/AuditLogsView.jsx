@@ -56,7 +56,7 @@ export default function AuditLogsView({ onLogout }) {
 
       console.log('AuditLogs fetch -> token present?', !!token);
 
-      const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs${query}`, {
+      const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
       method: 'GET',
       headers
         credentials: 'include'
