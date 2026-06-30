@@ -5,7 +5,8 @@ import { supabase } from '@/services/supabaseClient';
 export default function AuditLogsView({ onLogout }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ user: '', action: '', from: '', to: '' });
+  // Cambié 'user' por 'name' para que el mismo campo sirva como "Nombre" en todas las pestañas
+  const [filters, setFilters] = useState({ name: '', action: '', from: '', to: '' });
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -30,7 +31,8 @@ export default function AuditLogsView({ onLogout }) {
 
   const buildQuery = () => {
     const params = new URLSearchParams();
-    if (filters.user) params.append('usuario', filters.user);
+    // ahora usamos 'nombre' como parámetro en la API
+    if (filters.name) params.append('nombre', filters.name);
     if (filters.action) params.append('accion', filters.action);
     if (filters.from) params.append('desde', filters.from);
     if (filters.to) params.append('hasta', filters.to);
@@ -43,15 +45,12 @@ export default function AuditLogsView({ onLogout }) {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // Obtener token si lo guardas en userSession o token
       const sessionLocal = JSON.parse(localStorage.getItem('userSession') || '{}');
       const token = sessionLocal?.token || localStorage.getItem('token') || '';
       const query = buildQuery();
 
-      // --- Llamada al backend (ajusta la URL si usas proxy o variable de entorno) ---
       const headers = new Headers();
       headers.append('Content-Type', 'application/json');
-      // Si activaste validación JWT en el proxy, reenviamos el token
       if (token) headers.append('Authorization', `Bearer ${token}`);
       console.log('AuditLogs fetch -> token present?', !!token);
 
@@ -83,7 +82,6 @@ export default function AuditLogsView({ onLogout }) {
         return;
       }
 
-      // parsear JSON si todo ok
       const json = JSON.parse(text || '{}');
       const items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : (json.items || []));
       setLogs(items);
@@ -135,7 +133,7 @@ export default function AuditLogsView({ onLogout }) {
   // -----------------------------
   // AÑADIDO: integración — pestañas y tablas (manteniendo tu código original intacto)
   // - Paginación por recurso: productos = 6, categorias/usuarios = 10
-  // - Botones Anterior / Siguiente por recurso (misma UX que Audit Logs)
+  // - El filtro 'Nombre' se pasa como p_meta.nombre a las RPCs
   // -----------------------------
 
   const [activeTab, setActiveTab] = useState('audit_logs'); // 'audit_logs' | 'productos' | 'categorias' | 'usuarios'
@@ -143,14 +141,12 @@ export default function AuditLogsView({ onLogout }) {
   const [tableLoading, setTableLoading] = useState(false);
   const [tableError, setTableError] = useState('');
 
-  // Paginación por recurso: mantenemos página y total por cada recurso
   const [tablePage, setTablePage] = useState({
     productos: 1,
     categorias: 1,
     usuarios: 1
   });
 
-  // Tamaño por recurso: productos = 6, otros = 10
   const tablePageSizeMap = {
     productos: 6,
     categorias: 10,
@@ -176,6 +172,7 @@ export default function AuditLogsView({ onLogout }) {
   };
 
   // Llamada RPC usando el cliente supabase importado
+  // ahora acepta meta y lo pasa tal cual a la RPC (p_meta)
   const callRpc = async (rpcName, limit = 10, offset = 0, meta = null) => {
     setTableLoading(true);
     setTableError('');
@@ -233,7 +230,10 @@ export default function AuditLogsView({ onLogout }) {
         const currentPage = tablePage[activeTab] || 1;
         const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
         const offset = (currentPage - 1) * pageSizeForTab;
-        await callRpc(rpcName, pageSizeForTab, offset, null);
+
+        // Pasamos el filtro 'nombre' en p_meta para que la RPC pueda aplicarlo si está implementado
+        const meta = filters.name ? { nombre: filters.name } : null;
+        await callRpc(rpcName, pageSizeForTab, offset, meta);
 
         // intentar obtener total y actualizar estado
         const totalCount = await fetchTotalForResource(activeTab);
@@ -245,7 +245,7 @@ export default function AuditLogsView({ onLogout }) {
     fetchTableForTab();
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, tablePage.productos, tablePage.categorias, tablePage.usuarios]);
+  }, [activeTab, tablePage.productos, tablePage.categorias, tablePage.usuarios, filters.name]);
 
   const renderTable = () => {
     if (tableLoading) return <p>Cargando...</p>;
@@ -322,7 +322,10 @@ export default function AuditLogsView({ onLogout }) {
               else {
                 const pageSizeForTab = tablePageSizeMap[activeTab] || 10;
                 const offset = ((tablePage[activeTab] || 1) - 1) * pageSizeForTab;
-                if (rpcMap[activeTab]) callRpc(rpcMap[activeTab], pageSizeForTab, offset, null);
+                if (rpcMap[activeTab]) {
+                  const meta = filters.name ? { nombre: filters.name } : null;
+                  callRpc(rpcMap[activeTab], pageSizeForTab, offset, meta);
+                }
               }
             }}
           >
@@ -347,11 +350,17 @@ export default function AuditLogsView({ onLogout }) {
       </div>
 
       <div className="mb-3 d-flex gap-2 flex-wrap">
+        {/* Cambié placeholder a "Nombre" y el value/onChange usan filters.name */}
         <input
           className="form-control"
-          placeholder="Usuario"
-          value={filters.user}
-          onChange={event => setFilters(f => ({ ...f, user: event.target.value }))}
+          placeholder="Nombre"
+          value={filters.name}
+          onChange={event => {
+            // al cambiar el filtro de nombre reiniciamos la página de la tabla activa
+            setFilters(f => ({ ...f, name: event.target.value }));
+            // reiniciar paginación de tablas para que la búsqueda empiece en la página 1
+            setTablePage(prev => ({ ...prev, [activeTab]: 1 }));
+          }}
         />
         <input
           className="form-control"
@@ -379,7 +388,7 @@ export default function AuditLogsView({ onLogout }) {
         </button>
         <button
           className="btn btn-warning"
-          onClick={() => { setFilters({ user: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}
+          onClick={() => { setFilters({ name: '', action: '', from: '', to: '' }); setPage(1); fetchLogs(); }}
         >
           Limpiar
         </button>
