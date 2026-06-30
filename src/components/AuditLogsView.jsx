@@ -58,7 +58,7 @@ export default function AuditLogsView({ onLogout }) {
 
       const res = await fetch(`https://stock-sync-api.onrender.com/api/audit-logs?${query}`, {
       method: 'GET',
-      headers
+      headers,
         credentials: 'include'
       });
 
